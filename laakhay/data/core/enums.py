@@ -65,3 +65,18 @@ class TimeInterval(str, Enum):
             if interval.seconds == seconds:
                 return interval
         return None
+
+
+class MarketType(str, Enum):
+    """Market type for exchange trading.
+    
+    Different exchanges may support different market types.
+    This enum standardizes market type identification across providers.
+    """
+    
+    SPOT = "spot"
+    FUTURES = "futures"
+    
+    def __str__(self) -> str:
+        """String representation returns the value."""
+        return self.value
