@@ -3,10 +3,12 @@
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+import time
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
-from ...models import Candle, Liquidation, OpenInterest, Symbol
+from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, Symbol
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP, OI_PERIOD_MAP
 from .websocket_mixin import BinanceWebSocketMixin
@@ -37,6 +39,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         api_key: Optional[str] = None, 
         api_secret: Optional[str] = None,
         symbols_cache_ttl: float = 300.0,
+        products_cache_ttl: float = 600.0,
     ) -> None:
         super().__init__(name=f"binance-{market_type.value}")
         self.market_type = market_type
@@ -48,6 +51,10 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self._symbols_cache: Optional[List[Symbol]] = None
         self._symbols_cache_ts: Optional[float] = None
         self._symbols_cache_ttl = symbols_cache_ttl
+    # Products cache (Binance bapi)
+    self._products_cache: Optional[List[Dict[str, Any]]] = None
+    self._products_cache_ts: Optional[float] = None
+    self._products_cache_ttl = products_cache_ttl
 
     def set_credentials(self, api_key: str, api_secret: str) -> None:
         """Set API credentials for authenticated endpoints."""
@@ -137,7 +144,6 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         """
         # Serve from cache if fresh
         if use_cache and self._symbols_cache is not None and self._symbols_cache_ts is not None:
-            import time
             if (time.time() - self._symbols_cache_ts) < self._symbols_cache_ttl:
                 if quote_asset:
                     return [s for s in self._symbols_cache if s.quote_asset == quote_asset]
@@ -208,7 +214,6 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             )
         # Update cache
         self._symbols_cache = symbols
-        import time
         self._symbols_cache_ts = time.time()
 
         if quote_asset:
@@ -331,7 +336,180 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 open_interest_value=Decimal(str(data[3])),  # Use sum value as primary
             )
 
+    @retry_async(max_retries=3, base_delay=1.0)
+    async def get_funding_rate(
+        self,
+        symbol: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 100,
+    ) -> List[FundingRate]:
+        """Fetch historical APPLIED funding rate data from Binance.
+        
+        Returns the actual funding rates that were applied/charged to positions.
+        These rates are FIXED for each 8-hour period (00:00, 08:00, 16:00 UTC).
+        
+        Note: For PREDICTED/NEXT funding rate (changes continuously), use 
+        stream_funding_rate() WebSocket method instead.
+        
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSDT")
+            start_time: Start time for historical data
+            end_time: End time for historical data
+            limit: Maximum number of records (default 100, max 1000)
+            
+        Returns:
+            List of FundingRate objects (historical applied rates)
+            
+        Raises:
+            ValueError: If market type is not FUTURES
+            InvalidSymbolError: If symbol doesn't exist
+            ProviderError: If API request fails
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Funding rate is only available for Futures market")
+            
+        symbol = symbol.upper()
+        
+        params = {
+            "symbol": symbol,
+            "limit": min(limit, 1000),  # Binance max limit
+        }
+        
+        if start_time:
+            params["startTime"] = int(start_time.timestamp() * 1000)
+        if end_time:
+            params["endTime"] = int(end_time.timestamp() * 1000)
+            
+        try:
+            data = await self._http.get("/fapi/v1/fundingRate", params=params)
+        except Exception as e:
+            if "Invalid symbol" in str(e):
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+            raise
+            
+        # Parse funding rate data
+        return [self._parse_funding_rate(fr_data) for fr_data in data]
+
+    def _parse_funding_rate(self, data: Dict) -> FundingRate:
+        """Parse funding rate response."""
+        from datetime import timezone
+        
+        return FundingRate(
+            symbol=data["symbol"],
+            funding_time=datetime.fromtimestamp(data["fundingTime"] / 1000, tz=timezone.utc),
+            funding_rate=Decimal(str(data["fundingRate"])),
+            mark_price=Decimal(str(data["markPrice"])) if "markPrice" in data else None,
+        )
 
     async def close(self) -> None:
         """Close the HTTP client."""
         await self._http.close()
+
+    # ----------------------
+    # Products and market caps (Binance bapi)
+    # ----------------------
+
+    @dataclass(frozen=True)
+    class ProductCap:
+        symbol: str
+        base_asset: str
+        quote_asset: str
+        price: Decimal
+        circulating_supply: Decimal
+        circulating_market_cap: Decimal
+
+        def to_dict(self) -> Dict[str, str]:
+            return {
+                "symbol": self.symbol,
+                "base_asset": self.base_asset,
+                "quote_asset": self.quote_asset,
+                "price": str(self.price),
+                "circulating_supply": str(self.circulating_supply),
+                "circulating_market_cap": str(self.circulating_market_cap),
+            }
+
+    _BINANCE_PRODUCTS_URL = "https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products"
+
+    async def _fetch_products_raw(self) -> List[Dict[str, Any]]:
+        data = await self._http.get(self._BINANCE_PRODUCTS_URL)
+        if isinstance(data, dict):
+            items = data.get("data")
+            if isinstance(items, list):
+                return items
+        if isinstance(data, list):
+            return data
+        return []
+
+    def _products_cache_valid(self) -> bool:
+        return (
+            self._products_cache is not None
+            and self._products_cache_ts is not None
+            and (time.time() - self._products_cache_ts) <= self._products_cache_ttl
+        )
+
+    async def get_products(self, *, force_refresh: bool = False) -> List[Dict[str, Any]]:
+        """Fetch Binance products (with TTL cache)."""
+        if not force_refresh and self._products_cache_valid():
+            return list(self._products_cache or [])
+        items = await self._fetch_products_raw()
+        self._products_cache = items
+        self._products_cache_ts = time.time()
+        return list(items)
+
+    async def get_market_caps(
+        self,
+        *,
+        quote: Optional[str] = None,
+        min_circulating_supply: Optional[Decimal] = None,
+        force_refresh: bool = False,
+    ) -> List["BinanceProvider.ProductCap"]:
+        items = await self.get_products(force_refresh=force_refresh)
+        out: List[BinanceProvider.ProductCap] = []
+        for it in items:
+            symbol = str(it.get("s") or it.get("symbol") or "").upper()
+            base = str(it.get("b") or it.get("baseAsset") or "").upper()
+            q = str(it.get("q") or it.get("quoteAsset") or "").upper()
+            if not symbol or not base or not q:
+                continue
+            if quote and q != quote.upper():
+                continue
+            c_raw = it.get("c")
+            cs_raw = it.get("cs")
+            if c_raw is None or cs_raw is None:
+                continue
+            try:
+                price = Decimal(str(c_raw))
+                circ_supply = Decimal(str(cs_raw))
+            except Exception:
+                continue
+            if min_circulating_supply is not None and circ_supply < min_circulating_supply:
+                continue
+            mc = price * circ_supply
+            out.append(
+                BinanceProvider.ProductCap(
+                    symbol=symbol,
+                    base_asset=base,
+                    quote_asset=q,
+                    price=price,
+                    circulating_supply=circ_supply,
+                    circulating_market_cap=mc,
+                )
+            )
+        out.sort(key=lambda x: x.circulating_market_cap, reverse=True)
+        return out
+
+    async def get_top_market_caps(
+        self,
+        n: int = 100,
+        *,
+        quote: Optional[str] = "USDT",
+        min_circulating_supply: Optional[Decimal] = None,
+        force_refresh: bool = False,
+    ) -> List["BinanceProvider.ProductCap"]:
+        items = await self.get_market_caps(
+            quote=quote,
+            min_circulating_supply=min_circulating_supply,
+            force_refresh=force_refresh,
+        )
+        return items[: max(0, n)]
