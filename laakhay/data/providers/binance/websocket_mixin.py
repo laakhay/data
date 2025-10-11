@@ -7,7 +7,7 @@ graceful cancellation, and optional throttling for high-frequency updates.
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from dataclasses import dataclass
 from typing import AsyncIterator, Dict, List, Optional
@@ -17,8 +17,8 @@ import time
 import websockets
 
 from ...core import TimeInterval, MarketType
-from ...models import Candle
-from .constants import WS_SINGLE_URLS, WS_COMBINED_URLS, INTERVAL_MAP
+from ...models import Candle, Liquidation, OpenInterest
+from .constants import WS_SINGLE_URLS, WS_COMBINED_URLS, INTERVAL_MAP, OI_PERIOD_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -310,5 +310,147 @@ class BinanceWebSocketMixin:
                 reconnect_delay = self._next_delay(reconnect_delay)
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Trades WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_open_interest(
+        self,
+        symbols: List[str],
+        period: str = "5m",
+    ) -> AsyncIterator[OpenInterest]:
+        """Yield Open Interest updates using the <symbol>@openInterest@<period> stream.
+
+        Combined-stream payloads are wrapped as {"stream": ..., "data": {...}}; single
+        payloads deliver the event directly. The event type is "openInterest" with fields:
+        - s: symbol, E or t: event time (ms), oi: open interest (string)
+
+        Args:
+            symbols: List of symbols (e.g., ["BTCUSDT"]).
+            period: One of OI_PERIOD_MAP keys (e.g., "5m", "15m", "1h", "1d").
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Open Interest streaming is only available for Futures market")
+
+        if period not in OI_PERIOD_MAP:
+            raise ValueError(f"Invalid period: {period}. Valid: {sorted(OI_PERIOD_MAP.keys())}")
+
+        ws_base = WS_COMBINED_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        stream_names = [f"{s.lower()}@openInterest@{period}" for s in symbols]
+        url = f"{ws_base}?streams={'/'.join(stream_names)}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:  # reconnect loop
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            outer = json.loads(message)
+                            payload = outer.get("data", outer)
+                            if not isinstance(payload, dict):
+                                continue
+                            if payload.get("e") and payload.get("e") != "openInterest":
+                                continue
+
+                            symbol = payload.get("s") or payload.get("symbol")
+                            event_time_ms = payload.get("E") or payload.get("t") or payload.get("eventTime")
+                            oi_str = payload.get("oi") or payload.get("o") or payload.get("openInterest")
+                            if not symbol or oi_str is None or event_time_ms is None:
+                                continue
+
+                            yield OpenInterest(
+                                symbol=symbol,
+                                timestamp=datetime.fromtimestamp(int(event_time_ms) / 1000, tz=timezone.utc),
+                                open_interest=Decimal(str(oi_str)),
+                                open_interest_value=None,
+                            )
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_open_interest parse error: {e}")
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Open Interest WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
+        """Yield liquidation orders for all symbols using forceOrder stream.
+        
+        This stream provides real-time liquidation data across all futures symbols.
+        The stream name is '!forceOrder@arr' which means it receives all liquidations.
+        
+        Yields:
+            Liquidation: Real-time liquidation events
+            
+        Note:
+            This endpoint is only available for Futures market type.
+            The stream provides liquidation data for all symbols simultaneously.
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Liquidation streaming is only available for Futures market")
+
+        ws_base = WS_SINGLE_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        # Force order stream for all symbols
+        url = f"{ws_base}/!forceOrder@arr"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            outer = json.loads(message)
+                            payload = outer.get("data", outer)
+
+                            # Expect forceOrder event with nested order object "o"
+                            if payload.get("e") != "forceOrder" or "o" not in payload:
+                                continue
+
+                            o = payload["o"]
+                            event_time_ms = payload.get("E") or o.get("T")
+                            if event_time_ms is None:
+                                continue
+
+                            liquidation = Liquidation(
+                                symbol=o["s"],
+                                timestamp=datetime.fromtimestamp(int(event_time_ms) / 1000, tz=timezone.utc),
+                                side=o["S"],
+                                order_type=o["o"],
+                                time_in_force=o["f"],
+                                original_quantity=Decimal(str(o["q"])),
+                                price=Decimal(str(o["p"])),
+                                average_price=Decimal(str(o["ap"])),
+                                order_status=o["X"],
+                                last_filled_quantity=Decimal(str(o["l"])),
+                                accumulated_quantity=Decimal(str(o["z"])),
+                                commission=None,
+                                commission_asset=None,
+                                trade_id=None,
+                            )
+
+                            yield liquidation
+
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_liquidations parse error: {e}")
+                            
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:
+                logger.error(f"Liquidations WS error: {e}")
                 await asyncio.sleep(reconnect_delay)
                 reconnect_delay = self._next_delay(reconnect_delay)

@@ -6,9 +6,9 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
-from ...models import Candle, Symbol
+from ...models import Candle, Liquidation, OpenInterest, Symbol
 from ...utils import HTTPClient, retry_async
-from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP
+from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP, OI_PERIOD_MAP
 from .websocket_mixin import BinanceWebSocketMixin
 
 logger = logging.getLogger(__name__)
@@ -214,6 +214,123 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         if quote_asset:
             return [s for s in symbols if s.quote_asset == quote_asset]
         return symbols
+
+    @retry_async(max_retries=3, base_delay=1.0)
+    async def get_open_interest(
+        self,
+        symbol: str,
+        historical: bool = False,
+        period: str = "5m",
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 30,
+    ) -> List[OpenInterest]:
+        """Fetch Open Interest data from Binance.
+        
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSDT")
+            historical: If True, fetch historical OI data; if False, current OI
+            period: Time period for historical data (5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d)
+            start_time: Start time for historical data
+            end_time: End time for historical data  
+            limit: Maximum number of records (max 500)
+            
+        Returns:
+            List of OpenInterest objects
+            
+        Raises:
+            InvalidSymbolError: If symbol doesn't exist
+            ProviderError: If API request fails
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Open Interest is only available for Futures market")
+            
+        symbol = symbol.upper()
+        
+        if historical:
+            # Historical OI endpoint
+            if period not in OI_PERIOD_MAP:
+                raise ValueError(f"Invalid period: {period}. Valid periods: {list(OI_PERIOD_MAP.keys())}")
+                
+            params = {
+                "symbol": symbol,
+                "period": OI_PERIOD_MAP[period],
+                "limit": min(limit, 500),  # Binance max limit
+            }
+            
+            if start_time:
+                params["startTime"] = int(start_time.timestamp() * 1000)
+            if end_time:
+                params["endTime"] = int(end_time.timestamp() * 1000)
+                
+            try:
+                data = await self._http.get("/futures/data/openInterestHist", params=params)
+            except Exception as e:
+                if "Invalid symbol" in str(e):
+                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+                raise
+                
+            # Historical OI endpoint may return a single dict or list of data points
+            if isinstance(data, dict):
+                return [self._parse_open_interest_historical(data)]
+            else:
+                return [self._parse_open_interest_historical(oi_data) for oi_data in data]
+        else:
+            # Current OI endpoint
+            params = {"symbol": symbol}
+            try:
+                data = await self._http.get("/fapi/v1/openInterest", params=params)
+            except Exception as e:
+                if "Invalid symbol" in str(e):
+                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+                raise
+                
+            return [self._parse_open_interest_current(data)]
+
+    def _parse_open_interest_current(self, data: Dict) -> OpenInterest:
+        """Parse current OI response."""
+        from datetime import timezone
+        
+        return OpenInterest(
+            symbol=data["symbol"],
+            timestamp=datetime.fromtimestamp(data["time"] / 1000, tz=timezone.utc),
+            open_interest=Decimal(str(data["openInterest"])),
+            # Note: current OI endpoint doesn't provide openInterestValue, calculate from OI * mark price if available
+            open_interest_value=None,  # Will be None for current endpoint
+        )
+
+    def _parse_open_interest_historical(self, data) -> OpenInterest:
+        """Parse historical OI response - handles both dict and array formats."""
+        from datetime import timezone
+        
+        if isinstance(data, dict):
+            # Dictionary format (single data point)
+            # Note: Historical endpoint may not have timestamp, use current time
+            timestamp = datetime.now(timezone.utc)
+            if "time" in data:
+                timestamp = datetime.fromtimestamp(data["time"] / 1000, tz=timezone.utc)
+            elif "timestamp" in data:
+                timestamp = datetime.fromtimestamp(data["timestamp"] / 1000, tz=timezone.utc)
+                
+            return OpenInterest(
+                symbol=data["symbol"],
+                timestamp=timestamp,
+                sum_open_interest=Decimal(str(data["sumOpenInterest"])),
+                sum_open_interest_value=Decimal(str(data["sumOpenInterestValue"])),
+                open_interest=Decimal(str(data["sumOpenInterest"])),  # Use sum as primary
+                open_interest_value=Decimal(str(data["sumOpenInterestValue"])),  # Use sum value as primary
+            )
+        else:
+            # Array format (historical data points)
+            return OpenInterest(
+                symbol=data[0],  # symbol
+                timestamp=datetime.fromtimestamp(data[1] / 1000, tz=timezone.utc),  # timestamp
+                sum_open_interest=Decimal(str(data[2])),  # sumOpenInterest
+                sum_open_interest_value=Decimal(str(data[3])),  # sumOpenInterestValue
+                open_interest=Decimal(str(data[2])),  # Use sum as primary
+                open_interest_value=Decimal(str(data[3])),  # Use sum value as primary
+            )
+
 
     async def close(self) -> None:
         """Close the HTTP client."""
