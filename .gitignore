@@ -1,3 +1,13 @@
 .venv/
 
 **/__pycache__/
+
+# Dev web server to run demo
+app.py
+templates/
+
+# demo scripts and requirements
+demo*
+
+# logs if any
+**/*.log
