@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
 from ...models import Candle, Symbol
 from ...utils import HTTPClient, retry_async
-from .constants import BASE_URLS, INTERVAL_MAP
+from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP
 from .websocket_mixin import BinanceWebSocketMixin
 
 logger = logging.getLogger(__name__)
@@ -28,12 +28,15 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     """
 
     # REST and interval configuration (WebSocket config lives in constants + mixin)
+    # Back-compat: expose INTERVAL_MAP at class level for tests/consumers
+    INTERVAL_MAP = BINANCE_INTERVAL_MAP
 
     def __init__(
         self,
         market_type: MarketType = MarketType.SPOT,
         api_key: Optional[str] = None, 
-        api_secret: Optional[str] = None
+        api_secret: Optional[str] = None,
+        symbols_cache_ttl: float = 300.0,
     ) -> None:
         super().__init__(name=f"binance-{market_type.value}")
         self.market_type = market_type
@@ -41,6 +44,10 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self._http = HTTPClient(base_url=self._base_url)
         self._api_key = api_key
         self._api_secret = api_secret
+        # Symbols cache (full list); filter by quote_asset on read
+        self._symbols_cache: Optional[List[Symbol]] = None
+        self._symbols_cache_ts: Optional[float] = None
+        self._symbols_cache_ttl = symbols_cache_ttl
 
     def set_credentials(self, api_key: str, api_secret: str) -> None:
         """Set API credentials for authenticated endpoints."""
@@ -66,7 +73,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
 
     def validate_interval(self, interval: TimeInterval) -> None:
         """Validate interval is supported by Binance."""
-        if interval not in INTERVAL_MAP:
+        if interval not in self.INTERVAL_MAP:
             raise InvalidIntervalError(f"Interval {interval} not supported by Binance")
 
     @retry_async(max_retries=3, base_delay=1.0)
@@ -84,7 +91,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
 
         params: Dict = {
             "symbol": symbol.upper(),
-            "interval": INTERVAL_MAP[interval],
+            "interval": self.INTERVAL_MAP[interval],
         }
 
         if start_time:
@@ -118,22 +125,31 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         )
 
     @retry_async(max_retries=3, base_delay=1.0)
-    async def get_symbols(self, quote_asset: Optional[str] = None) -> List[Symbol]:
+    async def get_symbols(self, quote_asset: Optional[str] = None, use_cache: bool = True) -> List[Symbol]:
         """Fetch all trading symbols from Binance.
         
         Args:
             quote_asset: Optional filter by quote asset (e.g., "USDT", "BTC")
+            use_cache: When True (default), use in-memory cache within TTL
         
         Returns:
             List of Symbol objects. For FUTURES market, returns PERPETUAL contracts only.
         """
+        # Serve from cache if fresh
+        if use_cache and self._symbols_cache is not None and self._symbols_cache_ts is not None:
+            import time
+            if (time.time() - self._symbols_cache_ts) < self._symbols_cache_ttl:
+                if quote_asset:
+                    return [s for s in self._symbols_cache if s.quote_asset == quote_asset]
+                return list(self._symbols_cache)
+
         endpoint = self._get_exchange_info_endpoint()
         try:
             data = await self._http.get(endpoint)
         except Exception as e:
             raise Exception(f"Failed to fetch symbols from Binance: {e}")
 
-        symbols = []
+        symbols: List[Symbol] = []
         for symbol_data in data.get("symbols", []):
             # Skip non-trading symbols
             if symbol_data.get("status") != "TRADING":
@@ -148,13 +164,55 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 if symbol_data.get("contractType") != "PERPETUAL":
                     continue
             
+            # Extract trading filters for metadata
+            tick_size = None
+            step_size = None
+            min_notional = None
+
+            for f in symbol_data.get("filters", []):
+                ftype = f.get("filterType") or f.get("filterType".lower())
+                if ftype == "PRICE_FILTER":
+                    # Futures/Spot both use tickSize
+                    val = f.get("tickSize")
+                    if val is not None:
+                        try:
+                            tick_size = Decimal(str(val))
+                        except Exception:
+                            pass
+                elif ftype == "LOT_SIZE":
+                    val = f.get("stepSize")
+                    if val is not None:
+                        try:
+                            step_size = Decimal(str(val))
+                        except Exception:
+                            pass
+                elif ftype == "MIN_NOTIONAL":
+                    val = f.get("minNotional")
+                    if val is not None:
+                        try:
+                            min_notional = Decimal(str(val))
+                        except Exception:
+                            pass
+
             symbols.append(
                 Symbol(
                     symbol=symbol_data["symbol"],
                     base_asset=symbol_data["baseAsset"],
                     quote_asset=symbol_data["quoteAsset"],
+                    tick_size=tick_size,
+                    step_size=step_size,
+                    min_notional=min_notional,
+                    contract_type=symbol_data.get("contractType"),
+                    delivery_date=symbol_data.get("deliveryDate"),
                 )
             )
+        # Update cache
+        self._symbols_cache = symbols
+        import time
+        self._symbols_cache_ts = time.time()
+
+        if quote_asset:
+            return [s for s in symbols if s.quote_asset == quote_asset]
         return symbols
 
     async def close(self) -> None:
