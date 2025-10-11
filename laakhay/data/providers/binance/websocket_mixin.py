@@ -17,7 +17,7 @@ import time
 import websockets
 
 from ...core import TimeInterval, MarketType
-from ...models import Candle, Liquidation, OpenInterest
+from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from .constants import WS_SINGLE_URLS, WS_COMBINED_URLS, INTERVAL_MAP, OI_PERIOD_MAP
 
 logger = logging.getLogger(__name__)
@@ -452,5 +452,340 @@ class BinanceWebSocketMixin:
                 reconnect_delay = self._next_delay(reconnect_delay)
             except Exception as e:
                 logger.error(f"Liquidations WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_funding_rate(
+        self,
+        symbols: List[str],
+        update_speed: str = "1s",
+    ) -> AsyncIterator[FundingRate]:
+        """Yield predicted/next funding rate updates for multiple symbols using markPrice stream.
+        
+        The @markPrice stream includes the PREDICTED funding rate in the 'r' field.
+        This is the rate that WILL BE applied at the next funding time (00:00, 08:00, 16:00 UTC).
+        
+        IMPORTANT: This rate changes continuously in real-time as market conditions change.
+        It represents the time-weighted average of the Premium Index and shows where
+        funding is trending. The actual applied rate is fixed when funding settles.
+        
+        Args:
+            symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
+            update_speed: Update frequency ("1s" or "3s")
+            
+        Yields:
+            FundingRate: Predicted funding rate updates (changes every second)
+            
+        Note:
+            - This is the PREDICTED/NEXT funding rate (changes continuously)
+            - Actual funding is APPLIED every 8 hours (00:00, 08:00, 16:00 UTC)
+            - Use this to monitor funding trends and anticipate costs
+            - For historical APPLIED rates, use get_funding_rate() REST method
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Funding rate streaming is only available for Futures market")
+
+        if update_speed not in ["1s", "3s"]:
+            raise ValueError("update_speed must be '1s' or '3s'")
+
+        ws_base = WS_COMBINED_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        # Create stream names for mark price (includes funding rate)
+        stream_names = [f"{s.lower()}@markPrice@{update_speed}" for s in symbols]
+        url = f"{ws_base}?streams={'/'.join(stream_names)}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            data = json.loads(message)
+                            if "data" not in data:
+                                continue
+
+                            mark_data = data["data"]
+                            
+                            # Verify this is a mark price update with funding rate
+                            if not mark_data or "r" not in mark_data or "T" not in mark_data:
+                                continue
+
+                            # Parse funding rate data
+                            funding_rate = FundingRate(
+                                symbol=mark_data["s"],
+                                funding_time=datetime.fromtimestamp(mark_data["T"] / 1000, tz=timezone.utc),
+                                funding_rate=Decimal(str(mark_data["r"])),
+                                mark_price=Decimal(str(mark_data["p"])) if "p" in mark_data else None,
+                            )
+                            
+                            yield funding_rate
+                            
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_funding_rate parse error: {e}")
+                            
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                # Graceful reconnect with backoff
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Funding rate WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_mark_price(
+        self,
+        symbols: List[str],
+        update_speed: str = "1s",
+    ) -> AsyncIterator[MarkPrice]:
+        """Yield mark price and index price updates for multiple symbols.
+        
+        The @markPrice stream provides comprehensive pricing data including:
+        - Mark Price: Used for liquidations and unrealized PnL
+        - Index Price: Weighted average spot price from multiple exchanges
+        - Funding Rate: Current predicted funding rate
+        - Next Funding Time: When funding will be applied
+        
+        This stream is essential for:
+        - Monitoring mark/index price divergence (dislocation alerts)
+        - Detecting venue anomalies (index vs exchange spot)
+        - Preventing unfair liquidations
+        - Fair PnL calculations
+        
+        Args:
+            symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
+            update_speed: Update frequency ("1s" or "3s")
+            
+        Yields:
+            MarkPrice: Mark price updates with index price and funding data
+            
+        Example:
+            >>> async for mp in provider.stream_mark_price(["BTCUSDT"]):
+            >>>     if mp.is_high_spread:
+            >>>         print(f"Alert: Mark/Index spread {mp.mark_index_spread_bps} bps")
+            
+        Note:
+            - Updates every 1 second (or 3 seconds)
+            - Only available for Futures market
+            - Contains both mark and index prices for comparison
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Mark price streaming is only available for Futures market")
+
+        if update_speed not in ["1s", "3s"]:
+            raise ValueError("update_speed must be '1s' or '3s'")
+
+        ws_base = WS_COMBINED_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        # Create stream names for mark price
+        stream_names = [f"{s.lower()}@markPrice@{update_speed}" for s in symbols]
+        url = f"{ws_base}?streams={'/'.join(stream_names)}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            data = json.loads(message)
+                            if "data" not in data:
+                                continue
+
+                            mark_data = data["data"]
+                            
+                            # Verify this is a mark price update
+                            if not mark_data or mark_data.get("e") != "markPriceUpdate":
+                                continue
+
+                            # Parse mark price data
+                            # Fields: s=symbol, p=mark, i=index, P=settle, r=funding, T=next funding time, E=event time
+                            mark_price = MarkPrice(
+                                symbol=mark_data["s"],
+                                mark_price=Decimal(str(mark_data["p"])),
+                                index_price=Decimal(str(mark_data["i"])) if "i" in mark_data else None,
+                                estimated_settle_price=Decimal(str(mark_data["P"])) if "P" in mark_data else None,
+                                last_funding_rate=Decimal(str(mark_data["r"])) if "r" in mark_data else None,
+                                next_funding_time=datetime.fromtimestamp(
+                                    mark_data["T"] / 1000, tz=timezone.utc
+                                ) if "T" in mark_data else None,
+                                timestamp=datetime.fromtimestamp(mark_data["E"] / 1000, tz=timezone.utc),
+                            )
+                            
+                            yield mark_price
+                            
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_mark_price parse error: {e}")
+                            
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                # Graceful reconnect with backoff
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Mark price WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_order_book(
+        self,
+        symbol: str,
+        update_speed: str = "100ms",
+    ) -> AsyncIterator[OrderBook]:
+        """Yield order book updates for a symbol using depth stream.
+        
+        The @depth stream provides real-time order book updates (partial book).
+        For full order book maintenance, use get_order_book() REST then apply deltas.
+        
+        Args:
+            symbol: Symbol to monitor (e.g., "BTCUSDT")
+            update_speed: Update frequency ("100ms" or "1000ms")
+            
+        Yields:
+            OrderBook: Order book snapshots/updates
+            
+        Note:
+            - This streams UPDATES (deltas), not full snapshots
+            - Use get_order_book() first for initial snapshot
+            - Updates every 100ms or 1000ms
+            - Available for both SPOT and FUTURES
+        """
+        if update_speed not in ["100ms", "1000ms"]:
+            raise ValueError("update_speed must be '100ms' or '1000ms'")
+
+        ws_base = WS_SINGLE_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        # Depth stream URL
+        stream_suffix = f"@depth@{update_speed}"
+        url = f"{ws_base}/{symbol.lower()}{stream_suffix}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            data = json.loads(message)
+                            
+                            # Verify this is a depth update
+                            if data.get("e") != "depthUpdate":
+                                continue
+
+                            # Parse bids and asks
+                            bids = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("b", [])]
+                            asks = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("a", [])]
+                            
+                            # Skip empty updates
+                            if not bids and not asks:
+                                continue
+                            
+                            # Create OrderBook with updates
+                            # Note: This is a delta, not full book
+                            order_book = OrderBook(
+                                symbol=data["s"],
+                                last_update_id=data["u"],
+                                bids=bids if bids else [(Decimal("0"), Decimal("0"))],  # At least one level
+                                asks=asks if asks else [(Decimal("0"), Decimal("0"))],
+                                timestamp=datetime.fromtimestamp(data["E"] / 1000, tz=timezone.utc),
+                            )
+                            
+                            yield order_book
+                            
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_order_book parse error: {e}")
+                            
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Order book WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_trades(
+        self,
+        symbols: List[str],
+    ) -> AsyncIterator[Trade]:
+        """Yield real-time trades for multiple symbols.
+        
+        The @trade stream provides individual trade executions as they occur.
+        
+        Args:
+            symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
+            
+        Yields:
+            Trade: Individual trade executions
+            
+        Note:
+            - Streams EVERY trade execution in real-time
+            - High frequency for popular pairs
+            - Available for both SPOT and FUTURES
+        """
+        ws_base = WS_COMBINED_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        # Create stream names for trades
+        stream_names = [f"{s.lower()}@trade" for s in symbols]
+        url = f"{ws_base}?streams={'/'.join(stream_names)}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+
+        while True:
+            try:
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:
+                        try:
+                            data = json.loads(message)
+                            if "data" not in data:
+                                continue
+
+                            trade_data = data["data"]
+                            
+                            # Verify this is a trade event
+                            if not trade_data or trade_data.get("e") != "trade":
+                                continue
+
+                            # Parse trade
+                            # Fields: s=symbol, t=trade id, p=price, q=quantity, T=time, m=is buyer maker
+                            trade = Trade(
+                                symbol=trade_data["s"],
+                                trade_id=trade_data["t"],
+                                price=Decimal(str(trade_data["p"])),
+                                quantity=Decimal(str(trade_data["q"])),
+                                quote_quantity=Decimal(str(trade_data.get("q", "0"))) * Decimal(str(trade_data["p"])),
+                                timestamp=datetime.fromtimestamp(trade_data["T"] / 1000, tz=timezone.utc),
+                                is_buyer_maker=trade_data["m"],
+                                is_best_match=trade_data.get("M"),
+                            )
+                            
+                            yield trade
+                            
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_trades parse error: {e}")
+                            
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Trades WS error: {e}")
                 await asyncio.sleep(reconnect_delay)
                 reconnect_delay = self._next_delay(reconnect_delay)

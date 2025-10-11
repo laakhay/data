@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import time
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
-from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, Symbol
+from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Symbol, Trade
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP, OI_PERIOD_MAP
 from .websocket_mixin import BinanceWebSocketMixin
@@ -51,10 +51,10 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self._symbols_cache: Optional[List[Symbol]] = None
         self._symbols_cache_ts: Optional[float] = None
         self._symbols_cache_ttl = symbols_cache_ttl
-    # Products cache (Binance bapi)
-    self._products_cache: Optional[List[Dict[str, Any]]] = None
-    self._products_cache_ts: Optional[float] = None
-    self._products_cache_ttl = products_cache_ttl
+        # Products cache (Binance bapi)
+        self._products_cache: Optional[List[Dict[str, Any]]] = None
+        self._products_cache_ts: Optional[float] = None
+        self._products_cache_ttl = products_cache_ttl
 
     def set_credentials(self, api_key: str, api_secret: str) -> None:
         """Set API credentials for authenticated endpoints."""
@@ -400,6 +400,127 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             funding_time=datetime.fromtimestamp(data["fundingTime"] / 1000, tz=timezone.utc),
             funding_rate=Decimal(str(data["fundingRate"])),
             mark_price=Decimal(str(data["markPrice"])) if "markPrice" in data else None,
+        )
+
+    @retry_async(max_retries=3, base_delay=1.0)
+    async def get_order_book(
+        self,
+        symbol: str,
+        limit: int = 100,
+    ) -> OrderBook:
+        """Fetch current order book (market depth) from Binance.
+        
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSDT")
+            limit: Depth limit (5, 10, 20, 50, 100, 500, 1000, 5000)
+            
+        Returns:
+            OrderBook object with bids and asks
+            
+        Raises:
+            InvalidSymbolError: If symbol doesn't exist
+            ProviderError: If API request fails
+        """
+        symbol = symbol.upper()
+        
+        # Validate limit
+        valid_limits = [5, 10, 20, 50, 100, 500, 1000, 5000]
+        if limit not in valid_limits:
+            # Round to nearest valid limit
+            limit = min(valid_limits, key=lambda x: abs(x - limit))
+        
+        # Endpoint differs by market type
+        if self.market_type == MarketType.SPOT:
+            endpoint = "/api/v3/depth"
+        else:  # FUTURES
+            endpoint = "/fapi/v1/depth"
+        
+        params = {
+            "symbol": symbol,
+            "limit": limit,
+        }
+        
+        try:
+            data = await self._http.get(endpoint, params=params)
+        except Exception as e:
+            if "Invalid symbol" in str(e):
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
+            raise
+        
+        # Parse order book
+        return self._parse_order_book(data, symbol)
+
+    def _parse_order_book(self, data: Dict, symbol: str) -> OrderBook:
+        """Parse order book response."""
+        from datetime import timezone
+        
+        # Parse bids and asks
+        bids = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("bids", [])]
+        asks = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("asks", [])]
+        
+        return OrderBook(
+            symbol=symbol,
+            last_update_id=data.get("lastUpdateId", 0),
+            bids=bids,
+            asks=asks,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+    @retry_async(max_retries=3, base_delay=1.0)
+    async def get_recent_trades(
+        self,
+        symbol: str,
+        limit: int = 500,
+    ) -> List[Trade]:
+        """Fetch recent trades from Binance.
+        
+        Args:
+            symbol: Trading symbol (e.g., "BTCUSDT")
+            limit: Number of trades to fetch (max 1000)
+            
+        Returns:
+            List of Trade objects
+            
+        Raises:
+            InvalidSymbolError: If symbol doesn't exist
+            ProviderError: If API request fails
+        """
+        symbol = symbol.upper()
+        
+        # Endpoint differs by market type
+        if self.market_type == MarketType.SPOT:
+            endpoint = "/api/v3/trades"
+        else:  # FUTURES
+            endpoint = "/fapi/v1/trades"
+        
+        params = {
+            "symbol": symbol,
+            "limit": min(limit, 1000),  # Binance max limit
+        }
+        
+        try:
+            data = await self._http.get(endpoint, params=params)
+        except Exception as e:
+            if "Invalid symbol" in str(e):
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
+            raise
+        
+        # Parse trades
+        return [self._parse_trade(trade_data, symbol) for trade_data in data]
+
+    def _parse_trade(self, data: Dict, symbol: str) -> Trade:
+        """Parse trade response."""
+        from datetime import timezone
+        
+        return Trade(
+            symbol=symbol,
+            trade_id=data["id"],
+            price=Decimal(str(data["price"])),
+            quantity=Decimal(str(data["qty"])),
+            quote_quantity=Decimal(str(data["quoteQty"])) if "quoteQty" in data else None,
+            timestamp=datetime.fromtimestamp(data["time"] / 1000, tz=timezone.utc),
+            is_buyer_maker=data["isBuyerMaker"],
+            is_best_match=data.get("isBestMatch"),
         )
 
     async def close(self) -> None:
