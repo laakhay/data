@@ -1,278 +1,158 @@
 # Laakhay Data
 
-**Minimal, professional Python library for fetching market data.**
+**Professional Python library for cryptocurrency market data.**
 
-A thin, explicit wrapper around exchange APIs with type-safe models and async support. Built for microservices that need clean access to OHLCV candles and trading pairs.
+Async-first, type-safe wrapper for exchange APIs. Supports candles, order books, trades, liquidations, open interest, funding rates, and more.
 
-## Features
-
-- [X] **Async/await** - Non-blocking I/O with `aiohttp`
-- [X] **Type-safe** - Pydantic models with validation
-- [X] **Explicit** - No magic, clear interfaces
-- [X] **Tested** - 33 tests (30 unit + 3 integration)
-- [X] **Extensible** - Easy to add new exchanges
-
-## Installation
+## Install
 
 ```bash
-pip install laakhay-data
+pip install -e .
 ```
 
 ## Quick Start
 
-### Fetch OHLCV Candles
-
 ```python
 import asyncio
-from laakhay.data.providers import BinanceProvider
-from laakhay.data.core import TimeInterval
+from laakhay.data.providers.binance import BinanceProvider
+from laakhay.data.core import TimeInterval, MarketType
 
 async def main():
-    async with BinanceProvider() as provider:
-        # Fetch last 100 1-minute candles for BTCUSDT
-        candles = await provider.get_candles(
-            symbol="BTCUSDT",
-            interval=TimeInterval.M1,
-            limit=100
-        )
-      
-        for candle in candles:
-            print(f"{candle.timestamp}: O={candle.open} H={candle.high} L={candle.low} C={candle.close}")
+    # Spot market
+    async with BinanceProvider(market_type=MarketType.SPOT) as provider:
+        # Candles
+        candles = await provider.get_candles("BTCUSDT", TimeInterval.M1, limit=100)
+        
+        # Order book
+        ob = await provider.get_order_book("BTCUSDT", limit=20)
+        print(f"Spread: {ob.spread_bps:.2f} bps, Pressure: {ob.market_pressure}")
+        
+        # Recent trades
+        trades = await provider.get_recent_trades("BTCUSDT", limit=100)
+        print(f"Buy volume: {sum(t.value for t in trades if t.is_buy)}")
 
 asyncio.run(main())
 ```
 
-### Fetch Trading Symbols
+## Supported Data Types
 
+| Type | REST | WebSocket | Markets |
+|------|------|-----------|---------|
+| Candles | ✅ | ✅ | Spot, Futures |
+| Symbols | ✅ | - | Spot, Futures |
+| Order Book | ✅ | ✅ | Spot, Futures |
+| Trades | ✅ | ✅ | Spot, Futures |
+| Liquidations | - | ✅ | Futures |
+| Open Interest | ✅ | ✅ | Futures |
+| Funding Rates | ✅ | ✅ | Futures |
+| Mark Price | - | ✅ | Futures |
+
+## Key Features
+
+### Order Book Analysis
 ```python
-async def main():
-    async with BinanceProvider() as provider:
-        symbols = await provider.get_symbols()
-      
-        # Filter for USDT pairs
-        usdt_pairs = [s for s in symbols if s.quote_asset == "USDT"]
-        print(f"Found {len(usdt_pairs)} USDT trading pairs")
-
-asyncio.run(main())
+ob = await provider.get_order_book("BTCUSDT")
+print(ob.spread_bps)          # Spread in basis points
+print(ob.market_pressure)     # bullish/bearish/neutral
+print(ob.imbalance)           # -1.0 to 1.0
+print(ob.is_tight_spread)     # < 10 bps
 ```
 
-### Time Range Queries
-
+### Trade Flow
 ```python
-from datetime import datetime, timedelta
-
-async def main():
-    async with BinanceProvider() as provider:
-        end_time = datetime.now()
-        start_time = end_time - timedelta(hours=24)
-      
-        candles = await provider.get_candles(
-            symbol="ETHUSDT",
-            interval=TimeInterval.H1,
-            start_time=start_time,
-            end_time=end_time
-        )
-      
-        print(f"Fetched {len(candles)} hourly candles for last 24h")
-
-asyncio.run(main())
+trades = await provider.get_recent_trades("BTCUSDT")
+for trade in trades:
+    print(f"{trade.side}: ${trade.value:.2f} ({trade.size_category})")
 ```
 
-## API Reference
-
-### BinanceProvider
-
+### Liquidations (Futures)
 ```python
-from laakhay.data.providers import BinanceProvider
-
-# Initialize (no credentials needed for public data)
-provider = BinanceProvider()
-
-# With credentials (for private endpoints - future)
-provider = BinanceProvider(
-    api_key="your_api_key",
-    api_secret="your_api_secret"
-)
+async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
+    async for liq in provider.stream_liquidations():
+        if liq.is_large:
+            print(f"{liq.symbol}: ${liq.value_usdt:.2f} {liq.side}")
 ```
 
-#### Methods
-
-##### `get_candles(symbol, interval, start_time=None, end_time=None, limit=None)`
-
-Fetch OHLCV candlestick data.
-
-**Parameters:**
-
-- `symbol` (str): Trading pair (e.g., "BTCUSDT")
-- `interval` (TimeInterval): Candle interval (M1, M5, H1, D1, etc.)
-- `start_time` (datetime, optional): Start timestamp
-- `end_time` (datetime, optional): End timestamp
-- `limit` (int, optional): Max candles to return (default/max: 1000)
-
-**Returns:** `List[Candle]`
-
-##### `get_symbols()`
-
-Fetch all available trading pairs.
-
-**Returns:** `List[Symbol]`
-
-### TimeInterval
-
-Available intervals:
-
+### Open Interest (Futures)
 ```python
-from laakhay.data.core import TimeInterval
-
-# Minutes
-TimeInterval.M1   # 1 minute
-TimeInterval.M3   # 3 minutes
-TimeInterval.M5   # 5 minutes
-TimeInterval.M15  # 15 minutes
-TimeInterval.M30  # 30 minutes
-
-# Hours
-TimeInterval.H1   # 1 hour
-TimeInterval.H2   # 2 hours
-TimeInterval.H4   # 4 hours
-TimeInterval.H6   # 6 hours
-TimeInterval.H8   # 8 hours
-TimeInterval.H12  # 12 hours
-
-# Days/Weeks/Months
-TimeInterval.D1   # 1 day
-TimeInterval.D3   # 3 days
-TimeInterval.W1   # 1 week
-TimeInterval.MO1  # 1 month
+oi_list = await provider.get_open_interest("BTCUSDT", historical=True)
+async for oi in provider.stream_open_interest(["BTCUSDT"], period="5m"):
+    print(f"OI: {oi.open_interest}")
 ```
 
-### Models
-
-#### Candle
-
+### Funding Rates (Futures)
 ```python
-from laakhay.data.models import Candle
+# Historical (applied rates)
+rates = await provider.get_funding_rate("BTCUSDT", limit=10)
 
-candle.symbol      # str: "BTCUSDT"
-candle.timestamp   # datetime: UTC timestamp
-candle.open        # Decimal: Opening price
-candle.high        # Decimal: Highest price
-candle.low         # Decimal: Lowest price
-candle.close       # Decimal: Closing price
-candle.volume      # Decimal: Trading volume
+# Real-time (predicted rates)
+async for rate in provider.stream_funding_rate(["BTCUSDT"]):
+    print(f"Funding: {rate.funding_rate_percentage:.4f}%")
 ```
 
-#### Symbol
-
-```python
-from laakhay.data.models import Symbol
-
-symbol.symbol       # str: "BTCUSDT"
-symbol.base_asset   # str: "BTC"
-symbol.quote_asset  # str: "USDT"
-```
-
-## Error Handling
-
-```python
-from laakhay.data.core import (
-    DataError,              # Base exception
-    ProviderError,          # API errors
-    RateLimitError,         # Rate limit exceeded
-    InvalidSymbolError,     # Symbol not found
-    InvalidIntervalError,   # Interval not supported
-    ValidationError,        # Data validation failed
-)
-
-async def main():
-    provider = BinanceProvider()
-  
-    try:
-        candles = await provider.get_candles("INVALID", TimeInterval.M1)
-    except InvalidSymbolError as e:
-        print(f"Symbol error: {e}")
-    except RateLimitError as e:
-        print(f"Rate limited, retry after {e.retry_after}s")
-    except ProviderError as e:
-        print(f"Provider error: {e} (status: {e.status_code})")
-    finally:
-        await provider.close()
-```
 
 ## Architecture
 
 ```
 laakhay/data/
 ├── core/           # Base classes, enums, exceptions
-├── models/         # Pydantic data models (Candle, Symbol)
-├── providers/      # Exchange implementations (Binance, ...)
-└── utils/          # HTTP client, retry logic
+├── models/         # Pydantic models (Candle, OrderBook, Trade, etc.)
+├── providers/      # Exchange implementations
+│   └── binance/    # Binance provider + WebSocket mixin
+├── clients/        # High-level clients
+└── utils/          # HTTP, retry, WebSocket utilities
 ```
 
-**Design principles:**
+**Principles:**
+- Async-first (aiohttp, asyncio)
+- Type-safe (Pydantic models)
+- Explicit APIs
+- Comprehensive testing
 
-- **Explicit over implicit** - Direct imports, clear interfaces
-- **Async-first** - Non-blocking I/O for performance
-- **Type-safe** - Pydantic validation, strict typing
-- **Minimal** - No unnecessary abstractions
+## Models
 
-## Development
+All models are immutable Pydantic models with validation:
 
-### Setup
-
-```bash
-git clone https://github.com/laakhay/data.git
-cd laakhay-data
-pip install -e ".[dev]"
+```python
+from laakhay.data.models import (
+    Candle,        # OHLCV data
+    Symbol,        # Trading pairs
+    OrderBook,     # Market depth (25+ properties)
+    Trade,         # Individual trades
+    Liquidation,   # Forced closures
+    OpenInterest,  # Outstanding contracts
+    FundingRate,   # Perpetual funding
+    MarkPrice,     # Mark/index prices
+)
 ```
 
-### Run Tests
+## Exception Handling
 
-```bash
-# Unit tests
-pytest tests/unit/ -v
+```python
+from laakhay.data.core import (
+    LaakhayDataError,      # Base exception
+    ProviderError,         # API errors
+    InvalidSymbolError,    # Symbol not found
+    InvalidIntervalError,  # Invalid interval
+)
 
-# Integration tests (requires internet)
-pytest tests/integration/ -v
-
-# All tests
-pytest tests/ -v
-
-# With coverage
-pytest tests/ --cov=laakhay.data --cov-report=term-missing
+try:
+    candles = await provider.get_candles("INVALID", TimeInterval.M1)
+except InvalidSymbolError:
+    print("Symbol not found")
+except ProviderError as e:
+    print(f"API error: {e}")
 ```
-
-### Code Quality
-
-```bash
-# Format
-black laakhay/ tests/
-
-# Lint
-ruff check laakhay/ tests/
-
-# Type check
-mypy laakhay/
-```
-
-## Roadmap
-
-- [X] Binance provider (spot market)
-- [ ] Additional exchanges (Coinbase, Kraken, etc.)
-- [ ] WebSocket streaming support
-- [ ] Historical data export
-- [ ] Advanced retry strategies
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE)
 
-## Support
+## Contact
 
-- **Issues**: [GitHub Issues](https://github.com/laakhay/data/issues)
-- **Email**: laakhay.corp@gmail.com
-- **Website**: [laakhay.com](https://laakhay.com)
+- Issues: [GitHub Issues](https://github.com/laakhay/data/issues)
+- Email: laakhay.corp@gmail.com
 
 ---
 
-Built with ♥︎ by [Laakhay Corporation](https://laakhay.com)
+Built by [Laakhay Corporation](https://laakhay.com)
