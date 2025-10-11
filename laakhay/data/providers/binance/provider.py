@@ -1,5 +1,6 @@
 """Binance exchange data provider."""
 
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional
@@ -7,9 +8,13 @@ from typing import Dict, List, Optional
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
 from ...models import Candle, Symbol
 from ...utils import HTTPClient, retry_async
+from .constants import BASE_URLS, INTERVAL_MAP
+from .websocket_mixin import BinanceWebSocketMixin
+
+logger = logging.getLogger(__name__)
 
 
-class BinanceProvider(BaseProvider):
+class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     """Binance exchange data provider.
     
     Supports both Spot and Futures markets via market_type parameter.
@@ -19,45 +24,10 @@ class BinanceProvider(BaseProvider):
         market_type: Market type (SPOT or FUTURES)
         api_key: Optional API key for authenticated endpoints
         api_secret: Optional API secret for authenticated endpoints
-    
-    Examples:
-        >>> # Spot market (default)
-        >>> provider = BinanceProvider()
-        
-        >>> # Futures market
-        >>> provider = BinanceProvider(market_type=MarketType.FUTURES)
+
     """
 
-    # Market-specific base URLs
-    BASE_URLS = {
-        MarketType.SPOT: "https://api.binance.com",
-        MarketType.FUTURES: "https://fapi.binance.com",
-    }
-    
-    # Market-specific WebSocket URLs (for future use)
-    WS_BASE_URLS = {
-        MarketType.SPOT: "wss://stream.binance.com:9443/ws",
-        MarketType.FUTURES: "wss://fstream.binance.com/ws",
-    }
-    
-    # Binance interval mapping
-    INTERVAL_MAP = {
-        TimeInterval.M1: "1m",
-        TimeInterval.M3: "3m",
-        TimeInterval.M5: "5m",
-        TimeInterval.M15: "15m",
-        TimeInterval.M30: "30m",
-        TimeInterval.H1: "1h",
-        TimeInterval.H2: "2h",
-        TimeInterval.H4: "4h",
-        TimeInterval.H6: "6h",
-        TimeInterval.H8: "8h",
-        TimeInterval.H12: "12h",
-        TimeInterval.D1: "1d",
-        TimeInterval.D3: "3d",
-        TimeInterval.W1: "1w",
-        TimeInterval.MO1: "1M",
-    }
+    # REST and interval configuration (WebSocket config lives in constants + mixin)
 
     def __init__(
         self,
@@ -67,8 +37,7 @@ class BinanceProvider(BaseProvider):
     ) -> None:
         super().__init__(name=f"binance-{market_type.value}")
         self.market_type = market_type
-        self._base_url = self.BASE_URLS[market_type]
-        self._ws_base_url = self.WS_BASE_URLS[market_type]
+        self._base_url = BASE_URLS[market_type]
         self._http = HTTPClient(base_url=self._base_url)
         self._api_key = api_key
         self._api_secret = api_secret
@@ -97,7 +66,7 @@ class BinanceProvider(BaseProvider):
 
     def validate_interval(self, interval: TimeInterval) -> None:
         """Validate interval is supported by Binance."""
-        if interval not in self.INTERVAL_MAP:
+        if interval not in INTERVAL_MAP:
             raise InvalidIntervalError(f"Interval {interval} not supported by Binance")
 
     @retry_async(max_retries=3, base_delay=1.0)
@@ -115,7 +84,7 @@ class BinanceProvider(BaseProvider):
 
         params: Dict = {
             "symbol": symbol.upper(),
-            "interval": self.INTERVAL_MAP[interval],
+            "interval": INTERVAL_MAP[interval],
         }
 
         if start_time:
@@ -189,5 +158,5 @@ class BinanceProvider(BaseProvider):
         return symbols
 
     async def close(self) -> None:
-        """Close HTTP client session."""
+        """Close the HTTP client."""
         await self._http.close()

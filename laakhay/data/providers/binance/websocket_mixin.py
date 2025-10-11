@@ -1,0 +1,305 @@
+"""WebSocket streaming mixin for Binance provider.
+
+Separation of concerns: robust connection management, backoff with jitter,
+graceful cancellation, and optional throttling for high-frequency updates.
+"""
+
+import asyncio
+import json
+import logging
+from datetime import datetime
+from decimal import Decimal
+from dataclasses import dataclass
+from typing import AsyncIterator, Dict, List, Optional
+import random
+import time
+
+import websockets
+
+from ...core import TimeInterval, MarketType
+from ...models import Candle
+from .constants import WS_SINGLE_URLS, WS_COMBINED_URLS, INTERVAL_MAP
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class WebSocketConfig:
+    ping_interval: int = 30
+    ping_timeout: int = 10
+    base_reconnect_delay: float = 1.0
+    max_reconnect_delay: float = 30.0
+    jitter: float = 0.2  # +/-20% jitter to avoid thundering herds
+    max_size: Optional[int] = None  # bytes; None = websockets default
+    max_queue: Optional[int] = 1024  # number of messages queued; None = unlimited
+    close_timeout: int = 10
+
+
+class BinanceWebSocketMixin:
+    market_type: MarketType
+
+    # Allow providers to override ws_config; fall back to defaults
+    @property
+    def _ws_conf(self) -> WebSocketConfig:
+        """Return active WebSocketConfig (provider override or defaults)."""
+        return getattr(self, "ws_config", WebSocketConfig())
+
+    def _next_delay(self, delay: float) -> float:
+        """Exponential backoff with jitter, capped to max_reconnect_delay."""
+        conf = self._ws_conf
+        delay = min(delay * 2, conf.max_reconnect_delay)
+        # Apply jitter
+        factor = random.uniform(1 - conf.jitter, 1 + conf.jitter)
+        return max(0.5, delay * factor)
+
+    def _ws_connect(self, url: str):
+        """Create a websockets.connect context with our config (timeouts, sizing)."""
+        conf = self._ws_conf
+        kwargs = {
+            "ping_interval": conf.ping_interval,
+            "ping_timeout": conf.ping_timeout,
+            "close_timeout": conf.close_timeout,
+        }
+        # Only include size/queue if not None to keep library defaults
+        if conf.max_size is not None:
+            kwargs["max_size"] = conf.max_size
+        if conf.max_queue is not None:
+            kwargs["max_queue"] = conf.max_queue
+        return websockets.connect(url, **kwargs)
+
+    async def stream_candles(
+        self,
+        symbol: str,
+        interval: TimeInterval,
+        only_closed: bool = False,
+        throttle_ms: Optional[int] = None,
+        dedupe_same_candle: bool = False,
+    ) -> AsyncIterator[Candle]:
+        """Yield Candle updates for one symbol.
+
+        - Builds single-stream URL and connects with keepalive.
+        - Reconnects with backoff on disconnect/errors.
+        - Filters only_closed if requested, and supports throttle/dedupe.
+        """
+        ws_url = WS_SINGLE_URLS.get(self.market_type)
+        if not ws_url:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+
+        stream_name = f"{symbol.lower()}@kline_{INTERVAL_MAP[interval]}"
+        full_url = f"{ws_url}/{stream_name}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+        last_emit: Optional[float] = None
+        last_close_for_candle: Optional[str] = None
+        last_candle_ts: Optional[int] = None
+
+        while True:  # reconnect loop
+            try:
+                # Connect with configured timeouts
+                async with self._ws_connect(full_url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:  # message loop
+                        try:
+                            data = json.loads(message)
+                            if "k" not in data:  # expect kline payload
+                                continue
+                            k = data["k"]
+                            if only_closed and not k.get("x", False):
+                                continue
+                            # Optional dedupe: if same candle and close unchanged, skip
+                            if dedupe_same_candle and not only_closed:
+                                open_ts = int(k["t"])  # ms
+                                close_str = str(k["c"])  # string is consistent
+                                if last_candle_ts == open_ts and last_close_for_candle == close_str:
+                                    continue
+                                last_candle_ts = open_ts
+                                last_close_for_candle = close_str
+                            if throttle_ms and not only_closed:  # soft rate limit
+                                now = time.time()
+                                if last_emit is not None and (now - last_emit) < (throttle_ms / 1000.0):
+                                    continue
+                                last_emit = now
+                            # Map kline -> Candle
+                            yield Candle(
+                                symbol=symbol.upper(),
+                                timestamp=datetime.fromtimestamp(k["t"] / 1000),
+                                open=Decimal(str(k["o"])),
+                                high=Decimal(str(k["h"])),
+                                low=Decimal(str(k["l"])),
+                                close=Decimal(str(k["c"])),
+                                volume=Decimal(str(k["v"]))
+                            )
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_candles parse error: {e}")
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                # Graceful reconnect with backoff
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"WebSocket error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_candles_multi(
+        self,
+        symbols: List[str],
+        interval: TimeInterval,
+        only_closed: bool = False,
+        throttle_ms: Optional[int] = None,
+        dedupe_same_candle: bool = False,
+    ) -> AsyncIterator[Candle]:
+        """Yield Candle updates for multiple symbols using combined streams.
+
+        - Splits symbols to respect per-connection stream limits.
+        - For single chunk, yield directly; otherwise fan-in via queue.
+        - Supports throttle/dedupe per symbol.
+        """
+        if not symbols:
+            return
+
+        # Chunking per market rules
+        max_per_connection = 200 if self.market_type == MarketType.FUTURES else 1024
+        chunks = [symbols[i:i + max_per_connection] for i in range(0, len(symbols), max_per_connection)]
+
+        if len(chunks) == 1:
+            # Apply optional throttling here for single-chunk path
+            last_emit: Dict[str, float] = {}
+            last_close: Dict[tuple, str] = {}
+            async for c in self._stream_chunk(chunks[0], interval, only_closed):
+                if throttle_ms and not only_closed:
+                    now = time.time()
+                    last = last_emit.get(c.symbol)
+                    if last is not None and (now - last) < (throttle_ms / 1000.0):
+                        continue
+                    last_emit[c.symbol] = now
+                if dedupe_same_candle and not only_closed:
+                    key = (c.symbol, int(c.timestamp.timestamp() * 1000))
+                    close_s = str(c.close)
+                    if last_close.get(key) == close_s:
+                        continue
+                    last_close[key] = close_s
+                yield c
+            return
+
+        queue: asyncio.Queue = asyncio.Queue()  # fan-in buffer from chunk tasks
+
+        async def pump(chunk_syms: List[str]):
+            """Push chunk stream candles into fan-in queue (auto-reconnect inside)."""
+            async for c in self._stream_chunk(chunk_syms, interval, only_closed):
+                await queue.put(c)
+
+        tasks = [asyncio.create_task(pump(chunk)) for chunk in chunks]
+        last_emit: Dict[str, float] = {}
+        last_close: Dict[tuple, str] = {}
+        try:
+            while True:
+                c = await queue.get()  # backpressure: waits if queue empty
+                if throttle_ms and not only_closed:
+                    now = time.time()
+                    last = last_emit.get(c.symbol)
+                    if last is not None and (now - last) < (throttle_ms / 1000.0):
+                        continue
+                    last_emit[c.symbol] = now
+                if dedupe_same_candle and not only_closed:
+                    key = (c.symbol, int(c.timestamp.timestamp() * 1000))
+                    close_s = str(c.close)
+                    if last_close.get(key) == close_s:
+                        continue
+                    last_close[key] = close_s
+                yield c
+        finally:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _stream_chunk(
+        self,
+        symbols: List[str],
+        interval: TimeInterval,
+        only_closed: bool,
+    ) -> AsyncIterator[Candle]:
+        """Yield candles for one combined-stream connection (one socket)."""
+        names = [f"{s.lower()}@kline_{INTERVAL_MAP[interval]}" for s in symbols]
+        ws_base = WS_COMBINED_URLS.get(self.market_type)
+        if not ws_base:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+        url = f"{ws_base}?streams={'/'.join(names)}"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+        while True:  # reconnect loop
+            try:
+                # Connect to combined stream
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:  # message loop
+                        try:
+                            data = json.loads(message)
+                            if "data" not in data:  # combined payload has "data"
+                                continue
+                            k = data["data"].get("k")
+                            if not k:
+                                continue
+                            if only_closed and not k.get("x", False):
+                                continue
+                            # Map kline -> Candle
+                            yield Candle(
+                                symbol=k["s"],
+                                timestamp=datetime.fromtimestamp(k["t"] / 1000),
+                                open=Decimal(str(k["o"])),
+                                high=Decimal(str(k["h"])),
+                                low=Decimal(str(k["l"])),
+                                close=Decimal(str(k["c"])),
+                                volume=Decimal(str(k["v"]))
+                            )
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"_stream_chunk parse error: {e}")
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                # Graceful reconnect with backoff
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Combined WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+
+    async def stream_trades(self, symbol: str) -> AsyncIterator[Dict]:
+        """Yield trade prints for a symbol (price, qty, ts, is_buyer_maker)."""
+        ws_url = WS_SINGLE_URLS.get(self.market_type)
+        if not ws_url:
+            raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
+        url = f"{ws_url}/{symbol.lower()}@trade"
+
+        reconnect_delay = self._ws_conf.base_reconnect_delay
+        while True:  # reconnect loop
+            try:
+                # Connect to trade stream
+                async with self._ws_connect(url) as websocket:
+                    reconnect_delay = self._ws_conf.base_reconnect_delay
+                    async for message in websocket:  # message loop
+                        try:
+                            data = json.loads(message)
+                            if "p" not in data:
+                                continue
+                            yield {
+                                "symbol": symbol.upper(),
+                                "price": Decimal(str(data["p"])),
+                                "quantity": Decimal(str(data["q"])),
+                                "timestamp": datetime.fromtimestamp(data["T"] / 1000),
+                                "is_buyer_maker": data["m"],
+                            }
+                        except Exception as e:  # noqa: BLE001
+                            logger.error(f"stream_trades parse error: {e}")
+            except asyncio.CancelledError:
+                raise
+            except websockets.exceptions.ConnectionClosed:
+                # Graceful reconnect with backoff
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Trades WS error: {e}")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = self._next_delay(reconnect_delay)

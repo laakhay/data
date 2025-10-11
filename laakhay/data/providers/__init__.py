@@ -1,5 +1,5 @@
 """Provider implementations."""
 
-from .binance import BinanceProvider
+from .binance import BinanceProvider, BinanceFuturesProvider, BinanceSpotProvider
 
-__all__ = ["BinanceProvider"]
+__all__ = ["BinanceProvider", "BinanceFuturesProvider", "BinanceSpotProvider"]
