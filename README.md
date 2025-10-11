@@ -1,16 +1,16 @@
 # Laakhay Data
 
-**Minimal, professional Python library for fetching cryptocurrency market data.**
+**Minimal, professional Python library for fetching market data.**
 
 A thin, explicit wrapper around exchange APIs with type-safe models and async support. Built for microservices that need clean access to OHLCV candles and trading pairs.
 
 ## Features
 
-- ✅ **Async/await** - Non-blocking I/O with `aiohttp`
-- ✅ **Type-safe** - Pydantic models with validation
-- ✅ **Explicit** - No magic, clear interfaces
-- ✅ **Tested** - 33 tests (30 unit + 3 integration)
-- ✅ **Extensible** - Easy to add new exchanges
+- [X] **Async/await** - Non-blocking I/O with `aiohttp`
+- [X] **Type-safe** - Pydantic models with validation
+- [X] **Explicit** - No magic, clear interfaces
+- [X] **Tested** - 33 tests (30 unit + 3 integration)
+- [X] **Extensible** - Easy to add new exchanges
 
 ## Installation
 
@@ -35,7 +35,7 @@ async def main():
             interval=TimeInterval.M1,
             limit=100
         )
-        
+      
         for candle in candles:
             print(f"{candle.timestamp}: O={candle.open} H={candle.high} L={candle.low} C={candle.close}")
 
@@ -48,7 +48,7 @@ asyncio.run(main())
 async def main():
     async with BinanceProvider() as provider:
         symbols = await provider.get_symbols()
-        
+      
         # Filter for USDT pairs
         usdt_pairs = [s for s in symbols if s.quote_asset == "USDT"]
         print(f"Found {len(usdt_pairs)} USDT trading pairs")
@@ -65,14 +65,14 @@ async def main():
     async with BinanceProvider() as provider:
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=24)
-        
+      
         candles = await provider.get_candles(
             symbol="ETHUSDT",
             interval=TimeInterval.H1,
             start_time=start_time,
             end_time=end_time
         )
-        
+      
         print(f"Fetched {len(candles)} hourly candles for last 24h")
 
 asyncio.run(main())
@@ -102,6 +102,7 @@ provider = BinanceProvider(
 Fetch OHLCV candlestick data.
 
 **Parameters:**
+
 - `symbol` (str): Trading pair (e.g., "BTCUSDT")
 - `interval` (TimeInterval): Candle interval (M1, M5, H1, D1, etc.)
 - `start_time` (datetime, optional): Start timestamp
@@ -185,7 +186,7 @@ from laakhay.data.core import (
 
 async def main():
     provider = BinanceProvider()
-    
+  
     try:
         candles = await provider.get_candles("INVALID", TimeInterval.M1)
     except InvalidSymbolError as e:
@@ -209,6 +210,7 @@ laakhay/data/
 ```
 
 **Design principles:**
+
 - **Explicit over implicit** - Direct imports, clear interfaces
 - **Async-first** - Non-blocking I/O for performance
 - **Type-safe** - Pydantic validation, strict typing
@@ -255,7 +257,7 @@ mypy laakhay/
 
 ## Roadmap
 
-- [x] Binance provider (spot market)
+- [X] Binance provider (spot market)
 - [ ] Additional exchanges (Coinbase, Kraken, etc.)
 - [ ] WebSocket streaming support
 - [ ] Historical data export

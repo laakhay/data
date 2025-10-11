@@ -2,15 +2,24 @@
 
 import pytest
 
-from laakhay.data.core import TimeInterval
+from laakhay.data.core import TimeInterval, MarketType
 from laakhay.data.providers import BinanceProvider
 
 
 def test_binance_provider_instantiation():
-    """Test BinanceProvider can be instantiated."""
+    """Test BinanceProvider can be instantiated with default market type (SPOT)."""
     provider = BinanceProvider()
-    assert provider.name == "binance"
-    assert provider.BASE_URL == "https://api.binance.com"
+    assert provider.name == "binance-spot"
+    assert provider.market_type == MarketType.SPOT
+    assert provider._base_url == "https://api.binance.com"
+
+
+def test_binance_provider_futures_market_type():
+    """Test BinanceProvider with FUTURES market type."""
+    provider = BinanceProvider(market_type=MarketType.FUTURES)
+    assert provider.name == "binance-futures"
+    assert provider.market_type == MarketType.FUTURES
+    assert provider._base_url == "https://fapi.binance.com"
 
 
 def test_binance_interval_mapping():
@@ -76,3 +85,32 @@ def test_binance_partial_credentials():
     """Test partial credentials return False."""
     provider = BinanceProvider(api_key="test_key")
     assert not provider.has_credentials
+
+
+def test_binance_futures_provider_alias():
+    """Test BinanceFuturesProvider convenience alias."""
+    from laakhay.data.providers.binance import BinanceFuturesProvider
+    
+    provider = BinanceFuturesProvider()
+    assert provider.market_type == MarketType.FUTURES
+    assert provider.name == "binance-futures"
+    assert provider._base_url == "https://fapi.binance.com"
+
+
+def test_binance_spot_provider_alias():
+    """Test BinanceSpotProvider convenience alias."""
+    from laakhay.data.providers.binance import BinanceSpotProvider
+    
+    provider = BinanceSpotProvider()
+    assert provider.market_type == MarketType.SPOT
+    assert provider.name == "binance-spot"
+    assert provider._base_url == "https://api.binance.com"
+
+
+def test_binance_futures_provider_with_credentials():
+    """Test BinanceFuturesProvider with credentials."""
+    from laakhay.data.providers.binance import BinanceFuturesProvider
+    
+    provider = BinanceFuturesProvider(api_key="test_key", api_secret="test_secret")
+    assert provider.has_credentials
+    assert provider.market_type == MarketType.FUTURES
