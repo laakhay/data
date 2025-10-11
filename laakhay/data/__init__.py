@@ -12,6 +12,7 @@ from .core import (
     ValidationError,
 )
 from .models import Candle, Symbol
+from .clients.data_feed import DataFeed
 from .providers.binance import (
     BinanceFuturesProvider,
     BinanceProvider,
@@ -32,6 +33,7 @@ __all__ = [
     # Models
     "Candle",
     "Symbol",
+    "DataFeed",
     # Exceptions
     "DataError",
     "ProviderError",
