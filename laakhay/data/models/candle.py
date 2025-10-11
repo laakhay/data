@@ -1,6 +1,6 @@
 """Candle (OHLCV) data model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -42,3 +42,24 @@ class Candle(BaseModel):
         return v
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    # --- Developer ergonomics / freshness helpers ---
+    @property
+    def open_time_ms(self) -> int:
+        return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+    def close_time_ms(self, interval_seconds: int = 60) -> int:
+        """Approximate close time in ms given interval seconds (default 60s).
+
+        For closed candles this equals open_time + interval; for streaming open
+        candles the caller may pass the actual interval used.
+        """
+        return self.open_time_ms + (interval_seconds * 1000)
+
+    def get_age_seconds(self, *, is_closed: bool = True, interval_seconds: int = 60) -> float:
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        ref = self.close_time_ms(interval_seconds) if is_closed else now_ms
+        return max(0.0, (now_ms - ref) / 1000.0)
+
+    def is_fresh(self, max_age_seconds: float = 120.0, *, is_closed: bool = True, interval_seconds: int = 60) -> bool:
+        return self.get_age_seconds(is_closed=is_closed, interval_seconds=interval_seconds) < max_age_seconds
