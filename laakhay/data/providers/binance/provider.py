@@ -33,9 +33,25 @@ class BinanceProvider(BaseProvider):
         TimeInterval.MO1: "1M",
     }
 
-    def __init__(self) -> None:
+    def __init__(
+        self, 
+        api_key: Optional[str] = None, 
+        api_secret: Optional[str] = None
+    ) -> None:
         super().__init__(name="binance")
         self._http = HTTPClient()
+        self._api_key = api_key
+        self._api_secret = api_secret
+
+    def set_credentials(self, api_key: str, api_secret: str) -> None:
+        """Set API credentials for authenticated endpoints."""
+        self._api_key = api_key
+        self._api_secret = api_secret
+
+    @property
+    def has_credentials(self) -> bool:
+        """Check if API credentials are set."""
+        return bool(self._api_key and self._api_secret)
 
     def validate_interval(self, interval: TimeInterval) -> None:
         """Validate interval is supported by Binance."""
