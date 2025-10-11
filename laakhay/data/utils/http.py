@@ -8,7 +8,8 @@ import aiohttp
 class HTTPClient:
     """Async HTTP client wrapper."""
 
-    def __init__(self, timeout: float = 30.0) -> None:
+    def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0) -> None:
+        self.base_url = base_url
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self._session: Optional[aiohttp.ClientSession] = None
 
@@ -26,6 +27,10 @@ class HTTPClient:
         headers: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """GET request."""
+        # If base_url is set and url is relative, combine them
+        if self.base_url and not url.startswith("http"):
+            url = f"{self.base_url}{url}"
+        
         async with self.session.get(url, params=params, headers=headers) as response:
             response.raise_for_status()
             return await response.json()

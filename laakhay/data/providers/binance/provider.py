@@ -4,15 +4,41 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval
+from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
 from ...models import Candle, Symbol
 from ...utils import HTTPClient, retry_async
 
 
 class BinanceProvider(BaseProvider):
-    """Binance exchange data provider."""
+    """Binance exchange data provider.
+    
+    Supports both Spot and Futures markets via market_type parameter.
+    Default is SPOT for backward compatibility.
+    
+    Args:
+        market_type: Market type (SPOT or FUTURES)
+        api_key: Optional API key for authenticated endpoints
+        api_secret: Optional API secret for authenticated endpoints
+    
+    Examples:
+        >>> # Spot market (default)
+        >>> provider = BinanceProvider()
+        
+        >>> # Futures market
+        >>> provider = BinanceProvider(market_type=MarketType.FUTURES)
+    """
 
-    BASE_URL = "https://api.binance.com"
+    # Market-specific base URLs
+    BASE_URLS = {
+        MarketType.SPOT: "https://api.binance.com",
+        MarketType.FUTURES: "https://fapi.binance.com",
+    }
+    
+    # Market-specific WebSocket URLs (for future use)
+    WS_BASE_URLS = {
+        MarketType.SPOT: "wss://stream.binance.com:9443/ws",
+        MarketType.FUTURES: "wss://fstream.binance.com/ws",
+    }
     
     # Binance interval mapping
     INTERVAL_MAP = {
@@ -34,12 +60,16 @@ class BinanceProvider(BaseProvider):
     }
 
     def __init__(
-        self, 
+        self,
+        market_type: MarketType = MarketType.SPOT,
         api_key: Optional[str] = None, 
         api_secret: Optional[str] = None
     ) -> None:
-        super().__init__(name="binance")
-        self._http = HTTPClient()
+        super().__init__(name=f"binance-{market_type.value}")
+        self.market_type = market_type
+        self._base_url = self.BASE_URLS[market_type]
+        self._ws_base_url = self.WS_BASE_URLS[market_type]
+        self._http = HTTPClient(base_url=self._base_url)
         self._api_key = api_key
         self._api_secret = api_secret
 
@@ -52,6 +82,18 @@ class BinanceProvider(BaseProvider):
     def has_credentials(self) -> bool:
         """Check if API credentials are set."""
         return bool(self._api_key and self._api_secret)
+
+    def _get_klines_endpoint(self) -> str:
+        """Get the klines endpoint for the market type."""
+        if self.market_type == MarketType.FUTURES:
+            return "/fapi/v1/klines"
+        return "/api/v3/klines"
+    
+    def _get_exchange_info_endpoint(self) -> str:
+        """Get the exchange info endpoint for the market type."""
+        if self.market_type == MarketType.FUTURES:
+            return "/fapi/v1/exchangeInfo"
+        return "/api/v3/exchangeInfo"
 
     def validate_interval(self, interval: TimeInterval) -> None:
         """Validate interval is supported by Binance."""
@@ -81,10 +123,12 @@ class BinanceProvider(BaseProvider):
         if end_time:
             params["endTime"] = int(end_time.timestamp() * 1000)
         if limit:
-            params["limit"] = min(limit, 1000)  # Binance max is 1000
+            max_limit = 1000  # Conservative limit that works for both markets
+            params["limit"] = min(limit, max_limit)
 
+        endpoint = self._get_klines_endpoint()
         try:
-            data = await self._http.get(f"{self.BASE_URL}/api/v3/klines", params=params)
+            data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
                 raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
@@ -105,23 +149,43 @@ class BinanceProvider(BaseProvider):
         )
 
     @retry_async(max_retries=3, base_delay=1.0)
-    async def get_symbols(self) -> List[Symbol]:
-        """Fetch all trading symbols from Binance."""
+    async def get_symbols(self, quote_asset: Optional[str] = None) -> List[Symbol]:
+        """Fetch all trading symbols from Binance.
+        
+        Args:
+            quote_asset: Optional filter by quote asset (e.g., "USDT", "BTC")
+        
+        Returns:
+            List of Symbol objects. For FUTURES market, returns PERPETUAL contracts only.
+        """
+        endpoint = self._get_exchange_info_endpoint()
         try:
-            data = await self._http.get(f"{self.BASE_URL}/api/v3/exchangeInfo")
+            data = await self._http.get(endpoint)
         except Exception as e:
             raise Exception(f"Failed to fetch symbols from Binance: {e}")
 
         symbols = []
         for symbol_data in data.get("symbols", []):
-            if symbol_data.get("status") == "TRADING":
-                symbols.append(
-                    Symbol(
-                        symbol=symbol_data["symbol"],
-                        base_asset=symbol_data["baseAsset"],
-                        quote_asset=symbol_data["quoteAsset"],
-                    )
+            # Skip non-trading symbols
+            if symbol_data.get("status") != "TRADING":
+                continue
+            
+            # Filter by quote asset if specified
+            if quote_asset and symbol_data.get("quoteAsset") != quote_asset:
+                continue
+            
+            # For futures, filter for PERPETUAL contracts only
+            if self.market_type == MarketType.FUTURES:
+                if symbol_data.get("contractType") != "PERPETUAL":
+                    continue
+            
+            symbols.append(
+                Symbol(
+                    symbol=symbol_data["symbol"],
+                    base_asset=symbol_data["baseAsset"],
+                    quote_asset=symbol_data["quoteAsset"],
                 )
+            )
         return symbols
 
     async def close(self) -> None:
