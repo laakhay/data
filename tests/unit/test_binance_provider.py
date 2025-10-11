@@ -44,3 +44,35 @@ def test_binance_validate_symbol():
     # Should raise for empty
     with pytest.raises(ValueError, match="non-empty string"):
         provider.validate_symbol("")
+
+
+def test_binance_no_credentials_by_default():
+    """Test provider has no credentials by default."""
+    provider = BinanceProvider()
+    assert not provider.has_credentials
+
+
+def test_binance_credentials_in_constructor():
+    """Test setting credentials via constructor."""
+    provider = BinanceProvider(api_key="test_key", api_secret="test_secret")
+    assert provider.has_credentials
+    assert provider._api_key == "test_key"
+    assert provider._api_secret == "test_secret"
+
+
+def test_binance_set_credentials():
+    """Test explicit set_credentials method."""
+    provider = BinanceProvider()
+    assert not provider.has_credentials
+    
+    provider.set_credentials(api_key="test_key", api_secret="test_secret")
+    
+    assert provider.has_credentials
+    assert provider._api_key == "test_key"
+    assert provider._api_secret == "test_secret"
+
+
+def test_binance_partial_credentials():
+    """Test partial credentials return False."""
+    provider = BinanceProvider(api_key="test_key")
+    assert not provider.has_credentials
