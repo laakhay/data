@@ -37,6 +37,8 @@ class WebSocketConfig:
 
 class BinanceWebSocketMixin:
     market_type: MarketType
+    # Hint for DataFeed chunking; Spot allows more, Futures is lower.
+    max_streams_per_connection: Optional[int] = None
 
     # Allow providers to override ws_config; fall back to defaults
     @property
@@ -161,6 +163,13 @@ class BinanceWebSocketMixin:
 
         # Chunking per market rules
         max_per_connection = 200 if self.market_type == MarketType.FUTURES else 1024
+        # publish hint for callers
+        try:
+            # set attribute on instance for DataFeed to read
+            object.__setattr__(self, "max_streams_per_connection", max_per_connection)
+        except Exception:
+            # ignore if instance is frozen or does not allow setattr
+            pass
         chunks = [symbols[i:i + max_per_connection] for i in range(0, len(symbols), max_per_connection)]
 
         if len(chunks) == 1:
