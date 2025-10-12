@@ -1,5 +1,7 @@
 """Base provider abstract class."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 
@@ -44,7 +46,7 @@ class BaseProvider(ABC):
         if not symbol or not isinstance(symbol, str):
             raise ValueError("Symbol must be a non-empty string")
 
-    async def __aenter__(self) -> "BaseProvider":
+    async def __aenter__(self) -> BaseProvider:
         """Context manager entry."""
         return self
 
