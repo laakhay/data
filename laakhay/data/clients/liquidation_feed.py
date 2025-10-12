@@ -11,11 +11,11 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 from ..models import Liquidation
 
-Callback = Union[Callable[[Liquidation], Awaitable[None]], Callable[[Liquidation], None]]
+Callback = Callable[[Liquidation], Awaitable[None]] | Callable[[Liquidation], None]
 
 
 @dataclass(frozen=True)

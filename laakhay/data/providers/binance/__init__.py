@@ -1,7 +1,5 @@
 """Binance provider with futures and spot support."""
 
-from typing import Optional
-
 from ...core import MarketType
 from .provider import BinanceProvider
 

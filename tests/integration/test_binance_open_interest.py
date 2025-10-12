@@ -123,7 +123,6 @@ async def test_stream_open_interest_multiple_symbols():
     async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
         symbols = ["BTCUSDT", "ETHUSDT"]
         received_symbols = set()
-        max_received = 6  # 3 per symbol
 
         async for oi in provider.stream_open_interest(symbols, update_speed="1s"):
             assert isinstance(oi, OpenInterest)

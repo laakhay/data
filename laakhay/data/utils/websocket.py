@@ -110,7 +110,7 @@ class WebSocketClient:
         except Exception as e:
             self._state = ConnectionState.DISCONNECTED
             logger.error(f"Connection failed: {e}")
-            raise ConnectionError(f"Failed to connect to {self.url}: {e}")
+            raise ConnectionError(f"Failed to connect to {self.url}: {e}") from e
 
     async def _receive_loop(self) -> None:
         """Receive messages from WebSocket."""

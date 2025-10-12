@@ -186,7 +186,7 @@ class TestBinanceFundingRateIntegration:
             with pytest.raises(
                 ValueError, match="Funding rate streaming is only available for Futures market"
             ):
-                async for fr in provider.stream_funding_rate(["BTCUSDT"]):
+                async for _fr in provider.stream_funding_rate(["BTCUSDT"]):
                     break
 
     @pytest.mark.asyncio
@@ -196,7 +196,7 @@ class TestBinanceFundingRateIntegration:
             try:
                 async with asyncio.timeout(5):  # 5 second timeout
                     count = 0
-                    async for fr in provider.stream_funding_rate(["BTCUSDT", "ETHUSDT"]):
+                    async for _fr in provider.stream_funding_rate(["BTCUSDT", "ETHUSDT"]):
                         count += 1
                         if count >= 5:
                             break
