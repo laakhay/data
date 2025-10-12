@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 
-# Configurable Python executable
-PY ?= python3
+# Configurable Python executable - use venv if available
+PY ?= $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
 .PHONY: help install test unit integration e2e lint format fix coverage clean build publish
 
