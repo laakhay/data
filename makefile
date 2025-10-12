@@ -3,7 +3,7 @@ SHELL := /bin/sh
 # Configurable Python executable
 PY ?= python3
 
-.PHONY: help install test unit integration e2e lint format clean
+.PHONY: help install test unit integration e2e lint format fix coverage clean build publish
 
 help:
 	@echo "Make targets:"
@@ -14,7 +14,11 @@ help:
 	@echo "  e2e         Run end-to-end tests (tests/e2e)."
 	@echo "  lint        Run ruff lint if available."
 	@echo "  format      Run ruff format/black if available."
+	@echo "  fix         Auto-fix linting issues and format code."
+	@echo "  coverage    Run tests with coverage report."
 	@echo "  clean       Remove caches and compiled artifacts."
+	@echo "  build       Build distribution packages."
+	@echo "  publish     Publish to PyPI (requires PYPI_TOKEN)."
 
 install:
 	@$(PY) -m pip install -U pip setuptools wheel
@@ -41,10 +45,18 @@ integration:
 e2e:
 	@$(PY) -m pytest -q tests/e2e
 
+coverage:
+	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term
+
 lint:
 	@command -v ruff >/dev/null 2>&1 && ruff check . || echo "ruff not installed; skipping lint"
 
 format:
+	@command -v ruff >/dev/null 2>&1 && ruff format . || true
+	@command -v black >/dev/null 2>&1 && black . || echo "formatters not installed; skipping black"
+
+fix:
+	@command -v ruff >/dev/null 2>&1 && ruff check --fix . || echo "ruff not installed; skipping ruff fix"
 	@command -v ruff >/dev/null 2>&1 && ruff format . || true
 	@command -v black >/dev/null 2>&1 && black . || echo "formatters not installed; skipping black"
 
@@ -53,3 +65,16 @@ clean:
 	@find . -name '*.pyc' -delete || true
 	@find . -name '*.pyo' -delete || true
 	@rm -rf .pytest_cache || true
+	@rm -rf htmlcov || true
+	@rm -rf .coverage || true
+	@rm -rf dist || true
+	@rm -rf build || true
+	@rm -rf *.egg-info || true
+
+build: clean
+	@$(PY) -m pip install --upgrade build
+	@$(PY) -m build --sdist --wheel
+
+publish: build
+	@$(PY) -m pip install --upgrade twine
+	@$(PY) -m twine upload dist/*
