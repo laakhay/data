@@ -89,7 +89,7 @@ class HTTPClient:
                             result = hook(response)
                             if asyncio.iscoroutine(result):
                                 result = await result  # type: ignore[assignment]
-                            if isinstance(result, (int, float)) and result > 0:
+                            if isinstance(result, int | float) and result > 0:
                                 hook_delays.append(float(result))
                         except Exception:
                             # Hooks must never break requests

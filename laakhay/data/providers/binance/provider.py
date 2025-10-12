@@ -175,7 +175,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
-                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance") from e
             raise
 
         return [self._parse_candle(symbol, candle_data) for candle_data in data]
@@ -217,7 +217,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         try:
             data = await self._http.get(endpoint)
         except Exception as e:
-            raise Exception(f"Failed to fetch symbols from Binance: {e}")
+            raise Exception(f"Failed to fetch symbols from Binance: {e}") from e
 
         # Update rate limit heuristics from exchange info if present
         try:
@@ -366,7 +366,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 data = await self._http.get("/futures/data/openInterestHist", params=params)
             except Exception as e:
                 if "Invalid symbol" in str(e):
-                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures") from e
                 raise
 
             # Historical OI endpoint may return a single dict or list of data points
@@ -381,7 +381,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 data = await self._http.get("/fapi/v1/openInterest", params=params)
             except Exception as e:
                 if "Invalid symbol" in str(e):
-                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+                    raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures") from e
                 raise
 
             return [self._parse_open_interest_current(data)]
@@ -481,7 +481,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             data = await self._http.get("/fapi/v1/fundingRate", params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
-                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures") from e
             raise
 
         # Parse funding rate data
@@ -540,7 +540,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
-                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance") from e
             raise
 
         # Parse order book
@@ -598,7 +598,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
-                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
+                raise InvalidSymbolError(f"Symbol {symbol} not found on Binance") from e
             raise
 
         # Parse trades

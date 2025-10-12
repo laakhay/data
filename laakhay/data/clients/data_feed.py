@@ -21,12 +21,13 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 from ..core import TimeInterval
 from ..models import Candle
 
-Callback = Union[Callable[[Candle], Awaitable[None]], Callable[[Candle], None]]
+Callback = Callable[[Candle], Awaitable[None]] | Callable[[Candle], None]
+
 
 @dataclass(frozen=True)
 class _Sub:

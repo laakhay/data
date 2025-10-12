@@ -14,11 +14,11 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 from ..models import OpenInterest
 
-Callback = Union[Callable[[OpenInterest], Awaitable[None]], Callable[[OpenInterest], None]]
+Callback = Callable[[OpenInterest], Awaitable[None]] | Callable[[OpenInterest], None]
 
 
 @dataclass(frozen=True)
