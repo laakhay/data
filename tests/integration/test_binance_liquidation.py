@@ -79,14 +79,14 @@ class TestBinanceLiquidationIntegration:
         async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
             try:
                 # Set a timeout to test cancellation
-                async with asyncio.timeout(5):  # 5 second timeout
+                async with asyncio.timeout_at(asyncio.get_event_loop().time() + 5):
                     count = 0
                     async for _liquidation in provider.stream_liquidations():
                         count += 1
                         if count >= 3:  # Get a few liquidations
                             break
 
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, TimeoutError):
                 # Timeout is expected, test passes
                 pass
 

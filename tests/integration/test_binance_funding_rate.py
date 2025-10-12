@@ -194,13 +194,13 @@ class TestBinanceFundingRateIntegration:
         """Test that streaming can be cancelled gracefully."""
         async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
             try:
-                async with asyncio.timeout(5):  # 5 second timeout
+                async with asyncio.timeout_at(asyncio.get_event_loop().time() + 5):
                     count = 0
                     async for _fr in provider.stream_funding_rate(["BTCUSDT", "ETHUSDT"]):
                         count += 1
                         if count >= 5:
                             break
-            except asyncio.TimeoutError:
+            except (asyncio.TimeoutError, TimeoutError):
                 pass  # Expected, test passes
 
     @pytest.mark.asyncio
