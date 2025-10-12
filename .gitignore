@@ -11,3 +11,10 @@ demo*
 
 # logs if any
 **/*.log
+
+.pytest_cache/
+.vscode/
+
+*.egg-info/
+dist/
+build/
