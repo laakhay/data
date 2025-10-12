@@ -64,3 +64,20 @@ class Candle(BaseModel):
 
     def is_fresh(self, max_age_seconds: float = 120.0, *, is_closed: bool = True, interval_seconds: int = 60) -> bool:
         return self.get_age_seconds(is_closed=is_closed, interval_seconds=interval_seconds) < max_age_seconds
+
+
+    # --- commonly derived properties ---
+    @property
+    def hl2(self) -> Decimal:
+        """(High + Low) / 2"""
+        return (self.high + self.low) / Decimal("2")
+    
+    @property
+    def hlc3(self) -> Decimal:
+        """(High + Low + Close) / 3"""
+        return (self.high + self.low + self.close) / Decimal("3")
+    
+    @property
+    def ohlc4(self) -> Decimal:
+        """(Open + High + Low + Close) / 4"""
+        return (self.open + self.high + self.low + self.close) / Decimal("4")
