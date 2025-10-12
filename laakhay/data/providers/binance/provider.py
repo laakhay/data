@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import time
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
-from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Symbol, Trade
+from ...models import Candle, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP, OI_PERIOD_MAP
 from .websocket_mixin import BinanceWebSocketMixin
@@ -47,6 +47,8 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self._http = HTTPClient(base_url=self._base_url)
         self._api_key = api_key
         self._api_secret = api_secret
+        # Install Binance rate-limit aware response hook
+        self._http.add_response_hook(self._binance_rate_limit_hook)
         # Symbols cache (full list); filter by quote_asset on read
         self._symbols_cache: Optional[List[Symbol]] = None
         self._symbols_cache_ts: Optional[float] = None
@@ -82,6 +84,64 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         """Validate interval is supported by Binance."""
         if interval not in self.INTERVAL_MAP:
             raise InvalidIntervalError(f"Interval {interval} not supported by Binance")
+
+    # ----------------------
+    # Rate limit handling
+    # ----------------------
+    _WEIGHT_LIMITS = {
+        # Conservative defaults; actual limits come from exchangeInfo rateLimits
+        # REQUEST_WEIGHT per minute commonly 1200 on Spot, and higher on futures
+        "1m": 1200,
+        "10s": 300,  # Futures commonly 300 per 10s window; used heuristically
+    }
+
+    def _estimate_weight_budget(self, headers: Dict[str, str]) -> Optional[float]:
+        """Estimate remaining budget ratio from X-MBX-USED-WEIGHT-* headers.
+
+        Returns a value in [0, 1] representing how much of the presumed window
+        has been consumed (1.0 == at limit). None if not enough info.
+        """
+        used_min = headers.get("X-MBX-USED-WEIGHT-1m") or headers.get("x-mbx-used-weight-1m")
+        used_10s = headers.get("X-MBX-USED-WEIGHT-10S") or headers.get("x-mbx-used-weight-10s")
+
+        ratios: List[float] = []
+        if used_min is not None:
+            try:
+                ratios.append(float(used_min) / float(self._WEIGHT_LIMITS["1m"]))
+            except Exception:
+                pass
+        if used_10s is not None and "10s" in self._WEIGHT_LIMITS:
+            try:
+                ratios.append(float(used_10s) / float(self._WEIGHT_LIMITS["10s"]))
+            except Exception:
+                pass
+        if ratios:
+            # Return the maximum consumption ratio observed among windows
+            return max(0.0, min(1.0, max(ratios)))
+        return None
+
+    def _binance_rate_limit_hook(self, response) -> Optional[float]:
+        """Response hook to parse Binance rate-limit headers and request backoff.
+
+        If consumption ratio crosses 80%, request a gentle delay to spread load
+        within the window. If 95%+, be more conservative. This is additive to
+        any explicit Retry-After handling in HTTP client for 429/418.
+        """
+        try:
+            headers = dict(response.headers)  # CIMultiDictProxy -> dict[str,str]
+            ratio = self._estimate_weight_budget(headers)
+            if ratio is None:
+                return None
+            # Heuristic delays based on ratio; tuned to be small and non-invasive
+            if ratio >= 0.95:
+                return 1.0  # 1s pause near saturation
+            if ratio >= 0.90:
+                return 0.5
+            if ratio >= 0.80:
+                return 0.2
+            return None
+        except Exception:
+            return None
 
     @retry_async(max_retries=3, base_delay=1.0)
     async def get_candles(
@@ -154,6 +214,34 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             data = await self._http.get(endpoint)
         except Exception as e:
             raise Exception(f"Failed to fetch symbols from Binance: {e}")
+
+        # Update rate limit heuristics from exchange info if present
+        try:
+            for rl in data.get("rateLimits", []) or []:
+                if not isinstance(rl, dict):
+                    continue
+                rl_type = rl.get("rateLimitType") or rl.get("rateLimitType".lower())
+                if rl_type not in ("REQUEST_WEIGHT", "RAW_REQUESTS"):
+                    continue
+                interval = (rl.get("interval") or rl.get("interval".lower()) or "").upper()
+                interval_num = rl.get("intervalNum") or rl.get("intervalnum")
+                limit = rl.get("limit")
+                if limit is None or interval_num is None:
+                    continue
+                # Map to our keys currently tracked
+                key = None
+                if interval == "MINUTE" and interval_num == 1:
+                    key = "1m"
+                elif interval == "SECOND" and interval_num == 10:
+                    key = "10s"
+                if key:
+                    try:
+                        self._WEIGHT_LIMITS[key] = int(limit)
+                    except Exception:
+                        pass
+        except Exception:
+            # Never let heuristics update break symbols
+            pass
 
         symbols: List[Symbol] = []
         for symbol_data in data.get("symbols", []):
