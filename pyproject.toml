@@ -71,6 +71,8 @@ include = '\.pyi?$'
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -82,6 +84,12 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by black)
+    "B027",  # empty method in abstract base class without abstract decorator
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "B017",  # pytest.raises(Exception) is acceptable in tests
 ]
 
 [tool.mypy]
