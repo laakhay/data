@@ -3,7 +3,6 @@
 import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, List
 
 import pytest
 
@@ -13,9 +12,9 @@ from laakhay.data.models import Liquidation
 
 class FakeLiqProvider:
     def __init__(self) -> None:
-        self._events: Dict[str, List[Liquidation]] = {}
+        self._events: dict[str, list[Liquidation]] = {}
 
-    def queue(self, symbol: str, items: List[Liquidation]) -> None:
+    def queue(self, symbol: str, items: list[Liquidation]) -> None:
         self._events.setdefault(symbol.upper(), []).extend(items)
 
     async def stream_liquidations(self):

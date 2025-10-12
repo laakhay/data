@@ -45,4 +45,8 @@ INTERVAL_MAP = {
 }
 
 # Open Interest period mapping - reuse the same interval map since it's the same exchange
-OI_PERIOD_MAP = {v: v for v in INTERVAL_MAP.values() if v in ["5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"]}
+OI_PERIOD_MAP = {
+    v: v
+    for v in INTERVAL_MAP.values()
+    if v in ["5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"]
+}

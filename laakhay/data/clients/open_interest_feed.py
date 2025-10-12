@@ -12,11 +12,11 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Union
 
 from ..models import OpenInterest
-
 
 Callback = Union[Callable[[OpenInterest], Awaitable[None]], Callable[[OpenInterest], None]]
 
@@ -24,7 +24,7 @@ Callback = Union[Callable[[OpenInterest], Awaitable[None]], Callable[[OpenIntere
 @dataclass(frozen=True)
 class _Sub:
     callback: Callback
-    symbols: Optional[Set[str]]  # None means all
+    symbols: set[str] | None  # None means all
 
 
 class OpenInterestFeed:
@@ -40,17 +40,17 @@ class OpenInterestFeed:
         self._stale_threshold = stale_threshold_seconds
 
         # Streaming state
-        self._symbols: List[str] = []
-        self._requested_symbols: Set[str] = set()
+        self._symbols: list[str] = []
+        self._requested_symbols: set[str] = set()
         self._period: str = "5m"
-        self._stream_task: Optional[asyncio.Task] = None
+        self._stream_task: asyncio.Task | None = None
         self._running = False
 
         # Cache: latest OI per symbol
-        self._latest: Dict[str, OpenInterest] = {}
+        self._latest: dict[str, OpenInterest] = {}
 
         # Subscriptions
-        self._subs: Dict[str, _Sub] = {}
+        self._subs: dict[str, _Sub] = {}
 
         # Health
         self._last_msg_time: float = 0.0
@@ -111,8 +111,8 @@ class OpenInterestFeed:
             await self.set_symbols(updated)
 
     # Subscriptions
-    def subscribe(self, callback: Callback, *, symbols: Optional[Iterable[str]] = None) -> str:
-        subs_symbols: Optional[Set[str]] = None
+    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:
+        subs_symbols: set[str] | None = None
         if symbols is not None:
             subs_symbols = {s.upper() for s in symbols}
         sub = _Sub(callback=callback, symbols=subs_symbols)
@@ -121,6 +121,7 @@ class OpenInterestFeed:
 
         # Expand streaming set if subscriber asks for more symbols
         if subs_symbols:
+
             async def _maybe_update():
                 async with self._lock:
                     self._requested_symbols |= subs_symbols
@@ -135,6 +136,7 @@ class OpenInterestFeed:
                                 except asyncio.CancelledError:
                                     pass
                             self._stream_task = asyncio.create_task(self._stream_loop())
+
             try:
                 asyncio.get_running_loop().create_task(_maybe_update())
             except RuntimeError:
@@ -143,6 +145,7 @@ class OpenInterestFeed:
 
     def unsubscribe(self, subscription_id: str) -> None:
         self._subs.pop(subscription_id, None)
+
         async def _maybe_shrink():
             async with self._lock:
                 eff = sorted(self._requested_symbols)
@@ -156,27 +159,30 @@ class OpenInterestFeed:
                             except asyncio.CancelledError:
                                 pass
                         self._stream_task = asyncio.create_task(self._stream_loop())
+
         try:
             asyncio.get_running_loop().create_task(_maybe_shrink())
         except RuntimeError:
             pass
 
     # Cache access
-    def get_latest(self, symbol: str) -> Optional[OpenInterest]:
+    def get_latest(self, symbol: str) -> OpenInterest | None:
         return self._latest.get(symbol.upper())
 
-    def snapshot(self, symbols: Optional[Iterable[str]] = None) -> Dict[str, Optional[OpenInterest]]:
+    def snapshot(self, symbols: Iterable[str] | None = None) -> dict[str, OpenInterest | None]:
         if symbols is None:
             symbols = list(self._symbols)
-        out: Dict[str, Optional[OpenInterest]] = {}
+        out: dict[str, OpenInterest | None] = {}
         for s in symbols:
             out[s.upper()] = self._latest.get(s.upper())
         return out
 
     # Health
-    def get_connection_status(self) -> Dict[str, Any]:
+    def get_connection_status(self) -> dict[str, Any]:
         now = time.time()
-        healthy = (now - self._last_msg_time) <= self._stale_threshold if self._last_msg_time else False
+        healthy = (
+            (now - self._last_msg_time) <= self._stale_threshold if self._last_msg_time else False
+        )
         return {
             "active_connections": 1 if self._stream_task and not self._stream_task.done() else 0,
             "healthy_connections": 1 if healthy else 0,
@@ -202,7 +208,7 @@ class OpenInterestFeed:
             pass
 
     async def _dispatch(self, oi: OpenInterest) -> None:
-        to_call: List[Tuple[Callback, OpenInterest]] = []
+        to_call: list[tuple[Callback, OpenInterest]] = []
         for sub in self._subs.values():
             if sub.symbols is None or oi.symbol.upper() in sub.symbols:
                 to_call.append((sub.callback, oi))

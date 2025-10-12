@@ -1,9 +1,9 @@
 """Unit tests for OpenInterestFeed using a fake provider."""
 
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import AsyncIterator, Dict, List
 
 import pytest
 
@@ -13,12 +13,14 @@ from laakhay.data.models import OpenInterest
 
 class FakeOIProvider:
     def __init__(self) -> None:
-        self._events: Dict[str, List[OpenInterest]] = {}
+        self._events: dict[str, list[OpenInterest]] = {}
 
-    def queue(self, symbol: str, items: List[OpenInterest]) -> None:
+    def queue(self, symbol: str, items: list[OpenInterest]) -> None:
         self._events.setdefault(symbol.upper(), []).extend(items)
 
-    async def stream_open_interest(self, symbols: List[str], period: str = "5m") -> AsyncIterator[OpenInterest]:
+    async def stream_open_interest(
+        self, symbols: list[str], period: str = "5m"
+    ) -> AsyncIterator[OpenInterest]:
         for s in symbols:
             for item in self._events.get(s.upper(), []):
                 yield item

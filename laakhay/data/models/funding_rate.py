@@ -2,7 +2,6 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,8 +12,8 @@ class FundingRate(BaseModel):
     symbol: str = Field(..., min_length=1, description="Trading symbol")
     funding_time: datetime = Field(..., description="Funding time (UTC)")
     funding_rate: Decimal = Field(..., description="Funding rate (decimal, not percentage)")
-    mark_price: Optional[Decimal] = Field(default=None, ge=0, description="Mark price at funding time")
-    
+    mark_price: Decimal | None = Field(default=None, ge=0, description="Mark price at funding time")
+
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     # --- Developer ergonomics ---
@@ -49,7 +48,7 @@ class FundingRate(BaseModel):
         """True if absolute funding rate > 0.01% (high funding pressure)."""
         return abs(self.funding_rate_percentage) > Decimal("0.01")
 
-    def get_age_seconds(self, now_ms: Optional[int] = None) -> float:
+    def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since funding time."""
         if now_ms is None:
             now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -70,4 +69,3 @@ class FundingRate(BaseModel):
             "is_positive": self.is_positive,
             "is_high": self.is_high,
         }
-

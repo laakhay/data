@@ -7,18 +7,18 @@ graceful cancellation, and optional throttling for high-frequency updates.
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
-from decimal import Decimal
-from dataclasses import dataclass
-from typing import AsyncIterator, Dict, List, Optional
 import random
 import time
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal
 
 import websockets
 
-from ...core import TimeInterval, MarketType
+from ...core import MarketType, TimeInterval
 from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
-from .constants import WS_SINGLE_URLS, WS_COMBINED_URLS, INTERVAL_MAP, OI_PERIOD_MAP
+from .constants import INTERVAL_MAP, OI_PERIOD_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +30,15 @@ class WebSocketConfig:
     base_reconnect_delay: float = 1.0
     max_reconnect_delay: float = 30.0
     jitter: float = 0.2  # +/-20% jitter to avoid thundering herds
-    max_size: Optional[int] = None  # bytes; None = websockets default
-    max_queue: Optional[int] = 1024  # number of messages queued; None = unlimited
+    max_size: int | None = None  # bytes; None = websockets default
+    max_queue: int | None = 1024  # number of messages queued; None = unlimited
     close_timeout: int = 10
 
 
 class BinanceWebSocketMixin:
     market_type: MarketType
     # Hint for DataFeed chunking; Spot allows more, Futures is lower.
-    max_streams_per_connection: Optional[int] = None
+    max_streams_per_connection: int | None = None
 
     # Allow providers to override ws_config; fall back to defaults
     @property
@@ -74,7 +74,7 @@ class BinanceWebSocketMixin:
         symbol: str,
         interval: TimeInterval,
         only_closed: bool = False,
-        throttle_ms: Optional[int] = None,
+        throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[Candle]:
         """Yield Candle updates for one symbol.
@@ -91,9 +91,9 @@ class BinanceWebSocketMixin:
         full_url = f"{ws_url}/{stream_name}"
 
         reconnect_delay = self._ws_conf.base_reconnect_delay
-        last_emit: Optional[float] = None
-        last_close_for_candle: Optional[str] = None
-        last_candle_ts: Optional[int] = None
+        last_emit: float | None = None
+        last_close_for_candle: str | None = None
+        last_candle_ts: int | None = None
 
         while True:  # reconnect loop
             try:
@@ -118,7 +118,9 @@ class BinanceWebSocketMixin:
                                 last_close_for_candle = close_str
                             if throttle_ms and not only_closed:  # soft rate limit
                                 now = time.time()
-                                if last_emit is not None and (now - last_emit) < (throttle_ms / 1000.0):
+                                if last_emit is not None and (now - last_emit) < (
+                                    throttle_ms / 1000.0
+                                ):
                                     continue
                                 last_emit = now
                             # Map kline -> Candle
@@ -147,10 +149,10 @@ class BinanceWebSocketMixin:
 
     async def stream_candles_multi(
         self,
-        symbols: List[str],
+        symbols: list[str],
         interval: TimeInterval,
         only_closed: bool = False,
-        throttle_ms: Optional[int] = None,
+        throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[Candle]:
         """Yield Candle updates for multiple symbols using combined streams.
@@ -171,12 +173,14 @@ class BinanceWebSocketMixin:
         except Exception:
             # ignore if instance is frozen or does not allow setattr
             pass
-        chunks = [symbols[i:i + max_per_connection] for i in range(0, len(symbols), max_per_connection)]
+        chunks = [
+            symbols[i : i + max_per_connection] for i in range(0, len(symbols), max_per_connection)
+        ]
 
         if len(chunks) == 1:
             # Apply optional throttling here for single-chunk path
-            last_emit: Dict[str, float] = {}
-            last_close: Dict[tuple, str] = {}
+            last_emit: dict[str, float] = {}
+            last_close: dict[tuple, str] = {}
             async for c in self._stream_chunk(chunks[0], interval, only_closed):
                 if throttle_ms and not only_closed:
                     now = time.time()
@@ -195,14 +199,14 @@ class BinanceWebSocketMixin:
 
         queue: asyncio.Queue = asyncio.Queue()  # fan-in buffer from chunk tasks
 
-        async def pump(chunk_syms: List[str]):
+        async def pump(chunk_syms: list[str]):
             """Push chunk stream candles into fan-in queue (auto-reconnect inside)."""
             async for c in self._stream_chunk(chunk_syms, interval, only_closed):
                 await queue.put(c)
 
         tasks = [asyncio.create_task(pump(chunk)) for chunk in chunks]
-        last_emit: Dict[str, float] = {}
-        last_close: Dict[tuple, str] = {}
+        last_emit: dict[str, float] = {}
+        last_close: dict[tuple, str] = {}
         try:
             while True:
                 c = await queue.get()  # backpressure: waits if queue empty
@@ -226,7 +230,7 @@ class BinanceWebSocketMixin:
 
     async def _stream_chunk(
         self,
-        symbols: List[str],
+        symbols: list[str],
         interval: TimeInterval,
         only_closed: bool,
     ) -> AsyncIterator[Candle]:
@@ -277,7 +281,7 @@ class BinanceWebSocketMixin:
                 await asyncio.sleep(reconnect_delay)
                 reconnect_delay = self._next_delay(reconnect_delay)
 
-    async def stream_trades(self, symbol: str) -> AsyncIterator[Dict]:
+    async def stream_trades(self, symbol: str) -> AsyncIterator[dict]:
         """Yield trade prints for a symbol (price, qty, ts, is_buyer_maker)."""
         ws_url = WS_SINGLE_URLS.get(self.market_type)
         if not ws_url:
@@ -317,7 +321,7 @@ class BinanceWebSocketMixin:
 
     async def stream_open_interest(
         self,
-        symbols: List[str],
+        symbols: list[str],
         period: str = "5m",
     ) -> AsyncIterator[OpenInterest]:
         """Yield Open Interest updates using the <symbol>@openInterest@<period> stream.
@@ -359,14 +363,20 @@ class BinanceWebSocketMixin:
                                 continue
 
                             symbol = payload.get("s") or payload.get("symbol")
-                            event_time_ms = payload.get("E") or payload.get("t") or payload.get("eventTime")
-                            oi_str = payload.get("oi") or payload.get("o") or payload.get("openInterest")
+                            event_time_ms = (
+                                payload.get("E") or payload.get("t") or payload.get("eventTime")
+                            )
+                            oi_str = (
+                                payload.get("oi") or payload.get("o") or payload.get("openInterest")
+                            )
                             if not symbol or oi_str is None or event_time_ms is None:
                                 continue
 
                             yield OpenInterest(
                                 symbol=symbol,
-                                timestamp=datetime.fromtimestamp(int(event_time_ms) / 1000, tz=timezone.utc),
+                                timestamp=datetime.fromtimestamp(
+                                    int(event_time_ms) / 1000, tz=timezone.utc
+                                ),
                                 open_interest=Decimal(str(oi_str)),
                                 open_interest_value=None,
                             )
@@ -384,13 +394,13 @@ class BinanceWebSocketMixin:
 
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         """Yield liquidation orders for all symbols using forceOrder stream.
-        
+
         This stream provides real-time liquidation data across all futures symbols.
         The stream name is '!forceOrder@arr' which means it receives all liquidations.
-        
+
         Yields:
             Liquidation: Real-time liquidation events
-            
+
         Note:
             This endpoint is only available for Futures market type.
             The stream provides liquidation data for all symbols simultaneously.
@@ -427,7 +437,9 @@ class BinanceWebSocketMixin:
 
                             liquidation = Liquidation(
                                 symbol=o["s"],
-                                timestamp=datetime.fromtimestamp(int(event_time_ms) / 1000, tz=timezone.utc),
+                                timestamp=datetime.fromtimestamp(
+                                    int(event_time_ms) / 1000, tz=timezone.utc
+                                ),
                                 side=o["S"],
                                 order_type=o["o"],
                                 time_in_force=o["f"],
@@ -446,7 +458,7 @@ class BinanceWebSocketMixin:
 
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_liquidations parse error: {e}")
-                            
+
             except asyncio.CancelledError:
                 raise
             except websockets.exceptions.ConnectionClosed:
@@ -459,25 +471,25 @@ class BinanceWebSocketMixin:
 
     async def stream_funding_rate(
         self,
-        symbols: List[str],
+        symbols: list[str],
         update_speed: str = "1s",
     ) -> AsyncIterator[FundingRate]:
         """Yield predicted/next funding rate updates for multiple symbols using markPrice stream.
-        
+
         The @markPrice stream includes the PREDICTED funding rate in the 'r' field.
         This is the rate that WILL BE applied at the next funding time (00:00, 08:00, 16:00 UTC).
-        
+
         IMPORTANT: This rate changes continuously in real-time as market conditions change.
         It represents the time-weighted average of the Premium Index and shows where
         funding is trending. The actual applied rate is fixed when funding settles.
-        
+
         Args:
             symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
             update_speed: Update frequency ("1s" or "3s")
-            
+
         Yields:
             FundingRate: Predicted funding rate updates (changes every second)
-            
+
         Note:
             - This is the PREDICTED/NEXT funding rate (changes continuously)
             - Actual funding is APPLIED every 8 hours (00:00, 08:00, 16:00 UTC)
@@ -511,7 +523,7 @@ class BinanceWebSocketMixin:
                                 continue
 
                             mark_data = data["data"]
-                            
+
                             # Verify this is a mark price update with funding rate
                             if not mark_data or "r" not in mark_data or "T" not in mark_data:
                                 continue
@@ -519,16 +531,20 @@ class BinanceWebSocketMixin:
                             # Parse funding rate data
                             funding_rate = FundingRate(
                                 symbol=mark_data["s"],
-                                funding_time=datetime.fromtimestamp(mark_data["T"] / 1000, tz=timezone.utc),
+                                funding_time=datetime.fromtimestamp(
+                                    mark_data["T"] / 1000, tz=timezone.utc
+                                ),
                                 funding_rate=Decimal(str(mark_data["r"])),
-                                mark_price=Decimal(str(mark_data["p"])) if "p" in mark_data else None,
+                                mark_price=(
+                                    Decimal(str(mark_data["p"])) if "p" in mark_data else None
+                                ),
                             )
-                            
+
                             yield funding_rate
-                            
+
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_funding_rate parse error: {e}")
-                            
+
             except asyncio.CancelledError:
                 raise
             except websockets.exceptions.ConnectionClosed:
@@ -542,35 +558,35 @@ class BinanceWebSocketMixin:
 
     async def stream_mark_price(
         self,
-        symbols: List[str],
+        symbols: list[str],
         update_speed: str = "1s",
     ) -> AsyncIterator[MarkPrice]:
         """Yield mark price and index price updates for multiple symbols.
-        
+
         The @markPrice stream provides comprehensive pricing data including:
         - Mark Price: Used for liquidations and unrealized PnL
         - Index Price: Weighted average spot price from multiple exchanges
         - Funding Rate: Current predicted funding rate
         - Next Funding Time: When funding will be applied
-        
+
         This stream is essential for:
         - Monitoring mark/index price divergence (dislocation alerts)
         - Detecting venue anomalies (index vs exchange spot)
         - Preventing unfair liquidations
         - Fair PnL calculations
-        
+
         Args:
             symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
             update_speed: Update frequency ("1s" or "3s")
-            
+
         Yields:
             MarkPrice: Mark price updates with index price and funding data
-            
+
         Example:
             >>> async for mp in provider.stream_mark_price(["BTCUSDT"]):
             >>>     if mp.is_high_spread:
             >>>         print(f"Alert: Mark/Index spread {mp.mark_index_spread_bps} bps")
-            
+
         Note:
             - Updates every 1 second (or 3 seconds)
             - Only available for Futures market
@@ -603,7 +619,7 @@ class BinanceWebSocketMixin:
                                 continue
 
                             mark_data = data["data"]
-                            
+
                             # Verify this is a mark price update
                             if not mark_data or mark_data.get("e") != "markPriceUpdate":
                                 continue
@@ -613,20 +629,30 @@ class BinanceWebSocketMixin:
                             mark_price = MarkPrice(
                                 symbol=mark_data["s"],
                                 mark_price=Decimal(str(mark_data["p"])),
-                                index_price=Decimal(str(mark_data["i"])) if "i" in mark_data else None,
-                                estimated_settle_price=Decimal(str(mark_data["P"])) if "P" in mark_data else None,
-                                last_funding_rate=Decimal(str(mark_data["r"])) if "r" in mark_data else None,
-                                next_funding_time=datetime.fromtimestamp(
-                                    mark_data["T"] / 1000, tz=timezone.utc
-                                ) if "T" in mark_data else None,
-                                timestamp=datetime.fromtimestamp(mark_data["E"] / 1000, tz=timezone.utc),
+                                index_price=(
+                                    Decimal(str(mark_data["i"])) if "i" in mark_data else None
+                                ),
+                                estimated_settle_price=(
+                                    Decimal(str(mark_data["P"])) if "P" in mark_data else None
+                                ),
+                                last_funding_rate=(
+                                    Decimal(str(mark_data["r"])) if "r" in mark_data else None
+                                ),
+                                next_funding_time=(
+                                    datetime.fromtimestamp(mark_data["T"] / 1000, tz=timezone.utc)
+                                    if "T" in mark_data
+                                    else None
+                                ),
+                                timestamp=datetime.fromtimestamp(
+                                    mark_data["E"] / 1000, tz=timezone.utc
+                                ),
                             )
-                            
+
                             yield mark_price
-                            
+
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_mark_price parse error: {e}")
-                            
+
             except asyncio.CancelledError:
                 raise
             except websockets.exceptions.ConnectionClosed:
@@ -644,17 +670,17 @@ class BinanceWebSocketMixin:
         update_speed: str = "100ms",
     ) -> AsyncIterator[OrderBook]:
         """Yield order book updates for a symbol using depth stream.
-        
+
         The @depth stream provides real-time order book updates (partial book).
         For full order book maintenance, use get_order_book() REST then apply deltas.
-        
+
         Args:
             symbol: Symbol to monitor (e.g., "BTCUSDT")
             update_speed: Update frequency ("100ms" or "1000ms")
-            
+
         Yields:
             OrderBook: Order book snapshots/updates
-            
+
         Note:
             - This streams UPDATES (deltas), not full snapshots
             - Use get_order_book() first for initial snapshot
@@ -681,34 +707,42 @@ class BinanceWebSocketMixin:
                     async for message in websocket:
                         try:
                             data = json.loads(message)
-                            
+
                             # Verify this is a depth update
                             if data.get("e") != "depthUpdate":
                                 continue
 
                             # Parse bids and asks
-                            bids = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("b", [])]
-                            asks = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("a", [])]
-                            
+                            bids = [
+                                (Decimal(str(price)), Decimal(str(qty)))
+                                for price, qty in data.get("b", [])
+                            ]
+                            asks = [
+                                (Decimal(str(price)), Decimal(str(qty)))
+                                for price, qty in data.get("a", [])
+                            ]
+
                             # Skip empty updates
                             if not bids and not asks:
                                 continue
-                            
+
                             # Create OrderBook with updates
                             # Note: This is a delta, not full book
                             order_book = OrderBook(
                                 symbol=data["s"],
                                 last_update_id=data["u"],
-                                bids=bids if bids else [(Decimal("0"), Decimal("0"))],  # At least one level
+                                bids=(
+                                    bids if bids else [(Decimal("0"), Decimal("0"))]
+                                ),  # At least one level
                                 asks=asks if asks else [(Decimal("0"), Decimal("0"))],
                                 timestamp=datetime.fromtimestamp(data["E"] / 1000, tz=timezone.utc),
                             )
-                            
+
                             yield order_book
-                            
+
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_order_book parse error: {e}")
-                            
+
             except asyncio.CancelledError:
                 raise
             except websockets.exceptions.ConnectionClosed:
@@ -721,18 +755,18 @@ class BinanceWebSocketMixin:
 
     async def stream_trades_multi(
         self,
-        symbols: List[str],
+        symbols: list[str],
     ) -> AsyncIterator[Trade]:
         """Yield real-time trades for multiple symbols.
-        
+
         The @trade stream provides individual trade executions as they occur.
-        
+
         Args:
             symbols: List of symbols to monitor (e.g., ["BTCUSDT", "ETHUSDT"])
-            
+
         Yields:
             Trade: Individual trade executions
-            
+
         Note:
             - Streams EVERY trade execution in real-time
             - High frequency for popular pairs
@@ -759,7 +793,7 @@ class BinanceWebSocketMixin:
                                 continue
 
                             trade_data = data["data"]
-                            
+
                             # Verify this is a trade event
                             if not trade_data or trade_data.get("e") != "trade":
                                 continue
@@ -771,17 +805,20 @@ class BinanceWebSocketMixin:
                                 trade_id=trade_data["t"],
                                 price=Decimal(str(trade_data["p"])),
                                 quantity=Decimal(str(trade_data["q"])),
-                                quote_quantity=Decimal(str(trade_data.get("q", "0"))) * Decimal(str(trade_data["p"])),
-                                timestamp=datetime.fromtimestamp(trade_data["T"] / 1000, tz=timezone.utc),
+                                quote_quantity=Decimal(str(trade_data.get("q", "0")))
+                                * Decimal(str(trade_data["p"])),
+                                timestamp=datetime.fromtimestamp(
+                                    trade_data["T"] / 1000, tz=timezone.utc
+                                ),
                                 is_buyer_maker=trade_data["m"],
                                 is_best_match=trade_data.get("M"),
                             )
-                            
+
                             yield trade
-                            
+
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_trades_multi parse error: {e}")
-                            
+
             except asyncio.CancelledError:
                 raise
             except websockets.exceptions.ConnectionClosed:

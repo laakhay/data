@@ -1,7 +1,6 @@
 """Base provider abstract class."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 from datetime import datetime
 
 from .enums import TimeInterval
@@ -12,22 +11,22 @@ class BaseProvider(ABC):
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self._session: Optional[object] = None
+        self._session: object | None = None
 
     @abstractmethod
     async def get_candles(
         self,
         symbol: str,
         interval: TimeInterval,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[dict]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[dict]:
         """Fetch OHLCV candles for a symbol."""
         pass
 
     @abstractmethod
-    async def get_symbols(self) -> List[dict]:
+    async def get_symbols(self) -> list[dict]:
         """Fetch all available trading symbols."""
         pass
 

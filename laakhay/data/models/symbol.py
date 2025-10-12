@@ -1,8 +1,7 @@
 """Trading symbol data model with trading constraints and helpers."""
 
 from datetime import datetime
-from decimal import Decimal, ROUND_FLOOR
-from typing import Optional, Union
+from decimal import ROUND_FLOOR, Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,13 +19,13 @@ class Symbol(BaseModel):
     quote_asset: str = Field(..., min_length=1)
 
     # Optional trading constraints/metadata
-    tick_size: Optional[Decimal] = None
-    step_size: Optional[Decimal] = None
-    min_notional: Optional[Decimal] = None
+    tick_size: Decimal | None = None
+    step_size: Decimal | None = None
+    min_notional: Decimal | None = None
 
     # Futures-only extras (ignored for spot)
-    contract_type: Optional[str] = None
-    delivery_date: Optional[Union[int, datetime]] = None
+    contract_type: str | None = None
+    delivery_date: int | datetime | None = None
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 

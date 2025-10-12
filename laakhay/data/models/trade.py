@@ -2,14 +2,13 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class Trade(BaseModel):
     """Individual trade execution data.
-    
+
     Represents a single trade that occurred on the exchange.
     Used for analyzing trade flow, volume, and market activity.
     """
@@ -18,21 +17,17 @@ class Trade(BaseModel):
     trade_id: int = Field(..., description="Unique trade ID")
     price: Decimal = Field(..., gt=0, description="Trade execution price")
     quantity: Decimal = Field(..., gt=0, description="Trade quantity")
-    quote_quantity: Optional[Decimal] = Field(
-        default=None, 
-        ge=0, 
-        description="Quote asset quantity (price * quantity)"
+    quote_quantity: Decimal | None = Field(
+        default=None, ge=0, description="Quote asset quantity (price * quantity)"
     )
     timestamp: datetime = Field(..., description="Trade execution time (UTC)")
     is_buyer_maker: bool = Field(
-        ..., 
-        description="True if buyer was maker (sell market order hit bid)"
+        ..., description="True if buyer was maker (sell market order hit bid)"
     )
-    is_best_match: Optional[bool] = Field(
-        default=None,
-        description="Whether trade was best price match"
+    is_best_match: bool | None = Field(
+        default=None, description="Whether trade was best price match"
     )
-    
+
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     # --- Core Properties ---
@@ -92,7 +87,7 @@ class Trade(BaseModel):
         """Timestamp in milliseconds."""
         return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
 
-    def get_age_seconds(self, now_ms: Optional[int] = None) -> float:
+    def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since trade."""
         if now_ms is None:
             now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -118,4 +113,3 @@ class Trade(BaseModel):
             "is_large": self.is_large,
             "size_category": self.size_category,
         }
-

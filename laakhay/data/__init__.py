@@ -1,5 +1,6 @@
 """Laakhay Data - Multi-exchange market data aggregation library."""
 
+from .clients.data_feed import DataFeed
 from .core import (
     BaseProvider,
     DataError,
@@ -12,7 +13,6 @@ from .core import (
     ValidationError,
 )
 from .models import Candle, Symbol
-from .clients.data_feed import DataFeed
 from .providers.binance import (
     BinanceFuturesProvider,
     BinanceProvider,
