@@ -88,6 +88,10 @@ class DataFeed:
         symbols: Iterable[str],
         interval: TimeInterval = TimeInterval.M1,
         only_closed: bool = True,
+        # Warm-up behavior: 0 = disabled, >0 = fetch up to this many historical candles
+        # per symbol via provider.get_candles before starting streams. Best-effort and
+        # non-fatal if provider doesn't support it or returns errors.
+        warm_up: int = 0,
     ) -> None:
         """Start streaming for a static symbol set.
 
@@ -106,6 +110,15 @@ class DataFeed:
             self._interval = interval
             self._only_closed = only_closed
             self._assign_chunk_ids(self._symbols)
+            # Optionally prefill cache from provider REST before starting streams.
+            # warm_up > 0 indicates the per-symbol limit to request; 0 disables warm-up.
+            if warm_up and warm_up > 0:
+                try:
+                    await self._prefill_from_historical(self._symbols, self._interval, warm_up)
+                except Exception:
+                    # Prefill best-effort; don't fail start on provider errors
+                    pass
+
             self._running = True
             self._stream_task = asyncio.create_task(self._stream_loop())
 
@@ -315,7 +328,8 @@ class DataFeed:
             ):
                 # Update cache
                 key = (candle.symbol.upper(), self._interval)
-                if self._only_closed:
+                closed = bool(candle.is_closed)
+                if closed:
                     prev = self._latest.get(key)
                     if prev is not None:
                         self._prev_closed[key] = prev
@@ -367,6 +381,41 @@ class DataFeed:
                 self._symbol_chunk_id[s.upper()] = idx
             # initialize last message times to 0 (unknown)
             self._chunk_last_msg[idx] = 0.0
+
+    async def _prefill_from_historical(self, symbols: List[str], interval: TimeInterval, limit: Optional[int]) -> None:
+        """Best-effort prefill of latest-candle cache using provider REST method.
+
+        This will call provider.get_candles(symbol, interval, limit=limit) for each
+        symbol in parallel if the provider exposes that method. Exceptions per-symbol
+        are ignored so warm-up is non-fatal.
+        """
+        if not hasattr(self._provider, "get_candles"):
+            return
+
+        async def _fetch(s: str):
+            try:
+                return await self._provider.get_candles(s, interval, limit=limit)
+            except Exception:
+                return None
+
+        # Fire off parallel fetches
+        tasks = [_fetch(s) for s in symbols]
+        results = await asyncio.gather(*tasks, return_exceptions=False)
+
+        for sym, res in zip(symbols, results):
+            if not res:
+                continue
+            # res is a list[Candle]; prefer the most recent (last) as latest
+            try:
+                last_candle = res[-1]
+            except Exception:
+                continue
+            key = (sym.upper(), interval)
+            if self._only_closed:
+                prev = self._latest.get(key)
+                if prev is not None:
+                    self._prev_closed[key] = prev
+            self._latest[key] = last_candle
 
     def _compute_effective_symbols(self) -> List[str]:
         """Union of requested symbols and all subscriber symbols (if any)."""
