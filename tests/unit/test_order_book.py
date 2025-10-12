@@ -1,8 +1,9 @@
 """Unit tests for OrderBook model."""
 
-import pytest
 from datetime import datetime, timezone
 from decimal import Decimal
+
+import pytest
 
 from laakhay.data.models.order_book import OrderBook
 
@@ -16,7 +17,7 @@ def test_orderbook_valid():
         asks=[(Decimal("50100"), Decimal("1.0")), (Decimal("50200"), Decimal("1.5"))],
         timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
     )
-    
+
     assert ob.symbol == "BTCUSDT"
     assert len(ob.bids) == 2
     assert len(ob.asks) == 2
@@ -31,7 +32,7 @@ def test_orderbook_best_prices():
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("2"))],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     assert ob.best_bid_price == Decimal("50000")
     assert ob.best_ask_price == Decimal("50100")
     assert ob.best_bid_qty == Decimal("1")
@@ -47,13 +48,13 @@ def test_orderbook_spread():
         asks=[(Decimal("50100"), Decimal("1"))],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     assert ob.spread == Decimal("100")
     assert ob.mid_price == Decimal("50050")
-    
+
     # Spread in bps: (100 / 50050) * 10000 ≈ 19.98
     assert 19 < ob.spread_bps < 21
-    
+
     # Spread percentage: (100 / 50050) * 100 ≈ 0.1998
     assert Decimal("0.19") < ob.spread_percentage < Decimal("0.21")
 
@@ -70,7 +71,7 @@ def test_orderbook_tight_wide_spread():
     )
     assert tight_ob.is_tight_spread is True
     assert tight_ob.is_wide_spread is False
-    
+
     # Wide spread > 50 bps
     wide_ob = OrderBook(
         symbol="BTCUSDT",
@@ -92,7 +93,7 @@ def test_orderbook_volume():
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("1.5"))],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     assert ob.total_bid_volume == Decimal("3")  # 1 + 2
     assert ob.total_ask_volume == Decimal("2.5")  # 1 + 1.5
 
@@ -106,10 +107,10 @@ def test_orderbook_value():
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("1.5"))],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     # Bid value: 50000*1 + 49900*2 = 149800
     assert ob.total_bid_value == Decimal("149800")
-    
+
     # Ask value: 50100*1 + 50200*1.5 = 125400
     assert ob.total_ask_value == Decimal("125400")
 
@@ -126,7 +127,7 @@ def test_orderbook_imbalance():
     )
     assert balanced_ob.imbalance == Decimal("0")
     assert balanced_ob.market_pressure == "neutral"
-    
+
     # Bid-heavy (bullish)
     bid_heavy_ob = OrderBook(
         symbol="BTCUSDT",
@@ -138,7 +139,7 @@ def test_orderbook_imbalance():
     assert bid_heavy_ob.imbalance > Decimal("0")
     assert bid_heavy_ob.is_bid_heavy is True
     assert bid_heavy_ob.market_pressure == "bullish"
-    
+
     # Ask-heavy (bearish)
     ask_heavy_ob = OrderBook(
         symbol="BTCUSDT",
@@ -169,7 +170,7 @@ def test_orderbook_depth_percentage():
         ],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     # Within 0.5% of mid price
     depth = ob.get_depth_percentage(Decimal("0.5"))
     assert depth["bid_volume"] == Decimal("3")  # 50000 and 49900 levels
@@ -187,9 +188,10 @@ def test_orderbook_is_fresh():
         timestamp=datetime.now(timezone.utc),
     )
     assert fresh_ob.is_fresh(max_age_seconds=10) is True
-    
+
     # Stale orderbook
     from datetime import timedelta
+
     stale_time = datetime.now(timezone.utc) - timedelta(seconds=30)
     stale_ob = OrderBook(
         symbol="BTCUSDT",
@@ -210,13 +212,13 @@ def test_orderbook_to_dict():
         asks=[(Decimal("50100"), Decimal("1"))],
         timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
     )
-    
+
     data = ob.to_dict(include_levels=False)
     assert data["symbol"] == "BTCUSDT"
     assert data["spread"] == "100"
     assert data["bid_levels"] == 1
     assert data["ask_levels"] == 1
-    
+
     # With levels
     data_with_levels = ob.to_dict(include_levels=True)
     assert "bids" in data_with_levels
@@ -233,7 +235,7 @@ def test_orderbook_frozen():
         asks=[(Decimal("50100"), Decimal("1"))],
         timestamp=datetime.now(timezone.utc),
     )
-    
+
     with pytest.raises(Exception):  # Pydantic frozen validation error
         ob.symbol = "ETHUSDT"
 
@@ -249,7 +251,7 @@ def test_orderbook_validation():
             asks=[(Decimal("50100"), Decimal("1"))],
             timestamp=datetime.now(timezone.utc),
         )
-    
+
     # Empty bids/asks should fail
     with pytest.raises(Exception):
         OrderBook(
@@ -259,7 +261,7 @@ def test_orderbook_validation():
             asks=[(Decimal("50100"), Decimal("1"))],
             timestamp=datetime.now(timezone.utc),
         )
-    
+
     # Invalid price (non-positive) should fail
     with pytest.raises(Exception):
         OrderBook(
@@ -282,4 +284,3 @@ def test_orderbook_depth_score():
         timestamp=datetime.now(timezone.utc),
     )
     assert thin_ob.depth_score in ["thin", "moderate", "deep"]
-

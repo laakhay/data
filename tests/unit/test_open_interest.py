@@ -1,6 +1,6 @@
 """Unit tests for OpenInterest model."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -85,13 +85,13 @@ def test_open_interest_get_age_seconds():
     """Test get_age_seconds calculation."""
     now = datetime.now(timezone.utc)
     past_time = now - timedelta(minutes=5)  # 5 minutes ago
-    
+
     oi = OpenInterest(
         symbol="BTCUSDT",
         timestamp=past_time,
         open_interest=Decimal("1000"),
     )
-    
+
     age = oi.get_age_seconds()
     # Should be approximately 300 seconds (5 minutes)
     assert 290 <= age <= 310
@@ -102,7 +102,7 @@ def test_open_interest_is_fresh():
     now = datetime.now(timezone.utc)
     recent_time = now - timedelta(seconds=30)  # 30 seconds ago
     old_time = now - timedelta(minutes=5)  # 5 minutes ago
-    
+
     # Fresh OI (30 seconds old)
     fresh_oi = OpenInterest(
         symbol="BTCUSDT",
@@ -110,7 +110,7 @@ def test_open_interest_is_fresh():
         open_interest=Decimal("1000"),
     )
     assert fresh_oi.is_fresh(max_age_seconds=120.0) is True
-    
+
     # Stale OI (5 minutes old)
     stale_oi = OpenInterest(
         symbol="BTCUSDT",
@@ -131,7 +131,7 @@ def test_open_interest_to_dict():
         sum_open_interest=Decimal("12345.67"),
         sum_open_interest_value=Decimal("500000000.50"),
     )
-    
+
     result = oi.to_dict()
     expected = {
         "symbol": "BTCUSDT",
@@ -155,7 +155,7 @@ def test_open_interest_to_dict_with_none():
         sum_open_interest=None,
         sum_open_interest_value=None,
     )
-    
+
     result = oi.to_dict()
     expected = {
         "symbol": "BTCUSDT",

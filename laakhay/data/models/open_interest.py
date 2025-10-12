@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -13,13 +12,13 @@ class OpenInterest(BaseModel):
     symbol: str = Field(..., min_length=1, description="Trading symbol")
     timestamp: datetime = Field(..., description="Measurement timestamp (UTC)")
     open_interest: Decimal = Field(..., ge=0, description="Number of open contracts")
-    open_interest_value: Optional[Decimal] = Field(
+    open_interest_value: Decimal | None = Field(
         default=None, ge=0, description="USDT value of open interest"
     )
-    sum_open_interest: Optional[Decimal] = Field(
+    sum_open_interest: Decimal | None = Field(
         default=None, ge=0, description="Alternative format: sum of open interest"
     )
-    sum_open_interest_value: Optional[Decimal] = Field(
+    sum_open_interest_value: Decimal | None = Field(
         default=None, ge=0, description="Alternative format: sum of open interest value"
     )
 
@@ -33,7 +32,7 @@ class OpenInterest(BaseModel):
 
     @field_validator("open_interest_value", "sum_open_interest", "sum_open_interest_value")
     @classmethod
-    def validate_optional_values(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+    def validate_optional_values(cls, v: Decimal | None) -> Decimal | None:
         """Validate optional fields are non-negative if provided."""
         if v is not None and v < 0:
             raise ValueError("Value must be non-negative")
@@ -51,7 +50,7 @@ class OpenInterest(BaseModel):
     def get_age_seconds(self) -> float:
         """Seconds since measurement timestamp."""
         from datetime import datetime, timezone
-        
+
         now = datetime.now(timezone.utc)
         return max(0.0, (now - self.timestamp).total_seconds())
 
@@ -65,7 +64,11 @@ class OpenInterest(BaseModel):
             "symbol": self.symbol,
             "timestamp": self.timestamp.isoformat(),
             "open_interest": str(self.open_interest),
-            "open_interest_value": str(self.open_interest_value) if self.open_interest_value else None,
+            "open_interest_value": (
+                str(self.open_interest_value) if self.open_interest_value else None
+            ),
             "sum_open_interest": str(self.sum_open_interest) if self.sum_open_interest else None,
-            "sum_open_interest_value": str(self.sum_open_interest_value) if self.sum_open_interest_value else None,
+            "sum_open_interest_value": (
+                str(self.sum_open_interest_value) if self.sum_open_interest_value else None
+            ),
         }

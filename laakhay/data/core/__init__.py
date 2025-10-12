@@ -1,7 +1,7 @@
 """Core components."""
 
 from .base import BaseProvider
-from .enums import TimeInterval, MarketType
+from .enums import MarketType, TimeInterval
 from .exceptions import (
     DataError,
     InvalidIntervalError,

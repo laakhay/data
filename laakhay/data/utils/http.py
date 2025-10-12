@@ -9,7 +9,8 @@ This client provides:
 
 import asyncio
 import time
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import aiohttp
 
@@ -17,15 +18,17 @@ import aiohttp
 class HTTPClient:
     """Async HTTP client wrapper."""
 
-    def __init__(self, base_url: Optional[str] = None, timeout: float = 30.0) -> None:
+    def __init__(self, base_url: str | None = None, timeout: float = 30.0) -> None:
         self.base_url = base_url
         self.timeout = aiohttp.ClientTimeout(total=timeout)
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
         # Response hooks: called with aiohttp.ClientResponse and can optionally
         # return a float indicating additional delay (seconds) before next request.
-        self._response_hooks: List[Callable[[aiohttp.ClientResponse], Union[None, float, Awaitable[Optional[float]]]]] = []
+        self._response_hooks: list[
+            Callable[[aiohttp.ClientResponse], None | float | Awaitable[float | None]]
+        ] = []
         # Throttle until timestamp (epoch seconds) if set by hooks
-        self._throttle_until: Optional[float] = None
+        self._throttle_until: float | None = None
 
     @property
     def session(self) -> aiohttp.ClientSession:
@@ -36,7 +39,7 @@ class HTTPClient:
 
     def add_response_hook(
         self,
-        hook: Callable[[aiohttp.ClientResponse], Union[None, float, Awaitable[Optional[float]]]],
+        hook: Callable[[aiohttp.ClientResponse], None | float | Awaitable[float | None]],
     ) -> None:
         """Register a response hook.
 
@@ -59,9 +62,9 @@ class HTTPClient:
     async def get(
         self,
         url: str,
-        params: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """GET request."""
         # If base_url is set and url is relative, combine them
         if self.base_url and not url.startswith("http"):
@@ -80,7 +83,7 @@ class HTTPClient:
                 # Call hooks early so they can inspect headers even on error statuses
                 if self._response_hooks:
                     # Collect suggested delays from hooks
-                    hook_delays: List[float] = []
+                    hook_delays: list[float] = []
                     for hook in self._response_hooks:
                         try:
                             result = hook(response)

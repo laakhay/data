@@ -1,7 +1,5 @@
 """Unit tests for TimeInterval enum."""
 
-import pytest
-
 from laakhay.data.core import TimeInterval
 
 

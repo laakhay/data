@@ -1,15 +1,15 @@
 """Retry logic with exponential backoff."""
 
 import asyncio
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Type, Tuple
 
 
 def retry_async(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable:
     """Retry async function with exponential backoff."""
 

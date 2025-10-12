@@ -19,20 +19,19 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Union
 
 from ..core import TimeInterval
 from ..models import Candle
 
-
 Callback = Union[Callable[[Candle], Awaitable[None]], Callable[[Candle], None]]
-
 
 @dataclass(frozen=True)
 class _Sub:
     callback: Callback
-    symbols: Optional[Set[str]]  # None means "all effective symbols"
+    symbols: set[str] | None  # None means "all effective symbols"
     interval: TimeInterval
     only_closed: bool
 
@@ -42,12 +41,12 @@ class DataFeed:
 
     def __init__(
         self,
-    provider: Any,
+        provider: Any,
         *,
         stale_threshold_seconds: int = 900,
-        throttle_ms: Optional[int] = None,
+        throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
-        max_streams_per_connection: Optional[int] = None,
+        max_streams_per_connection: int | None = None,
     ) -> None:
         self._provider = provider
         self._stale_threshold = stale_threshold_seconds
@@ -57,24 +56,24 @@ class DataFeed:
 
         # Streaming state
         # Currently active stream symbol set (effective set)
-        self._symbols: List[str] = []
+        self._symbols: list[str] = []
         # Requested symbols via start/set/add/remove (global intent)
-        self._requested_symbols: Set[str] = set()
-        self._interval: Optional[TimeInterval] = None
+        self._requested_symbols: set[str] = set()
+        self._interval: TimeInterval | None = None
         self._only_closed: bool = True
-        self._stream_task: Optional[asyncio.Task] = None
+        self._stream_task: asyncio.Task | None = None
         self._running = False
 
         # Cache: latest and previous-closed per (symbol, interval)
-        self._latest: Dict[Tuple[str, TimeInterval], Candle] = {}
-        self._prev_closed: Dict[Tuple[str, TimeInterval], Candle] = {}
+        self._latest: dict[tuple[str, TimeInterval], Candle] = {}
+        self._prev_closed: dict[tuple[str, TimeInterval], Candle] = {}
 
         # Subscriptions
-        self._subs: Dict[str, _Sub] = {}
+        self._subs: dict[str, _Sub] = {}
 
         # Health tracking (derived by chunk id)
-        self._chunk_last_msg: Dict[int, float] = {}
-        self._symbol_chunk_id: Dict[str, int] = {}
+        self._chunk_last_msg: dict[int, float] = {}
+        self._symbol_chunk_id: dict[str, int] = {}
 
         # Lock for updates
         self._lock = asyncio.Lock()
@@ -179,9 +178,9 @@ class DataFeed:
         self,
         callback: Callback,
         *,
-        symbols: Optional[Iterable[str]] = None,
-        interval: Optional[TimeInterval] = None,
-        only_closed: Optional[bool] = None,
+        symbols: Iterable[str] | None = None,
+        interval: TimeInterval | None = None,
+        only_closed: bool | None = None,
     ) -> str:
         """Subscribe to candle updates for given symbols.
 
@@ -196,10 +195,12 @@ class DataFeed:
         if only_closed is None:
             only_closed = self._only_closed
 
-        subs_symbols: Optional[Set[str]] = None
+        subs_symbols: set[str] | None = None
         if symbols is not None:
             subs_symbols = {s.upper() for s in symbols}
-        sub = _Sub(callback=callback, symbols=subs_symbols, interval=interval, only_closed=only_closed)
+        sub = _Sub(
+            callback=callback, symbols=subs_symbols, interval=interval, only_closed=only_closed
+        )
         sub_id = uuid.uuid4().hex
         self._subs[sub_id] = sub
 
@@ -225,6 +226,7 @@ class DataFeed:
                                 except asyncio.CancelledError:
                                     pass
                             self._stream_task = asyncio.create_task(self._stream_loop())
+
             # schedule update but don't block caller
             try:
                 loop = asyncio.get_running_loop()
@@ -236,6 +238,7 @@ class DataFeed:
 
     def unsubscribe(self, subscription_id: str) -> None:
         self._subs.pop(subscription_id, None)
+
         # Recompute effective set from requested + subs; rebuild if shrunk
         async def _maybe_shrink():
             async with self._lock:
@@ -251,6 +254,7 @@ class DataFeed:
                             except asyncio.CancelledError:
                                 pass
                         self._stream_task = asyncio.create_task(self._stream_loop())
+
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(_maybe_shrink())
@@ -260,24 +264,30 @@ class DataFeed:
     # ----------------------
     # Cache access
     # ----------------------
-    def get_latest_candle(self, symbol: str, *, interval: Optional[TimeInterval] = None) -> Optional[Candle]:
+    def get_latest_candle(
+        self, symbol: str, *, interval: TimeInterval | None = None
+    ) -> Candle | None:
         """Get the latest candle from cache (O(1), non-blocking)."""
         if interval is None:
             interval = self._interval or TimeInterval.M1
         return self._latest.get((symbol.upper(), interval))
 
-    def get_previous_closed(self, symbol: str, *, interval: Optional[TimeInterval] = None) -> Optional[Candle]:
+    def get_previous_closed(
+        self, symbol: str, *, interval: TimeInterval | None = None
+    ) -> Candle | None:
         if interval is None:
             interval = self._interval or TimeInterval.M1
         return self._prev_closed.get((symbol.upper(), interval))
 
-    def snapshot(self, symbols: Optional[Iterable[str]] = None, *, interval: Optional[TimeInterval] = None) -> Dict[str, Optional[Candle]]:
+    def snapshot(
+        self, symbols: Iterable[str] | None = None, *, interval: TimeInterval | None = None
+    ) -> dict[str, Candle | None]:
         """Return a dict of latest candles for given symbols (or all effective)."""
         if interval is None:
             interval = self._interval or TimeInterval.M1
         if symbols is None:
             symbols = list(self._symbols)
-        out: Dict[str, Optional[Candle]] = {}
+        out: dict[str, Candle | None] = {}
         for s in symbols:
             out[s] = self._latest.get((s.upper(), interval))
         return out
@@ -287,19 +297,19 @@ class DataFeed:
         self,
         callback: Callback,
         *,
-        symbols: Optional[Iterable[str]] = None,
-        interval: Optional[TimeInterval] = None,
-        only_closed: Optional[bool] = None,
+        symbols: Iterable[str] | None = None,
+        interval: TimeInterval | None = None,
+        only_closed: bool | None = None,
     ) -> str:
         return self.subscribe(callback, symbols=symbols, interval=interval, only_closed=only_closed)
 
     # ----------------------
     # Health
     # ----------------------
-    def get_connection_status(self) -> Dict[str, Any]:
+    def get_connection_status(self) -> dict[str, Any]:
         """Summarize connection health derived from per-chunk last message times."""
         now = time.time()
-        stale_ids: List[str] = []
+        stale_ids: list[str] = []
         healthy = 0
         for cid, ts in self._chunk_last_msg.items():
             if now - ts <= self._stale_threshold:
@@ -310,7 +320,9 @@ class DataFeed:
             "active_connections": len(self._chunk_last_msg),
             "healthy_connections": healthy,
             "stale_connections": stale_ids,
-            "last_message_time": {f"connection_{cid}": ts for cid, ts in self._chunk_last_msg.items()}
+            "last_message_time": {
+                f"connection_{cid}": ts for cid, ts in self._chunk_last_msg.items()
+            },
         }
 
     # ----------------------
@@ -350,7 +362,7 @@ class DataFeed:
             pass
 
     async def _dispatch(self, candle: Candle) -> None:
-        to_call: List[Tuple[Callback, Candle]] = []
+        to_call: list[tuple[Callback, Candle]] = []
         for sub in self._subs.values():
             if sub.interval != self._interval:
                 continue
@@ -365,7 +377,7 @@ class DataFeed:
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, cb, c)
 
-    def _assign_chunk_ids(self, symbols: List[str]) -> None:
+    def _assign_chunk_ids(self, symbols: list[str]) -> None:
         # Mirror provider's chunking to derive per-connection ids.
         # Prefer explicit override, then provider hint, else conservative default (200).
         max_per_conn = (
@@ -373,7 +385,7 @@ class DataFeed:
             or getattr(self._provider, "max_streams_per_connection", None)
             or 200
         )
-        chunks = [symbols[i:i + max_per_conn] for i in range(0, len(symbols), max_per_conn)]
+        chunks = [symbols[i : i + max_per_conn] for i in range(0, len(symbols), max_per_conn)]
         self._symbol_chunk_id.clear()
         self._chunk_last_msg.clear()
         for idx, chunk in enumerate(chunks):
@@ -382,7 +394,9 @@ class DataFeed:
             # initialize last message times to 0 (unknown)
             self._chunk_last_msg[idx] = 0.0
 
-    async def _prefill_from_historical(self, symbols: List[str], interval: TimeInterval, limit: Optional[int]) -> None:
+    async def _prefill_from_historical(
+        self, symbols: list[str], interval: TimeInterval, limit: int | None
+    ) -> None:
         """Best-effort prefill of latest-candle cache using provider REST method.
 
         This will call provider.get_candles(symbol, interval, limit=limit) for each
@@ -402,7 +416,7 @@ class DataFeed:
         tasks = [_fetch(s) for s in symbols]
         results = await asyncio.gather(*tasks, return_exceptions=False)
 
-        for sym, res in zip(symbols, results):
+        for sym, res in zip(symbols, results, strict=False):
             if not res:
                 continue
             # res is a list[Candle]; prefer the most recent (last) as latest
@@ -417,11 +431,11 @@ class DataFeed:
                     self._prev_closed[key] = prev
             self._latest[key] = last_candle
 
-    def _compute_effective_symbols(self) -> List[str]:
+    def _compute_effective_symbols(self) -> list[str]:
         """Union of requested symbols and all subscriber symbols (if any)."""
-        subs_union: Set[str] = set()
+        subs_union: set[str] = set()
         for sub in self._subs.values():
             if sub.symbols:
                 subs_union |= sub.symbols
-        eff = sorted((self._requested_symbols | subs_union))
+        eff = sorted(self._requested_symbols | subs_union)
         return eff

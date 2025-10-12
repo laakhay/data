@@ -1,16 +1,17 @@
 """Binance exchange data provider."""
 
 import logging
+import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
-import time
+from typing import Any
 
-from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, TimeInterval, MarketType
+from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, MarketType, TimeInterval
 from ...models import Candle, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 from ...utils import HTTPClient, retry_async
-from .constants import BASE_URLS, INTERVAL_MAP as BINANCE_INTERVAL_MAP, OI_PERIOD_MAP
+from .constants import BASE_URLS, OI_PERIOD_MAP
+from .constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
 from .websocket_mixin import BinanceWebSocketMixin
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     """Binance exchange data provider.
-    
+
     Supports both Spot and Futures markets via market_type parameter.
     Default is SPOT for backward compatibility.
-    
+
     Args:
         market_type: Market type (SPOT or FUTURES)
         api_key: Optional API key for authenticated endpoints
@@ -36,8 +37,8 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     def __init__(
         self,
         market_type: MarketType = MarketType.SPOT,
-        api_key: Optional[str] = None, 
-        api_secret: Optional[str] = None,
+        api_key: str | None = None,
+        api_secret: str | None = None,
         symbols_cache_ttl: float = 300.0,
         products_cache_ttl: float = 600.0,
     ) -> None:
@@ -50,12 +51,12 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         # Install Binance rate-limit aware response hook
         self._http.add_response_hook(self._binance_rate_limit_hook)
         # Symbols cache (full list); filter by quote_asset on read
-        self._symbols_cache: Optional[List[Symbol]] = None
-        self._symbols_cache_ts: Optional[float] = None
+        self._symbols_cache: list[Symbol] | None = None
+        self._symbols_cache_ts: float | None = None
         self._symbols_cache_ttl = symbols_cache_ttl
         # Products cache (Binance bapi)
-        self._products_cache: Optional[List[Dict[str, Any]]] = None
-        self._products_cache_ts: Optional[float] = None
+        self._products_cache: list[dict[str, Any]] | None = None
+        self._products_cache_ts: float | None = None
         self._products_cache_ttl = products_cache_ttl
 
     def set_credentials(self, api_key: str, api_secret: str) -> None:
@@ -73,7 +74,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         if self.market_type == MarketType.FUTURES:
             return "/fapi/v1/klines"
         return "/api/v3/klines"
-    
+
     def _get_exchange_info_endpoint(self) -> str:
         """Get the exchange info endpoint for the market type."""
         if self.market_type == MarketType.FUTURES:
@@ -95,7 +96,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         "10s": 300,  # Futures commonly 300 per 10s window; used heuristically
     }
 
-    def _estimate_weight_budget(self, headers: Dict[str, str]) -> Optional[float]:
+    def _estimate_weight_budget(self, headers: dict[str, str]) -> float | None:
         """Estimate remaining budget ratio from X-MBX-USED-WEIGHT-* headers.
 
         Returns a value in [0, 1] representing how much of the presumed window
@@ -104,7 +105,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         used_min = headers.get("X-MBX-USED-WEIGHT-1m") or headers.get("x-mbx-used-weight-1m")
         used_10s = headers.get("X-MBX-USED-WEIGHT-10S") or headers.get("x-mbx-used-weight-10s")
 
-        ratios: List[float] = []
+        ratios: list[float] = []
         if used_min is not None:
             try:
                 ratios.append(float(used_min) / float(self._WEIGHT_LIMITS["1m"]))
@@ -120,7 +121,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             return max(0.0, min(1.0, max(ratios)))
         return None
 
-    def _binance_rate_limit_hook(self, response) -> Optional[float]:
+    def _binance_rate_limit_hook(self, response) -> float | None:
         """Response hook to parse Binance rate-limit headers and request backoff.
 
         If consumption ratio crosses 80%, request a gentle delay to spread load
@@ -148,15 +149,15 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self,
         symbol: str,
         interval: TimeInterval,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[Candle]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[Candle]:
         """Fetch OHLCV candles from Binance."""
         self.validate_symbol(symbol)
         self.validate_interval(interval)
 
-        params: Dict = {
+        params: dict = {
             "symbol": symbol.upper(),
             "interval": self.INTERVAL_MAP[interval],
         }
@@ -179,7 +180,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
 
         return [self._parse_candle(symbol, candle_data) for candle_data in data]
 
-    def _parse_candle(self, symbol: str, data: List) -> Candle:
+    def _parse_candle(self, symbol: str, data: list) -> Candle:
         """Parse Binance kline data into Candle model."""
         return Candle(
             symbol=symbol.upper(),
@@ -193,13 +194,15 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         )
 
     @retry_async(max_retries=3, base_delay=1.0)
-    async def get_symbols(self, quote_asset: Optional[str] = None, use_cache: bool = True) -> List[Symbol]:
+    async def get_symbols(
+        self, quote_asset: str | None = None, use_cache: bool = True
+    ) -> list[Symbol]:
         """Fetch all trading symbols from Binance.
-        
+
         Args:
             quote_asset: Optional filter by quote asset (e.g., "USDT", "BTC")
             use_cache: When True (default), use in-memory cache within TTL
-        
+
         Returns:
             List of Symbol objects. For FUTURES market, returns PERPETUAL contracts only.
         """
@@ -244,21 +247,21 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             # Never let heuristics update break symbols
             pass
 
-        symbols: List[Symbol] = []
+        symbols: list[Symbol] = []
         for symbol_data in data.get("symbols", []):
             # Skip non-trading symbols
             if symbol_data.get("status") != "TRADING":
                 continue
-            
+
             # Filter by quote asset if specified
             if quote_asset and symbol_data.get("quoteAsset") != quote_asset:
                 continue
-            
+
             # For futures, filter for PERPETUAL contracts only
             if self.market_type == MarketType.FUTURES:
                 if symbol_data.get("contractType") != "PERPETUAL":
                     continue
-            
+
             # Extract trading filters for metadata
             tick_size = None
             step_size = None
@@ -315,55 +318,57 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         symbol: str,
         historical: bool = False,
         period: str = "5m",
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
         limit: int = 30,
-    ) -> List[OpenInterest]:
+    ) -> list[OpenInterest]:
         """Fetch Open Interest data from Binance.
-        
+
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
             historical: If True, fetch historical OI data; if False, current OI
             period: Time period for historical data (5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d)
             start_time: Start time for historical data
-            end_time: End time for historical data  
+            end_time: End time for historical data
             limit: Maximum number of records (max 500)
-            
+
         Returns:
             List of OpenInterest objects
-            
+
         Raises:
             InvalidSymbolError: If symbol doesn't exist
             ProviderError: If API request fails
         """
         if self.market_type != MarketType.FUTURES:
             raise ValueError("Open Interest is only available for Futures market")
-            
+
         symbol = symbol.upper()
-        
+
         if historical:
             # Historical OI endpoint
             if period not in OI_PERIOD_MAP:
-                raise ValueError(f"Invalid period: {period}. Valid periods: {list(OI_PERIOD_MAP.keys())}")
-                
+                raise ValueError(
+                    f"Invalid period: {period}. Valid periods: {list(OI_PERIOD_MAP.keys())}"
+                )
+
             params = {
                 "symbol": symbol,
                 "period": OI_PERIOD_MAP[period],
                 "limit": min(limit, 500),  # Binance max limit
             }
-            
+
             if start_time:
                 params["startTime"] = int(start_time.timestamp() * 1000)
             if end_time:
                 params["endTime"] = int(end_time.timestamp() * 1000)
-                
+
             try:
                 data = await self._http.get("/futures/data/openInterestHist", params=params)
             except Exception as e:
                 if "Invalid symbol" in str(e):
                     raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
                 raise
-                
+
             # Historical OI endpoint may return a single dict or list of data points
             if isinstance(data, dict):
                 return [self._parse_open_interest_historical(data)]
@@ -378,13 +383,13 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 if "Invalid symbol" in str(e):
                     raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
                 raise
-                
+
             return [self._parse_open_interest_current(data)]
 
-    def _parse_open_interest_current(self, data: Dict) -> OpenInterest:
+    def _parse_open_interest_current(self, data: dict) -> OpenInterest:
         """Parse current OI response."""
         from datetime import timezone
-        
+
         return OpenInterest(
             symbol=data["symbol"],
             timestamp=datetime.fromtimestamp(data["time"] / 1000, tz=timezone.utc),
@@ -396,7 +401,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     def _parse_open_interest_historical(self, data) -> OpenInterest:
         """Parse historical OI response - handles both dict and array formats."""
         from datetime import timezone
-        
+
         if isinstance(data, dict):
             # Dictionary format (single data point)
             # Note: Historical endpoint may not have timestamp, use current time
@@ -405,14 +410,16 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 timestamp = datetime.fromtimestamp(data["time"] / 1000, tz=timezone.utc)
             elif "timestamp" in data:
                 timestamp = datetime.fromtimestamp(data["timestamp"] / 1000, tz=timezone.utc)
-                
+
             return OpenInterest(
                 symbol=data["symbol"],
                 timestamp=timestamp,
                 sum_open_interest=Decimal(str(data["sumOpenInterest"])),
                 sum_open_interest_value=Decimal(str(data["sumOpenInterestValue"])),
                 open_interest=Decimal(str(data["sumOpenInterest"])),  # Use sum as primary
-                open_interest_value=Decimal(str(data["sumOpenInterestValue"])),  # Use sum value as primary
+                open_interest_value=Decimal(
+                    str(data["sumOpenInterestValue"])
+                ),  # Use sum value as primary
             )
         else:
             # Array format (historical data points)
@@ -429,27 +436,27 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     async def get_funding_rate(
         self,
         symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
         limit: int = 100,
-    ) -> List[FundingRate]:
+    ) -> list[FundingRate]:
         """Fetch historical APPLIED funding rate data from Binance.
-        
+
         Returns the actual funding rates that were applied/charged to positions.
         These rates are FIXED for each 8-hour period (00:00, 08:00, 16:00 UTC).
-        
-        Note: For PREDICTED/NEXT funding rate (changes continuously), use 
+
+        Note: For PREDICTED/NEXT funding rate (changes continuously), use
         stream_funding_rate() WebSocket method instead.
-        
+
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
             start_time: Start time for historical data
             end_time: End time for historical data
             limit: Maximum number of records (default 100, max 1000)
-            
+
         Returns:
             List of FundingRate objects (historical applied rates)
-            
+
         Raises:
             ValueError: If market type is not FUTURES
             InvalidSymbolError: If symbol doesn't exist
@@ -457,33 +464,33 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         """
         if self.market_type != MarketType.FUTURES:
             raise ValueError("Funding rate is only available for Futures market")
-            
+
         symbol = symbol.upper()
-        
+
         params = {
             "symbol": symbol,
             "limit": min(limit, 1000),  # Binance max limit
         }
-        
+
         if start_time:
             params["startTime"] = int(start_time.timestamp() * 1000)
         if end_time:
             params["endTime"] = int(end_time.timestamp() * 1000)
-            
+
         try:
             data = await self._http.get("/fapi/v1/fundingRate", params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
                 raise InvalidSymbolError(f"Symbol {symbol} not found on Binance Futures")
             raise
-            
+
         # Parse funding rate data
         return [self._parse_funding_rate(fr_data) for fr_data in data]
 
-    def _parse_funding_rate(self, data: Dict) -> FundingRate:
+    def _parse_funding_rate(self, data: dict) -> FundingRate:
         """Parse funding rate response."""
         from datetime import timezone
-        
+
         return FundingRate(
             symbol=data["symbol"],
             funding_time=datetime.fromtimestamp(data["fundingTime"] / 1000, tz=timezone.utc),
@@ -498,55 +505,55 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         limit: int = 100,
     ) -> OrderBook:
         """Fetch current order book (market depth) from Binance.
-        
+
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
             limit: Depth limit (5, 10, 20, 50, 100, 500, 1000, 5000)
-            
+
         Returns:
             OrderBook object with bids and asks
-            
+
         Raises:
             InvalidSymbolError: If symbol doesn't exist
             ProviderError: If API request fails
         """
         symbol = symbol.upper()
-        
+
         # Validate limit
         valid_limits = [5, 10, 20, 50, 100, 500, 1000, 5000]
         if limit not in valid_limits:
             # Round to nearest valid limit
             limit = min(valid_limits, key=lambda x: abs(x - limit))
-        
+
         # Endpoint differs by market type
         if self.market_type == MarketType.SPOT:
             endpoint = "/api/v3/depth"
         else:  # FUTURES
             endpoint = "/fapi/v1/depth"
-        
+
         params = {
             "symbol": symbol,
             "limit": limit,
         }
-        
+
         try:
             data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
                 raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
             raise
-        
+
         # Parse order book
         return self._parse_order_book(data, symbol)
 
-    def _parse_order_book(self, data: Dict, symbol: str) -> OrderBook:
+    def _parse_order_book(self, data: dict, symbol: str) -> OrderBook:
         """Parse order book response."""
         from datetime import timezone
-        
+
         # Parse bids and asks
         bids = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("bids", [])]
         asks = [(Decimal(str(price)), Decimal(str(qty))) for price, qty in data.get("asks", [])]
-        
+
         return OrderBook(
             symbol=symbol,
             last_update_id=data.get("lastUpdateId", 0),
@@ -560,47 +567,47 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self,
         symbol: str,
         limit: int = 500,
-    ) -> List[Trade]:
+    ) -> list[Trade]:
         """Fetch recent trades from Binance.
-        
+
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
             limit: Number of trades to fetch (max 1000)
-            
+
         Returns:
             List of Trade objects
-            
+
         Raises:
             InvalidSymbolError: If symbol doesn't exist
             ProviderError: If API request fails
         """
         symbol = symbol.upper()
-        
+
         # Endpoint differs by market type
         if self.market_type == MarketType.SPOT:
             endpoint = "/api/v3/trades"
         else:  # FUTURES
             endpoint = "/fapi/v1/trades"
-        
+
         params = {
             "symbol": symbol,
             "limit": min(limit, 1000),  # Binance max limit
         }
-        
+
         try:
             data = await self._http.get(endpoint, params=params)
         except Exception as e:
             if "Invalid symbol" in str(e):
                 raise InvalidSymbolError(f"Symbol {symbol} not found on Binance")
             raise
-        
+
         # Parse trades
         return [self._parse_trade(trade_data, symbol) for trade_data in data]
 
-    def _parse_trade(self, data: Dict, symbol: str) -> Trade:
+    def _parse_trade(self, data: dict, symbol: str) -> Trade:
         """Parse trade response."""
         from datetime import timezone
-        
+
         return Trade(
             symbol=symbol,
             trade_id=data["id"],
@@ -629,7 +636,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         circulating_supply: Decimal
         circulating_market_cap: Decimal
 
-        def to_dict(self) -> Dict[str, str]:
+        def to_dict(self) -> dict[str, str]:
             return {
                 "symbol": self.symbol,
                 "base_asset": self.base_asset,
@@ -639,9 +646,11 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 "circulating_market_cap": str(self.circulating_market_cap),
             }
 
-    _BINANCE_PRODUCTS_URL = "https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products"
+    _BINANCE_PRODUCTS_URL = (
+        "https://www.binance.com/bapi/asset/v2/public/asset-service/product/get-products"
+    )
 
-    async def _fetch_products_raw(self) -> List[Dict[str, Any]]:
+    async def _fetch_products_raw(self) -> list[dict[str, Any]]:
         data = await self._http.get(self._BINANCE_PRODUCTS_URL)
         if isinstance(data, dict):
             items = data.get("data")
@@ -658,7 +667,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             and (time.time() - self._products_cache_ts) <= self._products_cache_ttl
         )
 
-    async def get_products(self, *, force_refresh: bool = False) -> List[Dict[str, Any]]:
+    async def get_products(self, *, force_refresh: bool = False) -> list[dict[str, Any]]:
         """Fetch Binance products (with TTL cache)."""
         if not force_refresh and self._products_cache_valid():
             return list(self._products_cache or [])
@@ -670,12 +679,12 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     async def get_market_caps(
         self,
         *,
-        quote: Optional[str] = None,
-        min_circulating_supply: Optional[Decimal] = None,
+        quote: str | None = None,
+        min_circulating_supply: Decimal | None = None,
         force_refresh: bool = False,
-    ) -> List["BinanceProvider.ProductCap"]:
+    ) -> list["BinanceProvider.ProductCap"]:
         items = await self.get_products(force_refresh=force_refresh)
-        out: List[BinanceProvider.ProductCap] = []
+        out: list[BinanceProvider.ProductCap] = []
         for it in items:
             symbol = str(it.get("s") or it.get("symbol") or "").upper()
             base = str(it.get("b") or it.get("baseAsset") or "").upper()
@@ -713,10 +722,10 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         self,
         n: int = 100,
         *,
-        quote: Optional[str] = "USDT",
-        min_circulating_supply: Optional[Decimal] = None,
+        quote: str | None = "USDT",
+        min_circulating_supply: Decimal | None = None,
         force_refresh: bool = False,
-    ) -> List["BinanceProvider.ProductCap"]:
+    ) -> list["BinanceProvider.ProductCap"]:
         items = await self.get_market_caps(
             quote=quote,
             min_circulating_supply=min_circulating_supply,

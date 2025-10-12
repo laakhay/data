@@ -34,5 +34,6 @@ def test_round_price_and_quantity_with_constraints():
 def test_round_helpers_without_constraints_return_identity():
     s = Symbol(symbol="ETHUSDT", base_asset="ETH", quote_asset="USDT")
     from decimal import Decimal
+
     assert s.round_price(Decimal("123.456")) == Decimal("123.456")
     assert s.round_quantity(Decimal("0.789")) == Decimal("0.789")

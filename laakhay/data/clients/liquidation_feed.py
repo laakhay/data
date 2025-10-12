@@ -9,11 +9,11 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Union
 
 from ..models import Liquidation
-
 
 Callback = Union[Callable[[Liquidation], Awaitable[None]], Callable[[Liquidation], None]]
 
@@ -21,7 +21,7 @@ Callback = Union[Callable[[Liquidation], Awaitable[None]], Callable[[Liquidation
 @dataclass(frozen=True)
 class _Sub:
     callback: Callback
-    symbols: Optional[Set[str]]  # None means all
+    symbols: set[str] | None  # None means all
 
 
 class LiquidationFeed:
@@ -37,14 +37,14 @@ class LiquidationFeed:
         self._stale_threshold = stale_threshold_seconds
 
         # Streaming state
-        self._stream_task: Optional[asyncio.Task] = None
+        self._stream_task: asyncio.Task | None = None
         self._running = False
 
         # Cache: latest liquidation per symbol
-        self._latest: Dict[str, Liquidation] = {}
+        self._latest: dict[str, Liquidation] = {}
 
         # Subscriptions
-        self._subs: Dict[str, _Sub] = {}
+        self._subs: dict[str, _Sub] = {}
 
         # Health
         self._last_msg_time: float = 0.0
@@ -72,8 +72,8 @@ class LiquidationFeed:
             self._stream_task = None
 
     # Subscriptions
-    def subscribe(self, callback: Callback, *, symbols: Optional[Iterable[str]] = None) -> str:
-        subs_symbols: Optional[Set[str]] = None
+    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:
+        subs_symbols: set[str] | None = None
         if symbols is not None:
             subs_symbols = {s.upper() for s in symbols}
         sub = _Sub(callback=callback, symbols=subs_symbols)
@@ -85,11 +85,11 @@ class LiquidationFeed:
         self._subs.pop(subscription_id, None)
 
     # Cache access
-    def get_latest(self, symbol: str) -> Optional[Liquidation]:
+    def get_latest(self, symbol: str) -> Liquidation | None:
         return self._latest.get(symbol.upper())
 
-    def snapshot(self, symbols: Optional[Iterable[str]] = None) -> Dict[str, Optional[Liquidation]]:
-        out: Dict[str, Optional[Liquidation]] = {}
+    def snapshot(self, symbols: Iterable[str] | None = None) -> dict[str, Liquidation | None]:
+        out: dict[str, Liquidation | None] = {}
         if symbols is None:
             symbols = list(self._latest.keys())
         for s in symbols:
@@ -97,9 +97,11 @@ class LiquidationFeed:
         return out
 
     # Health
-    def get_connection_status(self) -> Dict[str, Any]:
+    def get_connection_status(self) -> dict[str, Any]:
         now = time.time()
-        healthy = (now - self._last_msg_time) <= self._stale_threshold if self._last_msg_time else False
+        healthy = (
+            (now - self._last_msg_time) <= self._stale_threshold if self._last_msg_time else False
+        )
         return {
             "active_connections": 1 if self._stream_task and not self._stream_task.done() else 0,
             "healthy_connections": 1 if healthy else 0,
@@ -125,7 +127,7 @@ class LiquidationFeed:
             pass
 
     async def _dispatch(self, liq: Liquidation) -> None:
-        to_call: List[Tuple[Callback, Liquidation]] = []
+        to_call: list[tuple[Callback, Liquidation]] = []
         for sub in self._subs.values():
             if sub.symbols is None or liq.symbol.upper() in sub.symbols:
                 to_call.append((sub.callback, liq))

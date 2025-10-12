@@ -1,14 +1,14 @@
 """Unit tests for DataFeed behavior with a fake provider."""
 
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
 
 from laakhay.data import DataFeed
-from laakhay.data.core import TimeInterval, MarketType
+from laakhay.data.core import MarketType, TimeInterval
 from laakhay.data.models import Candle
 
 
@@ -17,17 +17,17 @@ class FakeProvider:
 
     def __init__(self) -> None:
         self.market_type = MarketType.FUTURES
-        self._events: Dict[str, List[Candle]] = {}
+        self._events: dict[str, list[Candle]] = {}
 
-    def queue(self, symbol: str, candles: List[Candle]) -> None:
+    def queue(self, symbol: str, candles: list[Candle]) -> None:
         self._events.setdefault(symbol.upper(), []).extend(candles)
 
     async def stream_candles_multi(
         self,
-        symbols: List[str],
+        symbols: list[str],
         interval: TimeInterval,
         only_closed: bool = False,
-    throttle_ms: Optional[int] = None,
+        throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[Candle]:
         # Yield queued candles for requested symbols, then sleep forever
@@ -47,12 +47,20 @@ async def test_data_feed_cache_and_subscribe_dynamic_symbols():
     btc = Candle(
         symbol="BTCUSDT",
         timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
-        open=Decimal("1"), high=Decimal("2"), low=Decimal("1"), close=Decimal("1.5"), volume=Decimal("10"),
+        open=Decimal("1"),
+        high=Decimal("2"),
+        low=Decimal("1"),
+        close=Decimal("1.5"),
+        volume=Decimal("10"),
     )
     eth = Candle(
         symbol="ETHUSDT",
         timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
-        open=Decimal("1"), high=Decimal("2"), low=Decimal("1"), close=Decimal("1.25"), volume=Decimal("5"),
+        open=Decimal("1"),
+        high=Decimal("2"),
+        low=Decimal("1"),
+        close=Decimal("1.25"),
+        volume=Decimal("5"),
     )
     fp.queue("BTCUSDT", [btc])
     fp.queue("ETHUSDT", [eth])
@@ -75,7 +83,7 @@ async def test_data_feed_cache_and_subscribe_dynamic_symbols():
     assert any(x.symbol == "BTCUSDT" for x in received)
 
     # Dynamically add ETH
-    await feed.add_symbols(["ETHUSDT"]) 
+    await feed.add_symbols(["ETHUSDT"])
     await asyncio.sleep(0.05)
 
     # Subscribe for ETH and ensure cache gets populated

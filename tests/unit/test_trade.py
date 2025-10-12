@@ -1,8 +1,9 @@
 """Unit tests for Trade model."""
 
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+
+import pytest
 
 from laakhay.data.models.trade import Trade
 
@@ -17,7 +18,7 @@ def test_trade_valid():
         timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
         is_buyer_maker=False,
     )
-    
+
     assert trade.symbol == "BTCUSDT"
     assert trade.trade_id == 12345
     assert trade.price == Decimal("50000")
@@ -34,7 +35,7 @@ def test_trade_value():
         timestamp=datetime.now(timezone.utc),
         is_buyer_maker=False,
     )
-    
+
     # Value = price * quantity
     assert trade.value == Decimal("5000")
 
@@ -50,7 +51,7 @@ def test_trade_with_quote_quantity():
         timestamp=datetime.now(timezone.utc),
         is_buyer_maker=False,
     )
-    
+
     # Should use quote_quantity when provided
     assert trade.value == Decimal("5001")
 
@@ -66,11 +67,11 @@ def test_trade_side():
         timestamp=datetime.now(timezone.utc),
         is_buyer_maker=False,  # Buyer NOT maker = buy market order
     )
-    
+
     assert buy_trade.side == "buy"
     assert buy_trade.is_buy is True
     assert buy_trade.is_sell is False
-    
+
     # Sell trade (taker was selling, buyer is maker)
     sell_trade = Trade(
         symbol="BTCUSDT",
@@ -80,7 +81,7 @@ def test_trade_side():
         timestamp=datetime.now(timezone.utc),
         is_buyer_maker=True,  # Buyer IS maker = sell market order
     )
-    
+
     assert sell_trade.side == "sell"
     assert sell_trade.is_buy is False
     assert sell_trade.is_sell is True
@@ -100,7 +101,7 @@ def test_trade_size_classification():
     assert small_trade.size_category == "small"
     assert small_trade.is_large is False
     assert small_trade.is_whale is False
-    
+
     # Medium trade $1k - $10k
     medium_trade = Trade(
         symbol="BTCUSDT",
@@ -111,7 +112,7 @@ def test_trade_size_classification():
         is_buyer_maker=False,
     )
     assert medium_trade.size_category == "medium"
-    
+
     # Large trade $10k - $100k
     large_trade = Trade(
         symbol="BTCUSDT",
@@ -123,7 +124,7 @@ def test_trade_size_classification():
     )
     assert large_trade.size_category == "large"
     assert large_trade.is_large is True
-    
+
     # Whale trade > $100k
     whale_trade = Trade(
         symbol="BTCUSDT",
@@ -149,7 +150,7 @@ def test_trade_freshness():
         is_buyer_maker=False,
     )
     assert fresh_trade.is_fresh(max_age_seconds=60) is True
-    
+
     # Stale trade
     stale_time = datetime.now(timezone.utc) - timedelta(minutes=5)
     stale_trade = Trade(
@@ -174,7 +175,7 @@ def test_trade_get_age_seconds():
         timestamp=old_time,
         is_buyer_maker=False,
     )
-    
+
     age = trade.get_age_seconds()
     assert 29 < age < 31  # ~30 seconds
 
@@ -190,9 +191,9 @@ def test_trade_to_dict():
         is_buyer_maker=False,
         is_best_match=True,
     )
-    
+
     data = trade.to_dict()
-    
+
     assert data["symbol"] == "BTCUSDT"
     assert data["trade_id"] == 12345
     assert data["price"] == "50000"
@@ -214,7 +215,7 @@ def test_trade_timestamp_ms():
         timestamp=timestamp,
         is_buyer_maker=False,
     )
-    
+
     expected_ms = int(timestamp.timestamp() * 1000)
     assert trade.timestamp_ms == expected_ms
 
@@ -229,10 +230,10 @@ def test_trade_frozen():
         timestamp=datetime.now(timezone.utc),
         is_buyer_maker=False,
     )
-    
+
     with pytest.raises(Exception):  # Pydantic frozen validation error
         trade.symbol = "ETHUSDT"
-    
+
     with pytest.raises(Exception):
         trade.price = Decimal("51000")
 
@@ -249,7 +250,7 @@ def test_trade_validation():
         is_buyer_maker=False,
     )
     assert trade.symbol == "BTCUSDT"
-    
+
     # Empty symbol should fail
     with pytest.raises(Exception):
         Trade(
@@ -260,7 +261,7 @@ def test_trade_validation():
             timestamp=datetime.now(timezone.utc),
             is_buyer_maker=False,
         )
-    
+
     # Zero/negative price should fail
     with pytest.raises(Exception):
         Trade(
@@ -271,7 +272,7 @@ def test_trade_validation():
             timestamp=datetime.now(timezone.utc),
             is_buyer_maker=False,
         )
-    
+
     # Zero/negative quantity should fail
     with pytest.raises(Exception):
         Trade(
@@ -297,7 +298,7 @@ def test_trade_optional_fields():
     )
     assert minimal_trade.is_best_match is None
     assert minimal_trade.quote_quantity is None
-    
+
     # Trade with all fields
     full_trade = Trade(
         symbol="BTCUSDT",
@@ -311,4 +312,3 @@ def test_trade_optional_fields():
     )
     assert full_trade.is_best_match is True
     assert full_trade.quote_quantity == Decimal("5000")
-

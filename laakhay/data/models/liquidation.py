@@ -2,7 +2,6 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -21,11 +20,11 @@ class Liquidation(BaseModel):
     order_status: str = Field(..., description="Order status (e.g., 'FILLED', 'PARTIALLY_FILLED')")
     last_filled_quantity: Decimal = Field(..., ge=0, description="Last filled quantity")
     accumulated_quantity: Decimal = Field(..., ge=0, description="Total accumulated quantity")
-    
+
     # Optional fields that may not be present in all responses
-    commission: Optional[Decimal] = Field(default=None, ge=0, description="Commission amount")
-    commission_asset: Optional[str] = Field(default=None, description="Commission asset")
-    trade_id: Optional[int] = Field(default=None, description="Trade ID")
+    commission: Decimal | None = Field(default=None, ge=0, description="Commission amount")
+    commission_asset: str | None = Field(default=None, description="Commission asset")
+    trade_id: int | None = Field(default=None, description="Trade ID")
 
     @field_validator("side")
     @classmethod

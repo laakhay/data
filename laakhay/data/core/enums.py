@@ -3,7 +3,6 @@
 from enum import Enum
 from typing import Optional
 
-
 # Conversion mapping
 _SECONDS_MAP = {
     "1m": 60,
@@ -69,14 +68,14 @@ class TimeInterval(str, Enum):
 
 class MarketType(str, Enum):
     """Market type for exchange trading.
-    
+
     Different exchanges may support different market types.
     This enum standardizes market type identification across providers.
     """
-    
+
     SPOT = "spot"
     FUTURES = "futures"
-    
+
     def __str__(self) -> str:
         """String representation returns the value."""
         return self.value
