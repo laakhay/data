@@ -16,6 +16,7 @@ class Candle(BaseModel):
     low: Decimal = Field(..., gt=0)
     close: Decimal = Field(..., gt=0)
     volume: Decimal = Field(..., ge=0)
+    is_closed: bool = Field(True)
 
     @field_validator("high")
     @classmethod
