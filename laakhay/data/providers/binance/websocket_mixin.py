@@ -124,12 +124,13 @@ class BinanceWebSocketMixin:
                             # Map kline -> Candle
                             yield Candle(
                                 symbol=symbol.upper(),
-                                timestamp=datetime.fromtimestamp(k["t"] / 1000),
+                                timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
                                 low=Decimal(str(k["l"])),
                                 close=Decimal(str(k["c"])),
-                                volume=Decimal(str(k["v"]))
+                                volume=Decimal(str(k["v"])),
+                                is_closed=bool(k.get("x", False)),
                             )
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_candles parse error: {e}")
@@ -255,12 +256,13 @@ class BinanceWebSocketMixin:
                             # Map kline -> Candle
                             yield Candle(
                                 symbol=k["s"],
-                                timestamp=datetime.fromtimestamp(k["t"] / 1000),
+                                timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
                                 low=Decimal(str(k["l"])),
                                 close=Decimal(str(k["c"])),
-                                volume=Decimal(str(k["v"]))
+                                volume=Decimal(str(k["v"])),
+                                is_closed=bool(k.get("x", False)),
                             )
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"_stream_chunk parse error: {e}")
@@ -717,7 +719,7 @@ class BinanceWebSocketMixin:
                 await asyncio.sleep(reconnect_delay)
                 reconnect_delay = self._next_delay(reconnect_delay)
 
-    async def stream_trades(
+    async def stream_trades_multi(
         self,
         symbols: List[str],
     ) -> AsyncIterator[Trade]:
@@ -778,7 +780,7 @@ class BinanceWebSocketMixin:
                             yield trade
                             
                         except Exception as e:  # noqa: BLE001
-                            logger.error(f"stream_trades parse error: {e}")
+                            logger.error(f"stream_trades_multi parse error: {e}")
                             
             except asyncio.CancelledError:
                 raise

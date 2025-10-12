@@ -1,7 +1,7 @@
 """Binance exchange data provider."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
@@ -183,12 +183,13 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         """Parse Binance kline data into Candle model."""
         return Candle(
             symbol=symbol.upper(),
-            timestamp=datetime.fromtimestamp(data[0] / 1000),
+            timestamp=datetime.fromtimestamp(data[0] / 1000, tz=timezone.utc),
             open=Decimal(str(data[1])),
             high=Decimal(str(data[2])),
             low=Decimal(str(data[3])),
             close=Decimal(str(data[4])),
             volume=Decimal(str(data[5])),
+            is_closed=True,
         )
 
     @retry_async(max_retries=3, base_delay=1.0)
