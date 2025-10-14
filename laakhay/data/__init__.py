@@ -12,7 +12,14 @@ from .core import (
     TimeInterval,
     ValidationError,
 )
-from .models import Candle, Symbol
+from .models import (
+    Candle,
+    ConnectionEvent,
+    ConnectionStatus,
+    DataEvent,
+    DataEventType,
+    Symbol,
+)
 from .providers.binance import (
     BinanceFuturesProvider,
     BinanceProvider,
@@ -33,6 +40,11 @@ __all__ = [
     # Models
     "Candle",
     "Symbol",
+    "ConnectionEvent",
+    "ConnectionStatus",
+    "DataEvent",
+    "DataEventType",
+    # Clients
     "DataFeed",
     # Exceptions
     "DataError",

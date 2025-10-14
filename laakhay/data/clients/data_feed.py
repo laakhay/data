@@ -21,18 +21,30 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import Any, Optional
 
 from ..core import TimeInterval
-from ..models import Candle
+from ..models import Candle, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType
 
 Callback = Callable[[Candle], Awaitable[None]] | Callable[[Candle], None]
+EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
 
 
 @dataclass(frozen=True)
 class _Sub:
     callback: Callback
     symbols: set[str] | None  # None means "all effective symbols"
+    interval: TimeInterval
+    only_closed: bool
+
+
+@dataclass(frozen=True)
+class _EventSub:
+    """Enhanced subscription for event system."""
+    callback: EventCallback
+    event_types: set[DataEventType] | None  # None means all event types
+    symbols: set[str] | None  # None means all symbols
     interval: TimeInterval
     only_closed: bool
 
@@ -48,12 +60,16 @@ class DataFeed:
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
         max_streams_per_connection: int | None = None,
+        enable_connection_events: bool = True,
+        max_candle_history: int = 10,
     ) -> None:
         self._provider = provider
         self._stale_threshold = stale_threshold_seconds
         self._throttle_ms = throttle_ms
         self._dedupe = dedupe_same_candle
         self._override_streams_per_conn = max_streams_per_connection
+        self._enable_connection_events = enable_connection_events
+        self._max_candle_history = max_candle_history
 
         # Streaming state
         # Currently active stream symbol set (effective set)
@@ -65,16 +81,24 @@ class DataFeed:
         self._stream_task: asyncio.Task | None = None
         self._running = False
 
-        # Cache: latest and previous-closed per (symbol, interval)
+        # Enhanced cache: latest, previous-closed, and candle history per (symbol, interval)
         self._latest: dict[tuple[str, TimeInterval], Candle] = {}
         self._prev_closed: dict[tuple[str, TimeInterval], Candle] = {}
+        self._candle_history: dict[tuple[str, TimeInterval], list[Candle]] = {}
 
-        # Subscriptions
+        # Legacy subscriptions (backward compatibility)
         self._subs: dict[str, _Sub] = {}
+        
+        # Enhanced event subscriptions
+        self._event_subs: dict[str, _EventSub] = {}
+        
+        # Connection event subscriptions
+        self._connection_callbacks: list[EventCallback] = []
 
         # Health tracking (derived by chunk id)
         self._chunk_last_msg: dict[int, float] = {}
         self._symbol_chunk_id: dict[str, int] = {}
+        self._connection_status: dict[int, ConnectionStatus] = {}
 
         # Lock for updates
         self._lock = asyncio.Lock()
@@ -110,6 +134,12 @@ class DataFeed:
             self._interval = interval
             self._only_closed = only_closed
             self._assign_chunk_ids(self._symbols)
+            
+            # Initialize candle history tracking
+            for symbol in self._symbols:
+                key = (symbol.upper(), interval)
+                self._candle_history[key] = []
+            
             # Optionally prefill cache from provider REST before starting streams.
             # warm_up > 0 indicates the per-symbol limit to request; 0 disables warm-up.
             if warm_up and warm_up > 0:
@@ -263,6 +293,120 @@ class DataFeed:
             pass
 
     # ----------------------
+    # Enhanced Event Subscriptions
+    # ----------------------
+    def subscribe_events(
+        self,
+        callback: EventCallback,
+        *,
+        event_types: Optional[list[DataEventType]] = None,
+        symbols: Optional[list[str]] = None,
+        interval: Optional[TimeInterval] = None,
+        only_closed: Optional[bool] = None,
+    ) -> str:
+        """Subscribe to structured data events.
+
+        Args:
+            callback: Function to call when events are received
+            event_types: List of event types to subscribe to (None = all types)
+            symbols: List of symbols to subscribe to (None = all symbols)
+            interval: Candle interval (None = use feed's current interval)
+            only_closed: Only emit closed candle events (None = use feed's setting)
+
+        Returns:
+            Subscription ID for later unsubscription
+        """
+        if interval is None:
+            if self._interval is None:
+                raise RuntimeError("DataFeed not started: interval unknown")
+            interval = self._interval
+        if only_closed is None:
+            only_closed = self._only_closed
+
+        event_types_set: set[DataEventType] | None = None
+        if event_types is not None:
+            event_types_set = set(event_types)
+
+        symbols_set: set[str] | None = None
+        if symbols is not None:
+            symbols_set = {s.upper() for s in symbols}
+
+        sub = _EventSub(
+            callback=callback,
+            event_types=event_types_set,
+            symbols=symbols_set,
+            interval=interval,
+            only_closed=only_closed,
+        )
+        sub_id = uuid.uuid4().hex
+        self._event_subs[sub_id] = sub
+
+        # If subscriber requested additional symbols, fold into effective set
+        if symbols_set:
+            async def _maybe_update():
+                async with self._lock:
+                    self._requested_symbols |= symbols_set
+                    eff = self._compute_effective_symbols()
+                    if eff != self._symbols:
+                        self._symbols = eff
+                        self._assign_chunk_ids(self._symbols)
+                        # Initialize new symbols' candle history
+                        for symbol in symbols_set:
+                            key = (symbol.upper(), interval)
+                            if key not in self._candle_history:
+                                self._candle_history[key] = []
+                        if self._running:
+                            if self._stream_task and not self._stream_task.done():
+                                self._stream_task.cancel()
+                                try:
+                                    await self._stream_task
+                                except asyncio.CancelledError:
+                                    pass
+                            self._stream_task = asyncio.create_task(self._stream_loop())
+
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_maybe_update())
+            except RuntimeError:
+                pass
+        return sub_id
+
+    def unsubscribe_events(self, subscription_id: str) -> None:
+        """Unsubscribe from event notifications."""
+        self._event_subs.pop(subscription_id, None)
+
+        # Recompute effective set and rebuild if shrunk
+        async def _maybe_shrink():
+            async with self._lock:
+                eff = self._compute_effective_symbols()
+                if eff != self._symbols:
+                    self._symbols = eff
+                    self._assign_chunk_ids(self._symbols)
+                    if self._running:
+                        if self._stream_task and not self._stream_task.done():
+                            self._stream_task.cancel()
+                            try:
+                                await self._stream_task
+                            except asyncio.CancelledError:
+                                pass
+                        self._stream_task = asyncio.create_task(self._stream_loop())
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_maybe_shrink())
+        except RuntimeError:
+            pass
+
+    def subscribe_connection_events(self, callback: EventCallback) -> None:
+        """Subscribe to connection status events."""
+        self._connection_callbacks.append(callback)
+
+    def unsubscribe_connection_events(self, callback: EventCallback) -> None:
+        """Unsubscribe from connection status events."""
+        if callback in self._connection_callbacks:
+            self._connection_callbacks.remove(callback)
+
+    # ----------------------
     # Cache access
     # ----------------------
     def get_latest_candle(
@@ -293,6 +437,18 @@ class DataFeed:
             out[s] = self._latest.get((s.upper(), interval))
         return out
 
+    def get_candle_history(
+        self, symbol: str, *, interval: Optional[TimeInterval] = None, count: Optional[int] = None
+    ) -> list[Candle]:
+        """Get the last N closed candles for technical analysis."""
+        if interval is None:
+            interval = self._interval or TimeInterval.M1
+        key = (symbol.upper(), interval)
+        history = self._candle_history.get(key, [])
+        if count is not None:
+            return history[-count:] if count > 0 else []
+        return history.copy()
+
     # Sugar alias for subscribe
     def on_candle(
         self,
@@ -304,23 +460,47 @@ class DataFeed:
     ) -> str:
         return self.subscribe(callback, symbols=symbols, interval=interval, only_closed=only_closed)
 
+    # Sugar alias for enhanced subscribe_events
+    def on_events(
+        self,
+        callback: EventCallback,
+        *,
+        event_types: Optional[list[DataEventType]] = None,
+        symbols: Optional[list[str]] = None,
+        interval: Optional[TimeInterval] = None,
+        only_closed: Optional[bool] = None,
+    ) -> str:
+        return self.subscribe_events(
+            callback,
+            event_types=event_types,
+            symbols=symbols,
+            interval=interval,
+            only_closed=only_closed,
+        )
+
     # ----------------------
     # Health
     # ----------------------
     def get_connection_status(self) -> dict[str, Any]:
-        """Summarize connection health derived from per-chunk last message times."""
+        """Enhanced connection health status with connection status tracking."""
         now = time.time()
         stale_ids: list[str] = []
         healthy = 0
+        
         for cid, ts in self._chunk_last_msg.items():
             if now - ts <= self._stale_threshold:
                 healthy += 1
             else:
                 stale_ids.append(f"connection_{cid}")
+                if self._enable_connection_events:
+                    # Mark connection as stale
+                    self._connection_status[cid] = ConnectionStatus.STALE
+        
         return {
             "active_connections": len(self._chunk_last_msg),
             "healthy_connections": healthy,
             "stale_connections": stale_ids,
+            "connection_status": {f"connection_{cid}": status.value for cid, status in self._connection_status.items()},
             "last_message_time": {
                 f"connection_{cid}": ts for cid, ts in self._chunk_last_msg.items()
             },
@@ -339,21 +519,38 @@ class DataFeed:
                 throttle_ms=self._throttle_ms,
                 dedupe_same_candle=self._dedupe,
             ):
-                # Update cache
+                # Update cache and history
                 key = (candle.symbol.upper(), self._interval)
                 closed = bool(candle.is_closed)
+                
                 if closed:
+                    # Store previous closed candle
                     prev = self._latest.get(key)
-                    if prev is not None:
+                    if prev is not None and prev.is_closed:
                         self._prev_closed[key] = prev
+                    
+                    # Add to candle history
+                    if key in self._candle_history:
+                        self._candle_history[key].append(candle)
+                        # Keep only last N candles to prevent memory growth
+                        if len(self._candle_history[key]) > self._max_candle_history:
+                            self._candle_history[key] = self._candle_history[key][-self._max_candle_history:]
+                
                 self._latest[key] = candle
 
-                # Update health (by chunk)
+                # Update health tracking
                 cid = self._symbol_chunk_id.get(candle.symbol.upper())
                 if cid is not None:
                     self._chunk_last_msg[cid] = time.time()
+                    # Update connection status
+                    if self._enable_connection_events:
+                        self._connection_status[cid] = ConnectionStatus.CONNECTED
 
-                # Dispatch to subscribers
+                # Dispatch to enhanced event subscribers
+                if self._event_subs:
+                    await self._dispatch_events(candle, cid)
+
+                # Dispatch to legacy subscribers (backward compatibility)
                 if self._subs:
                     await self._dispatch(candle)
         except asyncio.CancelledError:
@@ -378,6 +575,65 @@ class DataFeed:
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, cb, c)
 
+    async def _dispatch_events(self, candle: Candle, connection_id: Optional[int]) -> None:
+        """Dispatch events to enhanced event subscribers."""
+        connection_id_str = f"connection_{connection_id}" if connection_id is not None else None
+        
+        # Create candle event
+        candle_event = DataEvent.candle_update(
+            candle=candle,
+            connection_id=connection_id_str,
+            metadata={"chunk_id": connection_id},
+        )
+
+        to_call: list[tuple[EventCallback, DataEvent]] = []
+        
+        for sub in self._event_subs.values():
+            if sub.interval != self._interval:
+                continue
+            
+            # Filter by event type
+            if sub.event_types is not None and candle_event.event_type not in sub.event_types:
+                continue
+            
+            # Filter by symbol
+            if sub.symbols is not None and candle.symbol.upper() not in sub.symbols:
+                continue
+            
+            # Filter by closed status
+            if sub.only_closed and not candle.is_closed:
+                continue
+            
+            to_call.append((sub.callback, candle_event))
+        
+        # Fire callbacks
+        for cb, event in to_call:
+            if asyncio.iscoroutinefunction(cb):
+                asyncio.create_task(cb(event))
+            else:
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, cb, event)
+
+    async def _emit_connection_event(self, event: ConnectionEvent) -> None:
+        """Emit connection status events."""
+        if not self._enable_connection_events:
+            return
+        
+        data_event = DataEvent.connection_status(event)
+        
+        for callback in self._connection_callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(data_event)
+                else:
+                    loop = asyncio.get_running_loop()
+                    loop.run_in_executor(None, callback, data_event)
+            except Exception as e:
+                # Log error but don't crash
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error in connection event callback: {e}")
+
     def _assign_chunk_ids(self, symbols: list[str]) -> None:
         # Mirror provider's chunking to derive per-connection ids.
         # Prefer explicit override, then provider hint, else conservative default (200).
@@ -387,13 +643,16 @@ class DataFeed:
             or 200
         )
         chunks = [symbols[i : i + max_per_conn] for i in range(0, len(symbols), max_per_conn)]
+        
         self._symbol_chunk_id.clear()
         self._chunk_last_msg.clear()
+        self._connection_status.clear()
+        
         for idx, chunk in enumerate(chunks):
             for s in chunk:
                 self._symbol_chunk_id[s.upper()] = idx
-            # initialize last message times to 0 (unknown)
             self._chunk_last_msg[idx] = 0.0
+            self._connection_status[idx] = ConnectionStatus.DISCONNECTED
 
     async def _prefill_from_historical(
         self, symbols: list[str], interval: TimeInterval, limit: int | None
@@ -435,8 +694,15 @@ class DataFeed:
     def _compute_effective_symbols(self) -> list[str]:
         """Union of requested symbols and all subscriber symbols (if any)."""
         subs_union: set[str] = set()
+        
+        # Legacy subscribers
         for sub in self._subs.values():
             if sub.symbols:
                 subs_union |= sub.symbols
-        eff = sorted(self._requested_symbols | subs_union)
-        return eff
+        
+        # Enhanced event subscribers
+        for sub in self._event_subs.values():
+            if sub.symbols:
+                subs_union |= sub.symbols
+        
+        return sorted(self._requested_symbols | subs_union)
