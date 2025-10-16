@@ -27,7 +27,7 @@ from typing import Any, Optional
 from ..core import Timeframe
 from ..models import Bar, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType, OHLCV, SeriesMeta, StreamingBar
 
-Callback = Callable[[Bar], Awaitable[None]] | Callable[[Bar], None]
+Callback = Callable[[StreamingBar], Awaitable[None]] | Callable[[StreamingBar], None]
 EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
 
 
@@ -534,9 +534,8 @@ class DataFeed:
             ):
                 # Update cache and history
                 symbol = streaming_bar.symbol
-                bar = streaming_bar.bar
                 key = (symbol.upper(), self._interval)
-                closed = bool(bar.is_closed)
+                closed = bool(streaming_bar.is_closed)
                 
                 if closed:
                     # Store previous closed bar
@@ -547,12 +546,12 @@ class DataFeed:
                     # Add to bar history
                     if key not in self._bar_history:
                         self._bar_history[key] = []
-                    self._bar_history[key].append(bar)
+                    self._bar_history[key].append(streaming_bar)
                     # Keep only last N bars to prevent memory growth
                     if len(self._bar_history[key]) > self._max_bar_history:
                         self._bar_history[key] = self._bar_history[key][-self._max_bar_history:]
                 
-                self._latest[key] = bar
+                self._latest[key] = streaming_bar
 
                 # Update health tracking
                 cid = self._symbol_chunk_id.get(symbol.upper())
@@ -576,20 +575,20 @@ class DataFeed:
             pass
 
     async def _dispatch(self, streaming_bar: StreamingBar) -> None:
-        to_call: list[tuple[Callback, Bar]] = []
+        to_call: list[tuple[Callback, StreamingBar]] = []
         for sub in self._subs.values():
             if sub.interval != self._interval:
                 continue
             if sub.symbols is None or streaming_bar.symbol.upper() in sub.symbols:
-                to_call.append((sub.callback, streaming_bar.bar))
+                to_call.append((sub.callback, streaming_bar))
         # Fire callbacks (don't block stream)
-        for cb, bar in to_call:
+        for cb, streaming_bar in to_call:
             if asyncio.iscoroutinefunction(cb):
-                asyncio.create_task(cb(bar))
+                asyncio.create_task(cb(streaming_bar))
             else:
                 # run sync cb in default loop executor to avoid blocking
                 loop = asyncio.get_running_loop()
-                loop.run_in_executor(None, cb, bar)
+                loop.run_in_executor(None, cb, streaming_bar)
 
     async def _dispatch_events(self, streaming_bar: StreamingBar, connection_id: Optional[int]) -> None:
         """Dispatch events to enhanced event subscribers."""
