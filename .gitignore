@@ -18,3 +18,5 @@ demo*
 *.egg-info/
 dist/
 build/
+
+.coverage
