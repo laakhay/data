@@ -28,7 +28,7 @@ def candles_spec() -> RestEndpointSpec:
         return q
 
     return RestEndpointSpec(
-        id="candles",
+        id="ohlcv",
         method="GET",
         build_path=_klines_path,
         build_query=build_query,

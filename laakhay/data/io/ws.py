@@ -22,7 +22,7 @@ class WSProvider(ABC):
     max_streams_per_connection: int | None = None
 
     @abstractmethod
-    async def stream_candles(
+    async def stream_ohlcv(
         self,
         symbol: str,
         interval: Timeframe,
@@ -31,11 +31,11 @@ class WSProvider(ABC):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        """Yield streaming candle updates for a single symbol."""
+        """Yield streaming OHLCV (bar) updates for a single symbol."""
         raise NotImplementedError
 
     @abstractmethod
-    async def stream_candles_multi(
+    async def stream_ohlcv_multi(
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -44,7 +44,7 @@ class WSProvider(ABC):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        """Yield streaming candle updates for multiple symbols (fan-in)."""
+        """Yield streaming OHLCV (bar) updates for multiple symbols (fan-in)."""
         raise NotImplementedError
 
     # Providers may implement close() if they maintain background tasks/sockets

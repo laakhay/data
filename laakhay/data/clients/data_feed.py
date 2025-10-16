@@ -1,11 +1,11 @@
-"""High-level DataFeed for real-time candles with cache, pub-sub, and health.
+"""High-level DataFeed for real-time OHLCV with cache, pub-sub, and health.
 
 This wraps a provider that supports Binance-style WebSocket streaming and
 exposes a developer-friendly API for service layers:
 
 - start/stop lifecycle for streaming a set of symbols at a given interval
-- synchronous latest-candle cache reads for fast polling paths
-- subscribe/unsubscribe to receive candle callbacks (only_closed by default)
+- synchronous latest-bar cache reads for fast polling paths
+- subscribe/unsubscribe to receive bar callbacks (only_closed by default)
 - basic connection health status derived from message recency per chunk
 
 Notes:
@@ -123,7 +123,7 @@ class DataFeed:
         symbols: Iterable[str],
         interval: Timeframe = Timeframe.M1,
         only_closed: bool = True,
-        # Warm-up behavior: 0 = disabled, >0 = fetch up to this many historical candles
+        # Warm-up behavior: 0 = disabled, >0 = fetch up to this many historical bars (OHLCV)
         # per symbol via provider.get_candles before starting streams. Best-effort and
         # non-fatal if provider doesn't support it or returns errors.
         warm_up: int = 0,
@@ -133,7 +133,7 @@ class DataFeed:
         Args:
             symbols: Iterable of symbols to stream (e.g., ["BTCUSDT", ...])
             interval: Bar interval (default 1m)
-            only_closed: Emit only closed candles (recommended)
+            only_closed: Emit only closed bars (recommended)
         """
         async with self._lock:
             if self._running:
@@ -146,7 +146,7 @@ class DataFeed:
             self._only_closed = only_closed
             self._assign_chunk_ids(self._symbols)
 
-            # Initialize candle history tracking
+            # Initialize bar history tracking
             for symbol in self._symbols:
                 key = (symbol.upper(), interval)
                 self._bar_history[key] = []
@@ -224,7 +224,7 @@ class DataFeed:
         interval: Timeframe | None = None,
         only_closed: bool | None = None,
     ) -> str:
-        """Subscribe to candle updates for given symbols.
+        """Subscribe to OHLCV updates for given symbols.
 
         Returns a subscription_id to later unsubscribe.
 
@@ -322,7 +322,7 @@ class DataFeed:
             event_types: List of event types to subscribe to (None = all types)
             symbols: List of symbols to subscribe to (None = all symbols)
             interval: Bar interval (None = use feed's current interval)
-            only_closed: Only emit closed candle events (None = use feed's setting)
+            only_closed: Only emit closed bar events (None = use feed's setting)
 
         Returns:
             Subscription ID for later unsubscription
@@ -362,7 +362,7 @@ class DataFeed:
                     if eff != self._symbols:
                         self._symbols = eff
                         self._assign_chunk_ids(self._symbols)
-                        # Initialize new symbols' candle history
+                        # Initialize new symbols' bar history
                         for symbol in symbols_set:
                             key = (symbol.upper(), interval)
                             if key not in self._bar_history:
@@ -535,7 +535,11 @@ class DataFeed:
     async def _stream_loop(self) -> None:
         assert self._interval is not None
         try:
-            async for streaming_bar in self._ws.stream_candles_multi(
+            # Allow legacy providers in tests that still expose stream_candles_multi
+            stream_multi = getattr(self._ws, "stream_ohlcv_multi", None) or getattr(
+                self._ws, "stream_candles_multi", None
+            )
+            async for streaming_bar in stream_multi(
                 self._symbols,
                 self._interval,
                 only_closed=self._only_closed,
@@ -686,7 +690,7 @@ class DataFeed:
     async def _prefill_from_historical(
         self, symbols: list[str], interval: Timeframe, limit: int | None
     ) -> None:
-        """Best-effort prefill of latest-candle cache using provider REST method.
+        """Best-effort prefill of latest-bar cache using provider REST method.
 
         This will call provider.get_candles(symbol, interval, limit=limit) for each
         symbol in parallel if the provider exposes that method. Exceptions per-symbol

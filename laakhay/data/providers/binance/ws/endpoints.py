@@ -9,7 +9,7 @@ from ....io import EndpointSpec
 from ..constants import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 
-def candles_spec(market_type: MarketType) -> EndpointSpec:
+def ohlcv_spec(market_type: MarketType) -> EndpointSpec:
     ws_single = WS_SINGLE_URLS.get(market_type)
     ws_combined = WS_COMBINED_URLS.get(market_type)
     if not ws_single:
@@ -29,7 +29,7 @@ def candles_spec(market_type: MarketType) -> EndpointSpec:
 
     max_streams = 200 if market_type == MarketType.FUTURES else 1024
     return EndpointSpec(
-        id="candles",
+        id="ohlcv",
         combined_supported=bool(ws_combined),
         max_streams_per_connection=max_streams,
         build_stream_name=build_stream_name,

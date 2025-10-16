@@ -13,16 +13,16 @@ from ...core import MarketType, Timeframe
 from ...io import StreamRunner, WSProvider
 from ...models.streaming_bar import StreamingBar
 from .ws.adapters import (
-    CandlesAdapter,
     FundingRateAdapter,
     MarkPriceAdapter,
+    OhlcvAdapter,
     OpenInterestAdapter,
     OrderBookAdapter,
     TradesAdapter,
 )
 from .ws.endpoints import (
-    candles_spec,
     mark_price_spec,
+    ohlcv_spec,
     open_interest_spec,
     order_book_spec,
     trades_spec,
@@ -38,7 +38,7 @@ class BinanceWSProvider(WSProvider):
     def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
         self.market_type = market_type
 
-    async def stream_candles(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override]
         self,
         symbol: str,
         interval: Timeframe,
@@ -49,8 +49,8 @@ class BinanceWSProvider(WSProvider):
     ) -> AsyncIterator[StreamingBar]:
         # Use generic runner + adapter + endpoint spec
         runner = StreamRunner()
-        spec = candles_spec(self.market_type)
-        adapter = CandlesAdapter()
+        spec = ohlcv_spec(self.market_type)
+        adapter = OhlcvAdapter()
         params = {"interval": interval}
 
         dedupe_key = None
@@ -76,7 +76,7 @@ class BinanceWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_candles_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override]
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -86,8 +86,8 @@ class BinanceWSProvider(WSProvider):
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
         runner = StreamRunner()
-        spec = candles_spec(self.market_type)
-        adapter = CandlesAdapter()
+        spec = ohlcv_spec(self.market_type)
+        adapter = OhlcvAdapter()
         params = {"interval": interval}
 
         dedupe_key = None
