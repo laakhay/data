@@ -1,6 +1,7 @@
 """Integration tests for Binance liquidation functionality."""
 
 import asyncio
+import os
 from datetime import datetime, timezone
 
 import pytest
@@ -8,6 +9,11 @@ import pytest
 from laakhay.data.core import MarketType
 from laakhay.data.models.liquidation import Liquidation
 from laakhay.data.providers.binance.provider import BinanceProvider
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to Binance API",
+)
 
 
 class TestBinanceLiquidationIntegration:

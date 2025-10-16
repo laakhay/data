@@ -1,10 +1,18 @@
 """Integration tests for BinanceProvider."""
 
 import asyncio
+import os
 from datetime import datetime, timedelta
+
+import pytest
 
 from laakhay.data.core import Timeframe
 from laakhay.data.providers import BinanceProvider
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to Binance API",
+)
 
 
 def test_binance_sync_wrapper():

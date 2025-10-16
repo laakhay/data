@@ -1,7 +1,9 @@
 """Unit tests for Binance REST/WS providers (decoupled)."""
 
+import asyncio
+
 from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.providers import BinanceRESTProvider, BinanceWSProvider
+from laakhay.data.providers import BinanceProvider, BinanceRESTProvider, BinanceWSProvider
 from laakhay.data.providers.binance.constants import INTERVAL_MAP
 
 
@@ -28,3 +30,21 @@ def test_binance_ws_provider_instantiation():
 
     ws_fut = BinanceWSProvider(market_type=MarketType.FUTURES)
     assert ws_fut.market_type == MarketType.FUTURES
+
+
+def test_binance_provider_instantiation_defaults_to_spot():
+    provider = BinanceProvider()
+    assert provider.market_type == MarketType.SPOT
+
+
+def test_binance_provider_instantiation_futures():
+    provider = BinanceProvider(market_type=MarketType.FUTURES)
+    assert provider.market_type == MarketType.FUTURES
+
+
+def test_binance_provider_context_manager_closes():
+    async def run() -> bool:
+        async with BinanceProvider() as provider:
+            return provider.market_type == MarketType.SPOT
+
+    assert asyncio.run(run())
