@@ -29,17 +29,6 @@ class WebSocketClient:
     - Ping/pong keepalive
     - Message handler callback
     - Graceful shutdown
-
-    Examples:
-        >>> async def on_message(message):
-        ...     print(f"Received: {message}")
-
-        >>> client = WebSocketClient(
-        ...     url="wss://stream.binance.com:9443/ws/btcusdt@kline_1m",
-        ...     on_message=on_message
-        ... )
-        >>> async with client:
-        ...     await asyncio.sleep(60)  # Stream for 60 seconds
     """
 
     def __init__(

@@ -118,6 +118,55 @@ class HTTPClient:
                 response.raise_for_status()
                 return await response.json()
 
+    async def post(
+        self,
+        url: str,
+        *,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """POST request with JSON body."""
+        if self.base_url and not url.startswith("http"):
+            url = f"{self.base_url}{url}"
+
+        if self._throttle_until is not None:
+            remaining = self._throttle_until - time.time()
+            if remaining > 0:
+                await asyncio.sleep(remaining)
+            self._throttle_until = None
+
+        while True:
+            async with self.session.post(url, json=json, headers=headers) as response:
+                if self._response_hooks:
+                    hook_delays: list[float] = []
+                    for hook in self._response_hooks:
+                        try:
+                            result = hook(response)
+                            if asyncio.iscoroutine(result):
+                                result = await result  # type: ignore[assignment]
+                            if isinstance(result, int | float) and result > 0:
+                                hook_delays.append(float(result))
+                        except Exception:
+                            pass
+                    if hook_delays:
+                        self.set_throttle(max(hook_delays))
+
+                if response.status in (429, 418):
+                    retry_after = response.headers.get("Retry-After")
+                    delay = None
+                    if retry_after is not None:
+                        try:
+                            delay = float(retry_after)
+                        except Exception:
+                            delay = None
+                    if delay is None or delay <= 0:
+                        delay = 1.0
+                    await asyncio.sleep(delay)
+                    continue
+
+                response.raise_for_status()
+                return await response.json()
+
     async def close(self) -> None:
         """Close session."""
         if self._session and not self._session.closed:

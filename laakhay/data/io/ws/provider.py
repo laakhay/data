@@ -10,8 +10,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from ..core.enums import Timeframe
-from ..models.streaming_bar import StreamingBar
+from ...core.enums import Timeframe
+from ...models.streaming_bar import StreamingBar
 
 
 class WSProvider(ABC):

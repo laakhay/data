@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....core import MarketType
-from ....io.rest_runner import RestEndpointSpec
+from ....io import RestEndpointSpec
 
 
 def _klines_path(params: dict[str, Any]) -> str:

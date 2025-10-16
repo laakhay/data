@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from ....io.rest_runner import ResponseAdapter
+from ....io import ResponseAdapter
 from ....models import OHLCV, Bar, OrderBook, SeriesMeta, Symbol
 
 
