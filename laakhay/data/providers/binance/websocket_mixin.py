@@ -17,7 +17,7 @@ from decimal import Decimal
 import websockets
 
 from ...core import MarketType, Timeframe
-from ...models import Bar, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
+from ...models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from ...models.streaming_bar import StreamingBar
 from .constants import INTERVAL_MAP, OI_PERIOD_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 

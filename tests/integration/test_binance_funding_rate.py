@@ -16,7 +16,9 @@ class TestBinanceFundingRateIntegration:
     @pytest.mark.asyncio
     async def test_get_current_funding_rate(self):
         """Test fetching current/recent funding rate for a symbol."""
-        async with BinanceProvider(market_type=MarketType.FUTURES, interval=Timeframe.M1) as provider:
+        async with BinanceProvider(
+            market_type=MarketType.FUTURES, interval=Timeframe.M1
+        ) as provider:
             # Fetch last funding rate
             fr_list = await provider.get_funding_rate("BTCUSDT", limit=1)
 

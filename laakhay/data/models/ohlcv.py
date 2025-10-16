@@ -1,8 +1,8 @@
 """OHLCV series data model."""
 
+from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
-from typing import Iterator, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -51,49 +51,47 @@ class OHLCV(BaseModel):
         return len(self.bars) == 0
 
     @property
-    def latest(self) -> Optional[Bar]:
+    def latest(self) -> Bar | None:
         """Latest bar in the series, or None if empty."""
         return self.bars[-1] if self.bars else None
 
     @property
-    def earliest(self) -> Optional[Bar]:
+    def earliest(self) -> Bar | None:
         """Earliest bar in the series, or None if empty."""
         return self.bars[0] if self.bars else None
 
     # --- Time range properties ---
     @property
-    def start_time(self) -> Optional[datetime]:
+    def start_time(self) -> datetime | None:
         """Start time of the series (earliest bar timestamp)."""
         return self.earliest.timestamp if self.earliest else None
 
     @property
-    def end_time(self) -> Optional[datetime]:
+    def end_time(self) -> datetime | None:
         """End time of the series (latest bar timestamp)."""
         return self.latest.timestamp if self.latest else None
 
     # --- Price statistics ---
     @property
-    def highest_price(self) -> Optional[Decimal]:
+    def highest_price(self) -> Decimal | None:
         """Highest price across all bars."""
         return max(bar.high for bar in self.bars) if self.bars else None
 
     @property
-    def lowest_price(self) -> Optional[Decimal]:
+    def lowest_price(self) -> Decimal | None:
         """Lowest price across all bars."""
         return min(bar.low for bar in self.bars) if self.bars else None
 
     @property
-    def total_volume(self) -> Optional[Decimal]:
+    def total_volume(self) -> Decimal | None:
         """Total volume across all bars."""
         return sum(bar.volume for bar in self.bars) if self.bars else None
 
     # --- Convenience methods ---
     def get_bars_in_range(self, start: datetime, end: datetime) -> "OHLCV":
         """Get bars within a time range."""
-        filtered_bars = [
-            bar for bar in self.bars if start <= bar.timestamp <= end
-        ]
-        from .series_meta import SeriesMeta
+        filtered_bars = [bar for bar in self.bars if start <= bar.timestamp <= end]
+
         return OHLCV(meta=self.meta, bars=filtered_bars)
 
     def get_last_n_bars(self, n: int) -> "OHLCV":
@@ -148,13 +146,14 @@ class OHLCV(BaseModel):
     def from_dict(cls, data: dict) -> "OHLCV":
         """Create OHLCV from dictionary representation."""
         from datetime import datetime
+
         from .series_meta import SeriesMeta
 
         meta = SeriesMeta(
             symbol=data["meta"]["symbol"],
             timeframe=data["meta"]["timeframe"],
         )
-        
+
         bars = [
             Bar(
                 timestamp=datetime.fromisoformat(bar_data["timestamp"]),
@@ -167,7 +166,7 @@ class OHLCV(BaseModel):
             )
             for bar_data in data["bars"]
         ]
-        
+
         return cls(meta=meta, bars=bars)
 
     def __str__(self) -> str:
@@ -177,5 +176,3 @@ class OHLCV(BaseModel):
     def __repr__(self) -> str:
         """Detailed representation."""
         return f"OHLCV(meta={self.meta!r}, bars={len(self.bars)} items)"
-
-

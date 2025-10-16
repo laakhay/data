@@ -1,6 +1,6 @@
 """Streaming bar that includes symbol context."""
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from .bar import Bar
 

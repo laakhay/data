@@ -5,14 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .bar import Bar
 
 
 class DataEventType(Enum):
     """Types of data events."""
-    
+
     CANDLE_UPDATE = "candle_update"
     CANDLE_CLOSED = "candle_closed"
     CONNECTION_STATUS = "connection_status"
@@ -20,7 +20,7 @@ class DataEventType(Enum):
 
 class ConnectionStatus(Enum):
     """Connection status types."""
-    
+
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     RECONNECTING = "reconnecting"
@@ -30,41 +30,41 @@ class ConnectionStatus(Enum):
 @dataclass(frozen=True)
 class ConnectionEvent:
     """Connection status event."""
-    
+
     status: ConnectionStatus
     connection_id: str
     timestamp: datetime
     symbols_count: int = 0
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = None
+    error: str | None = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         if self.metadata is None:
-            object.__setattr__(self, 'metadata', {})
+            object.__setattr__(self, "metadata", {})
 
 
 @dataclass(frozen=True)
 class DataEvent:
     """Structured event for data streaming."""
-    
+
     event_type: DataEventType
     timestamp: datetime
     symbol: str
-    bar: Optional[Bar] = None
-    connection_id: Optional[str] = None
-    metadata: Dict[str, Any] = None
+    bar: Bar | None = None
+    connection_id: str | None = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         if self.metadata is None:
-            object.__setattr__(self, 'metadata', {})
+            object.__setattr__(self, "metadata", {})
 
     @classmethod
     def bar_update(
         cls,
         bar: Bar,
         symbol: str,
-        connection_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        connection_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> DataEvent:
         """Create a bar update event."""
         event_type = DataEventType.CANDLE_CLOSED if bar.is_closed else DataEventType.CANDLE_UPDATE
