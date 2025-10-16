@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from .candle import Candle
+from .bar import Bar
 
 
 class DataEventType(Enum):
@@ -50,7 +50,7 @@ class DataEvent:
     event_type: DataEventType
     timestamp: datetime
     symbol: str
-    candle: Optional[Candle] = None
+    bar: Optional[Bar] = None
     connection_id: Optional[str] = None
     metadata: Dict[str, Any] = None
 
@@ -59,19 +59,20 @@ class DataEvent:
             object.__setattr__(self, 'metadata', {})
 
     @classmethod
-    def candle_update(
+    def bar_update(
         cls,
-        candle: Candle,
+        bar: Bar,
+        symbol: str,
         connection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> DataEvent:
-        """Create a candle update event."""
-        event_type = DataEventType.CANDLE_CLOSED if candle.is_closed else DataEventType.CANDLE_UPDATE
+        """Create a bar update event."""
+        event_type = DataEventType.CANDLE_CLOSED if bar.is_closed else DataEventType.CANDLE_UPDATE
         return cls(
             event_type=event_type,
             timestamp=datetime.now(),
-            symbol=candle.symbol,
-            candle=candle,
+            symbol=symbol,
+            bar=bar,
             connection_id=connection_id,
             metadata=metadata or {},
         )

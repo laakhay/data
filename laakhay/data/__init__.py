@@ -13,11 +13,14 @@ from .core import (
     ValidationError,
 )
 from .models import (
-    Candle,
+    Bar,
     ConnectionEvent,
     ConnectionStatus,
     DataEvent,
     DataEventType,
+    OHLCV,
+    SeriesMeta,
+    StreamingBar,
     Symbol,
 )
 from .providers.binance import (
@@ -38,7 +41,10 @@ __all__ = [
     "BinanceFuturesProvider",
     "BinanceSpotProvider",
     # Models
-    "Candle",
+    "Bar",
+    "OHLCV",
+    "SeriesMeta",
+    "StreamingBar",
     "Symbol",
     "ConnectionEvent",
     "ConnectionStatus",

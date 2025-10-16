@@ -25,9 +25,9 @@ from datetime import datetime
 from typing import Any, Optional
 
 from ..core import Timeframe
-from ..models import Candle, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType
+from ..models import Bar, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType, OHLCV, SeriesMeta, StreamingBar
 
-Callback = Callable[[Candle], Awaitable[None]] | Callable[[Candle], None]
+Callback = Callable[[Bar], Awaitable[None]] | Callable[[Bar], None]
 EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
 
 
@@ -61,7 +61,7 @@ class DataFeed:
         dedupe_same_candle: bool = False,
         max_streams_per_connection: int | None = None,
         enable_connection_events: bool = True,
-        max_candle_history: int = 10,
+        max_bar_history: int = 10,
     ) -> None:
         self._provider = provider
         self._stale_threshold = stale_threshold_seconds
@@ -69,7 +69,7 @@ class DataFeed:
         self._dedupe = dedupe_same_candle
         self._override_streams_per_conn = max_streams_per_connection
         self._enable_connection_events = enable_connection_events
-        self._max_candle_history = max_candle_history
+        self._max_bar_history = max_bar_history
 
         # Streaming state
         # Currently active stream symbol set (effective set)
@@ -81,10 +81,10 @@ class DataFeed:
         self._stream_task: asyncio.Task | None = None
         self._running = False
 
-        # Enhanced cache: latest, previous-closed, and candle history per (symbol, interval)
-        self._latest: dict[tuple[str, Timeframe], Candle] = {}
-        self._prev_closed: dict[tuple[str, Timeframe], Candle] = {}
-        self._candle_history: dict[tuple[str, Timeframe], list[Candle]] = {}
+        # Cache: latest, previous-closed, and bar history per (symbol, interval)
+        self._latest: dict[tuple[str, Timeframe], Bar] = {}
+        self._prev_closed: dict[tuple[str, Timeframe], Bar] = {}
+        self._bar_history: dict[tuple[str, Timeframe], list[Bar]] = {}
 
         # Legacy subscriptions (backward compatibility)
         self._subs: dict[str, _Sub] = {}
@@ -121,7 +121,7 @@ class DataFeed:
 
         Args:
             symbols: Iterable of symbols to stream (e.g., ["BTCUSDT", ...])
-            interval: Candle interval (default 1m)
+            interval: Bar interval (default 1m)
             only_closed: Emit only closed candles (recommended)
         """
         async with self._lock:
@@ -138,7 +138,7 @@ class DataFeed:
             # Initialize candle history tracking
             for symbol in self._symbols:
                 key = (symbol.upper(), interval)
-                self._candle_history[key] = []
+                self._bar_history[key] = []
             
             # Optionally prefill cache from provider REST before starting streams.
             # warm_up > 0 indicates the per-symbol limit to request; 0 disables warm-up.
@@ -310,7 +310,7 @@ class DataFeed:
             callback: Function to call when events are received
             event_types: List of event types to subscribe to (None = all types)
             symbols: List of symbols to subscribe to (None = all symbols)
-            interval: Candle interval (None = use feed's current interval)
+            interval: Bar interval (None = use feed's current interval)
             only_closed: Only emit closed candle events (None = use feed's setting)
 
         Returns:
@@ -353,8 +353,8 @@ class DataFeed:
                         # Initialize new symbols' candle history
                         for symbol in symbols_set:
                             key = (symbol.upper(), interval)
-                            if key not in self._candle_history:
-                                self._candle_history[key] = []
+                            if key not in self._bar_history:
+                                self._bar_history[key] = []
                         if self._running:
                             if self._stream_task and not self._stream_task.done():
                                 self._stream_task.cancel()
@@ -409,48 +409,61 @@ class DataFeed:
     # ----------------------
     # Cache access
     # ----------------------
-    def get_latest_candle(
+    def get_latest_bar(
         self, symbol: str, *, interval: Timeframe | None = None
-    ) -> Candle | None:
-        """Get the latest candle from cache (O(1), non-blocking)."""
+    ) -> Bar | None:
+        """Get the latest bar from cache (O(1), non-blocking)."""
         if interval is None:
             interval = self._interval or Timeframe.M1
         return self._latest.get((symbol.upper(), interval))
 
     def get_previous_closed(
         self, symbol: str, *, interval: Timeframe | None = None
-    ) -> Candle | None:
+    ) -> Bar | None:
+        """Get the previous closed bar from cache."""
         if interval is None:
             interval = self._interval or Timeframe.M1
         return self._prev_closed.get((symbol.upper(), interval))
 
     def snapshot(
         self, symbols: Iterable[str] | None = None, *, interval: Timeframe | None = None
-    ) -> dict[str, Candle | None]:
-        """Return a dict of latest candles for given symbols (or all effective)."""
+    ) -> dict[str, Bar | None]:
+        """Return a dict of latest bars for given symbols (or all effective)."""
         if interval is None:
             interval = self._interval or Timeframe.M1
         if symbols is None:
             symbols = list(self._symbols)
-        out: dict[str, Candle | None] = {}
+        out: dict[str, Bar | None] = {}
         for s in symbols:
             out[s] = self._latest.get((s.upper(), interval))
         return out
 
-    def get_candle_history(
+    def get_bar_history(
         self, symbol: str, *, interval: Optional[Timeframe] = None, count: Optional[int] = None
-    ) -> list[Candle]:
-        """Get the last N closed candles for technical analysis."""
+    ) -> list[Bar]:
+        """Get the last N closed bars for technical analysis."""
         if interval is None:
             interval = self._interval or Timeframe.M1
         key = (symbol.upper(), interval)
-        history = self._candle_history.get(key, [])
+        history = self._bar_history.get(key, [])
         if count is not None:
             return history[-count:] if count > 0 else []
         return history.copy()
 
+    def get_ohlcv(
+        self, symbol: str, *, interval: Optional[Timeframe] = None, count: Optional[int] = None
+    ) -> OHLCV:
+        """Get OHLCV series for a symbol."""
+        if interval is None:
+            interval = self._interval or Timeframe.M1
+        
+        bars = self.get_bar_history(symbol, interval=interval, count=count)
+        meta = SeriesMeta(symbol=symbol.upper(), timeframe=interval.value)
+        
+        return OHLCV(meta=meta, bars=bars)
+
     # Sugar alias for subscribe
-    def on_candle(
+    def on_bar(
         self,
         callback: Callback,
         *,
@@ -512,7 +525,7 @@ class DataFeed:
     async def _stream_loop(self) -> None:
         assert self._interval is not None
         try:
-            async for candle in self._provider.stream_candles_multi(
+            async for streaming_bar in self._provider.stream_candles_multi(
                 self._symbols,
                 self._interval,
                 only_closed=self._only_closed,
@@ -520,26 +533,29 @@ class DataFeed:
                 dedupe_same_candle=self._dedupe,
             ):
                 # Update cache and history
-                key = (candle.symbol.upper(), self._interval)
-                closed = bool(candle.is_closed)
+                symbol = streaming_bar.symbol
+                bar = streaming_bar.bar
+                key = (symbol.upper(), self._interval)
+                closed = bool(bar.is_closed)
                 
                 if closed:
-                    # Store previous closed candle
+                    # Store previous closed bar
                     prev = self._latest.get(key)
                     if prev is not None and prev.is_closed:
                         self._prev_closed[key] = prev
                     
-                    # Add to candle history
-                    if key in self._candle_history:
-                        self._candle_history[key].append(candle)
-                        # Keep only last N candles to prevent memory growth
-                        if len(self._candle_history[key]) > self._max_candle_history:
-                            self._candle_history[key] = self._candle_history[key][-self._max_candle_history:]
+                    # Add to bar history
+                    if key not in self._bar_history:
+                        self._bar_history[key] = []
+                    self._bar_history[key].append(bar)
+                    # Keep only last N bars to prevent memory growth
+                    if len(self._bar_history[key]) > self._max_bar_history:
+                        self._bar_history[key] = self._bar_history[key][-self._max_bar_history:]
                 
-                self._latest[key] = candle
+                self._latest[key] = bar
 
                 # Update health tracking
-                cid = self._symbol_chunk_id.get(candle.symbol.upper())
+                cid = self._symbol_chunk_id.get(symbol.upper())
                 if cid is not None:
                     self._chunk_last_msg[cid] = time.time()
                     # Update connection status
@@ -548,40 +564,41 @@ class DataFeed:
 
                 # Dispatch to enhanced event subscribers
                 if self._event_subs:
-                    await self._dispatch_events(candle, cid)
+                    await self._dispatch_events(streaming_bar, cid)
 
-                # Dispatch to legacy subscribers (backward compatibility)
+                # Dispatch to subscribers
                 if self._subs:
-                    await self._dispatch(candle)
+                    await self._dispatch(streaming_bar)
         except asyncio.CancelledError:
             raise
         except Exception:
             # Keep task quiet on exceptions; next start() will recreate
             pass
 
-    async def _dispatch(self, candle: Candle) -> None:
-        to_call: list[tuple[Callback, Candle]] = []
+    async def _dispatch(self, streaming_bar: StreamingBar) -> None:
+        to_call: list[tuple[Callback, Bar]] = []
         for sub in self._subs.values():
             if sub.interval != self._interval:
                 continue
-            if sub.symbols is None or candle.symbol.upper() in sub.symbols:
-                to_call.append((sub.callback, candle))
+            if sub.symbols is None or streaming_bar.symbol.upper() in sub.symbols:
+                to_call.append((sub.callback, streaming_bar.bar))
         # Fire callbacks (don't block stream)
-        for cb, c in to_call:
+        for cb, bar in to_call:
             if asyncio.iscoroutinefunction(cb):
-                asyncio.create_task(cb(c))
+                asyncio.create_task(cb(bar))
             else:
                 # run sync cb in default loop executor to avoid blocking
                 loop = asyncio.get_running_loop()
-                loop.run_in_executor(None, cb, c)
+                loop.run_in_executor(None, cb, bar)
 
-    async def _dispatch_events(self, candle: Candle, connection_id: Optional[int]) -> None:
+    async def _dispatch_events(self, streaming_bar: StreamingBar, connection_id: Optional[int]) -> None:
         """Dispatch events to enhanced event subscribers."""
         connection_id_str = f"connection_{connection_id}" if connection_id is not None else None
         
-        # Create candle event
-        candle_event = DataEvent.candle_update(
-            candle=candle,
+        # Create bar event
+        bar_event = DataEvent.bar_update(
+            bar=streaming_bar.bar,
+            symbol=streaming_bar.symbol,
             connection_id=connection_id_str,
             metadata={"chunk_id": connection_id},
         )
@@ -593,18 +610,18 @@ class DataFeed:
                 continue
             
             # Filter by event type
-            if sub.event_types is not None and candle_event.event_type not in sub.event_types:
+            if sub.event_types is not None and bar_event.event_type not in sub.event_types:
                 continue
             
             # Filter by symbol
-            if sub.symbols is not None and candle.symbol.upper() not in sub.symbols:
+            if sub.symbols is not None and streaming_bar.symbol.upper() not in sub.symbols:
                 continue
             
             # Filter by closed status
-            if sub.only_closed and not candle.is_closed:
+            if sub.only_closed and not streaming_bar.bar.is_closed:
                 continue
             
-            to_call.append((sub.callback, candle_event))
+            to_call.append((sub.callback, bar_event))
         
         # Fire callbacks
         for cb, event in to_call:
@@ -679,7 +696,7 @@ class DataFeed:
         for sym, res in zip(symbols, results, strict=False):
             if not res:
                 continue
-            # res is a list[Candle]; prefer the most recent (last) as latest
+            # res is a list[Bar]; prefer the most recent (last) as latest
             try:
                 last_candle = res[-1]
             except Exception:

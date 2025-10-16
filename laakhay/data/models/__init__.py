@@ -1,17 +1,20 @@
 """Data models."""
 
-from .candle import Candle
+from .bar import Bar
 from .events import ConnectionEvent, ConnectionStatus, DataEvent, DataEventType
 from .funding_rate import FundingRate
 from .liquidation import Liquidation
 from .mark_price import MarkPrice
+from .ohlcv import OHLCV
 from .open_interest import OpenInterest
 from .order_book import OrderBook
+from .series_meta import SeriesMeta
+from .streaming_bar import StreamingBar
 from .symbol import Symbol
 from .trade import Trade
 
 __all__ = [
-    "Candle",
+    "Bar",
     "ConnectionEvent",
     "ConnectionStatus",
     "DataEvent",
@@ -19,8 +22,11 @@ __all__ = [
     "FundingRate",
     "Liquidation",
     "MarkPrice",
+    "OHLCV",
     "OpenInterest",
     "OrderBook",
+    "SeriesMeta",
+    "StreamingBar",
     "Symbol",
     "Trade",
 ]

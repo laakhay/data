@@ -20,7 +20,7 @@ from laakhay.data.core import Timeframe, MarketType
 async def main():
     # Spot market
     async with BinanceProvider(market_type=MarketType.SPOT) as provider:
-        # Candles
+        # OHLCV Bars
         candles = await provider.get_candles("BTCUSDT", Timeframe.M1, limit=100)
         
         # Order book
@@ -38,7 +38,7 @@ asyncio.run(main())
 
 | Type | REST | WebSocket | Markets |
 |------|------|-----------|---------|
-| Candles | ✅ | ✅ | Spot, Futures |
+| OHLCV Bars | ✅ | ✅ | Spot, Futures |
 | Symbols | ✅ | - | Spot, Futures |
 | Order Book | ✅ | ✅ | Spot, Futures |
 | Trades | ✅ | ✅ | Spot, Futures |
@@ -96,7 +96,7 @@ async for rate in provider.stream_funding_rate(["BTCUSDT"]):
 ```
 laakhay/data/
 ├── core/           # Base classes, enums, exceptions
-├── models/         # Pydantic models (Candle, OrderBook, Trade, etc.)
+├── models/         # Pydantic models (Bar, OHLCV, OrderBook, Trade, etc.)
 ├── providers/      # Exchange implementations
 │   └── binance/    # Binance provider + WebSocket mixin
 ├── clients/        # High-level clients
@@ -115,7 +115,8 @@ All models are immutable Pydantic models with validation:
 
 ```python
 from laakhay.data.models import (
-    Candle,        # OHLCV data
+    Bar,           # Individual OHLCV bar
+    OHLCV,         # OHLCV series with metadata
     Symbol,        # Trading pairs
     OrderBook,     # Market depth (25+ properties)
     Trade,         # Individual trades

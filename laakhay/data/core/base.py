@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+from ..models import OHLCV
 from .enums import Timeframe
 
 
@@ -23,8 +24,8 @@ class BaseProvider(ABC):
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
-    ) -> list[dict]:
-        """Fetch OHLCV candles for a symbol."""
+    ) -> OHLCV:
+        """Fetch OHLCV bars for a symbol."""
         pass
 
     @abstractmethod
