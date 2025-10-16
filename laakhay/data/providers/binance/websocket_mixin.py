@@ -125,7 +125,8 @@ class BinanceWebSocketMixin:
                                     continue
                                 last_emit = now
                             # Map kline -> StreamingBar
-                            bar = Bar(
+                            yield StreamingBar(
+                                symbol=symbol.upper(),
                                 timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
@@ -134,7 +135,6 @@ class BinanceWebSocketMixin:
                                 volume=Decimal(str(k["v"])),
                                 is_closed=bool(k.get("x", False)),
                             )
-                            yield StreamingBar(symbol=symbol.upper(), bar=bar)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_candles parse error: {e}")
             except asyncio.CancelledError:
@@ -259,7 +259,8 @@ class BinanceWebSocketMixin:
                             if only_closed and not k.get("x", False):
                                 continue
                             # Map kline -> StreamingBar
-                            bar = Bar(
+                            yield StreamingBar(
+                                symbol=k["s"],
                                 timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
@@ -268,7 +269,6 @@ class BinanceWebSocketMixin:
                                 volume=Decimal(str(k["v"])),
                                 is_closed=bool(k.get("x", False)),
                             )
-                            yield StreamingBar(symbol=k["s"], bar=bar)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"_stream_chunk parse error: {e}")
             except asyncio.CancelledError:

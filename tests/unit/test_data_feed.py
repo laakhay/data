@@ -20,7 +20,19 @@ class FakeProvider:
         self._events: dict[str, list[StreamingBar]] = {}
 
     def queue(self, symbol: str, bars: list[Bar]) -> None:
-        streaming_bars = [StreamingBar(symbol=symbol, bar=bar) for bar in bars]
+        streaming_bars = [
+            StreamingBar(
+                symbol=symbol,
+                timestamp=bar.timestamp,
+                open=bar.open,
+                high=bar.high,
+                low=bar.low,
+                close=bar.close,
+                volume=bar.volume,
+                is_closed=bar.is_closed,
+            )
+            for bar in bars
+        ]
         self._events.setdefault(symbol.upper(), []).extend(streaming_bars)
 
     async def stream_candles_multi(
@@ -64,10 +76,10 @@ async def test_data_feed_cache_and_subscribe_dynamic_symbols():
     fp.queue("BTCUSDT", [btc_bar])
     fp.queue("ETHUSDT", [eth_bar])
 
-    received: list[Bar] = []
+    received: list[StreamingBar] = []
 
-    async def on_bar(b: Bar):
-        received.append(b)
+    async def on_bar(sb: StreamingBar):
+        received.append(sb)
 
     # Start with BTC only
     await feed.start(symbols=["BTCUSDT"], interval=Timeframe.M1, only_closed=True)
