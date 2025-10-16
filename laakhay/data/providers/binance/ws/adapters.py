@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from ....io import MessageAdapter
-from ....models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade
+from ....models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade, Liquidation
 from ....models.streaming_bar import StreamingBar
 
 
@@ -189,6 +189,44 @@ class OrderBookAdapter(MessageAdapter):
                     bids=bids if bids else [(Decimal("0"), Decimal("0"))],
                     asks=asks if asks else [(Decimal("0"), Decimal("0"))],
                     timestamp=datetime.fromtimestamp(int(d["E"]) / 1000, tz=timezone.utc),
+                )
+            )
+        except Exception:
+            return []
+        return out
+
+
+class LiquidationsAdapter(MessageAdapter):
+    def is_relevant(self, payload: Any) -> bool:
+        if isinstance(payload, dict):
+            data = payload.get("data", payload)
+            return isinstance(data, dict) and data.get("e") == "forceOrder" and "o" in data
+        return False
+
+    def parse(self, payload: Any) -> list[Liquidation]:
+        out: list[Liquidation] = []
+        if not isinstance(payload, dict):
+            return out
+        d = payload.get("data", payload)
+        try:
+            o = d["o"]
+            event_time_ms = int(d.get("E") or o.get("T"))
+            out.append(
+                Liquidation(
+                    symbol=str(o["s"]),
+                    timestamp=datetime.fromtimestamp(event_time_ms / 1000, tz=timezone.utc),
+                    side=o["S"],
+                    order_type=o["o"],
+                    time_in_force=o["f"],
+                    original_quantity=Decimal(str(o["q"])),
+                    price=Decimal(str(o["p"])),
+                    average_price=Decimal(str(o.get("ap", "0"))),
+                    order_status=o["X"],
+                    last_filled_quantity=Decimal(str(o.get("l", "0"))),
+                    accumulated_quantity=Decimal(str(o.get("z", "0"))),
+                    commission=None,
+                    commission_asset=None,
+                    trade_id=None,
                 )
             )
         except Exception:

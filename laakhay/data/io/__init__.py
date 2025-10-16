@@ -1,7 +1,7 @@
 """I/O layer abstractions (REST and streaming provider interfaces)."""
 
 from .rest import RESTProvider
-from .stream_runner import EndpointSpec, MessageAdapter, StreamRunner
+from .stream_runner import WSEndpointSpec, MessageAdapter, StreamRunner
 from .ws import WSProvider
 from .ws_transport import TransportConfig, WebSocketTransport
 
@@ -10,7 +10,7 @@ __all__ = [
     "WSProvider",
     "TransportConfig",
     "WebSocketTransport",
-    "EndpointSpec",
+    "WSEndpointSpec",
     "MessageAdapter",
     "StreamRunner",
 ]

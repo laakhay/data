@@ -16,7 +16,7 @@ from .ws_transport import WebSocketTransport
 
 
 @dataclass(frozen=True)
-class EndpointSpec:
+class WSEndpointSpec:
     id: str
     combined_supported: bool
     max_streams_per_connection: int
@@ -48,7 +48,7 @@ class StreamRunner:
     async def run(
         self,
         *,
-        spec: EndpointSpec,
+        spec: WSEndpointSpec,
         adapter: MessageAdapter,
         symbols: list[str],
         params: dict[str, Any] | None = None,
@@ -125,7 +125,7 @@ class StreamRunner:
 
     async def _stream_chunk(
         self,
-        spec: EndpointSpec,
+        spec: WSEndpointSpec,
         adapter: MessageAdapter,
         symbols: list[str],
         params: dict[str, Any],
