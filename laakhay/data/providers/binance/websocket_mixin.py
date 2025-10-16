@@ -17,7 +17,8 @@ from decimal import Decimal
 import websockets
 
 from ...core import MarketType, Timeframe
-from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
+from ...models import Bar, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
+from ...models.streaming_bar import StreamingBar
 from .constants import INTERVAL_MAP, OI_PERIOD_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 logger = logging.getLogger(__name__)
@@ -76,8 +77,8 @@ class BinanceWebSocketMixin:
         only_closed: bool = False,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
-    ) -> AsyncIterator[Candle]:
-        """Yield Candle updates for one symbol.
+    ) -> AsyncIterator[StreamingBar]:
+        """Yield StreamingBar updates for one symbol.
 
         - Builds single-stream URL and connects with keepalive.
         - Reconnects with backoff on disconnect/errors.
@@ -123,9 +124,8 @@ class BinanceWebSocketMixin:
                                 ):
                                     continue
                                 last_emit = now
-                            # Map kline -> Candle
-                            yield Candle(
-                                symbol=symbol.upper(),
+                            # Map kline -> StreamingBar
+                            bar = Bar(
                                 timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
@@ -134,6 +134,7 @@ class BinanceWebSocketMixin:
                                 volume=Decimal(str(k["v"])),
                                 is_closed=bool(k.get("x", False)),
                             )
+                            yield StreamingBar(symbol=symbol.upper(), bar=bar)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"stream_candles parse error: {e}")
             except asyncio.CancelledError:
@@ -154,8 +155,8 @@ class BinanceWebSocketMixin:
         only_closed: bool = False,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
-    ) -> AsyncIterator[Candle]:
-        """Yield Candle updates for multiple symbols using combined streams.
+    ) -> AsyncIterator[StreamingBar]:
+        """Yield StreamingBar updates for multiple symbols using combined streams.
 
         - Splits symbols to respect per-connection stream limits.
         - For single chunk, yield directly; otherwise fan-in via queue.
@@ -233,7 +234,7 @@ class BinanceWebSocketMixin:
         symbols: list[str],
         interval: Timeframe,
         only_closed: bool,
-    ) -> AsyncIterator[Candle]:
+    ) -> AsyncIterator[StreamingBar]:
         """Yield candles for one combined-stream connection (one socket)."""
         names = [f"{s.lower()}@kline_{INTERVAL_MAP[interval]}" for s in symbols]
         ws_base = WS_COMBINED_URLS.get(self.market_type)
@@ -257,9 +258,8 @@ class BinanceWebSocketMixin:
                                 continue
                             if only_closed and not k.get("x", False):
                                 continue
-                            # Map kline -> Candle
-                            yield Candle(
-                                symbol=k["s"],
+                            # Map kline -> StreamingBar
+                            bar = Bar(
                                 timestamp=datetime.fromtimestamp(k["t"] / 1000, tz=timezone.utc),
                                 open=Decimal(str(k["o"])),
                                 high=Decimal(str(k["h"])),
@@ -268,6 +268,7 @@ class BinanceWebSocketMixin:
                                 volume=Decimal(str(k["v"])),
                                 is_closed=bool(k.get("x", False)),
                             )
+                            yield StreamingBar(symbol=k["s"], bar=bar)
                         except Exception as e:  # noqa: BLE001
                             logger.error(f"_stream_chunk parse error: {e}")
             except asyncio.CancelledError:

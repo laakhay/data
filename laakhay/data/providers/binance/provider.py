@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, MarketType, Timeframe
-from ...models import Candle, FundingRate, OpenInterest, OrderBook, Symbol, Trade
+from ...models import Bar, FundingRate, OHLCV, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, OI_PERIOD_MAP
 from .constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
@@ -152,8 +152,8 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
-    ) -> list[Candle]:
-        """Fetch OHLCV candles from Binance."""
+    ) -> OHLCV:
+        """Fetch OHLCV bars from Binance."""
         self.validate_symbol(symbol)
         self.validate_interval(interval)
 
@@ -178,12 +178,17 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
                 raise InvalidSymbolError(f"Symbol {symbol} not found on Binance") from e
             raise
 
-        return [self._parse_candle(symbol, candle_data) for candle_data in data]
+        # Create series metadata
+        meta = SeriesMeta(symbol=symbol.upper(), timeframe=interval.value)
+        
+        # Parse bars
+        bars = [self._parse_bar(bar_data) for bar_data in data]
+        
+        return OHLCV(meta=meta, bars=bars)
 
-    def _parse_candle(self, symbol: str, data: list) -> Candle:
-        """Parse Binance kline data into Candle model."""
-        return Candle(
-            symbol=symbol.upper(),
+    def _parse_bar(self, data: list) -> Bar:
+        """Parse Binance kline data into Bar model."""
+        return Bar(
             timestamp=datetime.fromtimestamp(data[0] / 1000, tz=timezone.utc),
             open=Decimal(str(data[1])),
             high=Decimal(str(data[2])),
