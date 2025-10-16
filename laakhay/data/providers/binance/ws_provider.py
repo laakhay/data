@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ...core import MarketType, Timeframe
 from ...io import StreamRunner, WSProvider
 from ...models.streaming_bar import StreamingBar
-from .adapters import (
+from .ws.adapters import (
     CandlesAdapter,
     FundingRateAdapter,
     MarkPriceAdapter,
@@ -20,7 +20,7 @@ from .adapters import (
     OrderBookAdapter,
     TradesAdapter,
 )
-from .endpoints import (
+from .ws.endpoints import (
     candles_spec,
     mark_price_spec,
     open_interest_spec,

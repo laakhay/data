@@ -24,9 +24,8 @@ from .models import (
     Symbol,
 )
 from .providers.binance import (
-    BinanceFuturesProvider,
-    BinanceProvider,
-    BinanceSpotProvider,
+    BinanceRESTProvider,
+    BinanceWSProvider,
 )
 
 __version__ = "0.1.0"
@@ -37,9 +36,8 @@ __all__ = [
     "MarketType",
     # Providers
     "BaseProvider",
-    "BinanceProvider",
-    "BinanceFuturesProvider",
-    "BinanceSpotProvider",
+    "BinanceRESTProvider",
+    "BinanceWSProvider",
     # Models
     "Bar",
     "OHLCV",

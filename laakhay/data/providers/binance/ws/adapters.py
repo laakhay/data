@@ -1,4 +1,4 @@
-"""Message adapters for Binance streams."""
+"""Message adapters for Binance WS streams."""
 
 from __future__ import annotations
 
@@ -6,19 +6,13 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from ...io import MessageAdapter
-from ...models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade
-from ...models.streaming_bar import StreamingBar
+from ....io import MessageAdapter
+from ....models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade
+from ....models.streaming_bar import StreamingBar
 
 
 class CandlesAdapter(MessageAdapter):
-    """Parse Binance kline payloads into StreamingBar objects.
-
-    Supports both combined payloads (with "data" key) and single-stream payloads.
-    """
-
     def is_relevant(self, payload: Any) -> bool:
-        # Combined: {"data": {"k": {...}}}, Single: {"k": {...}}
         if isinstance(payload, dict):
             if "data" in payload:
                 return isinstance(payload.get("data"), dict) and "k" in payload.get("data", {})
@@ -36,7 +30,7 @@ class CandlesAdapter(MessageAdapter):
         try:
             out.append(
                 StreamingBar(
-                    symbol=str(k["s"]) if "s" in k else str(data.get("s")),
+                    symbol=str(k.get("s") or data.get("s")),
                     timestamp=datetime.fromtimestamp(int(k["t"]) / 1000, tz=timezone.utc),
                     open=Decimal(str(k["o"])),
                     high=Decimal(str(k["h"])),
