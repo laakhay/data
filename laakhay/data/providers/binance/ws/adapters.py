@@ -11,7 +11,7 @@ from ....models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade
 from ....models.streaming_bar import StreamingBar
 
 
-class CandlesAdapter(MessageAdapter):
+class OhlcvAdapter(MessageAdapter):
     def is_relevant(self, payload: Any) -> bool:
         if isinstance(payload, dict):
             if "data" in payload:
