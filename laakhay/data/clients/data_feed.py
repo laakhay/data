@@ -63,8 +63,9 @@ class DataFeed:
 
     def __init__(
         self,
-        provider: Any,
+        ws_provider: Any,
         *,
+        rest_provider: Any | None = None,
         stale_threshold_seconds: int = 900,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
@@ -72,7 +73,8 @@ class DataFeed:
         enable_connection_events: bool = True,
         max_bar_history: int = 10,
     ) -> None:
-        self._provider = provider
+        self._ws = ws_provider
+        self._rest = rest_provider
         self._stale_threshold = stale_threshold_seconds
         self._throttle_ms = throttle_ms
         self._dedupe = dedupe_same_candle
@@ -533,7 +535,7 @@ class DataFeed:
     async def _stream_loop(self) -> None:
         assert self._interval is not None
         try:
-            async for streaming_bar in self._provider.stream_candles_multi(
+            async for streaming_bar in self._ws.stream_candles_multi(
                 self._symbols,
                 self._interval,
                 only_closed=self._only_closed,
@@ -666,7 +668,7 @@ class DataFeed:
         # Prefer explicit override, then provider hint, else conservative default (200).
         max_per_conn = (
             self._override_streams_per_conn
-            or getattr(self._provider, "max_streams_per_connection", None)
+            or getattr(self._ws, "max_streams_per_connection", None)
             or 200
         )
         chunks = [symbols[i : i + max_per_conn] for i in range(0, len(symbols), max_per_conn)]
@@ -690,12 +692,13 @@ class DataFeed:
         symbol in parallel if the provider exposes that method. Exceptions per-symbol
         are ignored so warm-up is non-fatal.
         """
-        if not hasattr(self._provider, "get_candles"):
+        rest_obj = self._rest
+        if rest_obj is None or not hasattr(rest_obj, "get_candles"):
             return
 
         async def _fetch(s: str):
             try:
-                return await self._provider.get_candles(s, interval, limit=limit)
+                return await rest_obj.get_candles(s, interval, limit=limit)
             except Exception:
                 return None
 

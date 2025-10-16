@@ -1,5 +1,6 @@
 """Core components."""
 
+from ..io import RESTProvider, WSProvider
 from .base import BaseProvider
 from .enums import MarketType, Timeframe
 from .exceptions import (
@@ -21,4 +22,6 @@ __all__ = [
     "InvalidSymbolError",
     "InvalidIntervalError",
     "ValidationError",
+    "RESTProvider",
+    "WSProvider",
 ]

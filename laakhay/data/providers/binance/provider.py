@@ -12,12 +12,11 @@ from ...models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMe
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, OI_PERIOD_MAP
 from .constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
-from .websocket_mixin import BinanceWebSocketMixin
 
 logger = logging.getLogger(__name__)
 
 
-class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
+class BinanceProvider(BaseProvider):
     """Binance exchange data provider.
 
     Supports both Spot and Futures markets via market_type parameter.
@@ -30,7 +29,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
 
     """
 
-    # REST and interval configuration (WebSocket config lives in constants + mixin)
+    # REST and interval configuration
     # Back-compat: expose INTERVAL_MAP at class level for tests/consumers
     INTERVAL_MAP = BINANCE_INTERVAL_MAP
 
