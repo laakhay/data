@@ -12,9 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from ...core import MarketType, Timeframe
-from ...io import RESTProvider
-from ...io.rest_runner import RestRunner
-from ...io.rest_transport import RESTTransport
+from ...io import RESTProvider, RestRunner, RESTTransport
 from ...models import (
     OHLCV,
     FundingRate,

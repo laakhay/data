@@ -9,8 +9,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from ..core.enums import Timeframe
-from ..models import OHLCV, FundingRate, OpenInterest, OrderBook, Symbol, Trade
+from ...core.enums import Timeframe
+from ...models import OHLCV, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 
 
 class RESTProvider(ABC):

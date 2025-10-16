@@ -1,6 +1,6 @@
 """Unit tests for HTTP client."""
 
-from laakhay.data.utils import HTTPClient
+from laakhay.data.io import HTTPClient
 
 
 def test_http_client_instantiation():

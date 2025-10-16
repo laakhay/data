@@ -12,7 +12,7 @@ from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .ws_transport import WebSocketTransport
+from .transport import WebSocketTransport
 
 
 @dataclass(frozen=True)

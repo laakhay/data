@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .rest_transport import RESTTransport
+from .transport import RESTTransport
 
 
 @dataclass(frozen=True)
