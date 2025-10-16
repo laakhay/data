@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from laakhay.data.core import MarketType
+from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models.funding_rate import FundingRate
 from laakhay.data.providers.binance.provider import BinanceProvider
 
@@ -16,7 +16,7 @@ class TestBinanceFundingRateIntegration:
     @pytest.mark.asyncio
     async def test_get_current_funding_rate(self):
         """Test fetching current/recent funding rate for a symbol."""
-        async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
+        async with BinanceProvider(market_type=MarketType.FUTURES, interval=Timeframe.M1) as provider:
             # Fetch last funding rate
             fr_list = await provider.get_funding_rate("BTCUSDT", limit=1)
 

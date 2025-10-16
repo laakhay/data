@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
 
-from ..core import TimeInterval
+from ..core import Timeframe
 from ..models import Candle, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType
 
 Callback = Callable[[Candle], Awaitable[None]] | Callable[[Candle], None]
@@ -35,7 +35,7 @@ EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], N
 class _Sub:
     callback: Callback
     symbols: set[str] | None  # None means "all effective symbols"
-    interval: TimeInterval
+    interval: Timeframe
     only_closed: bool
 
 
@@ -45,7 +45,7 @@ class _EventSub:
     callback: EventCallback
     event_types: set[DataEventType] | None  # None means all event types
     symbols: set[str] | None  # None means all symbols
-    interval: TimeInterval
+    interval: Timeframe
     only_closed: bool
 
 
@@ -76,15 +76,15 @@ class DataFeed:
         self._symbols: list[str] = []
         # Requested symbols via start/set/add/remove (global intent)
         self._requested_symbols: set[str] = set()
-        self._interval: TimeInterval | None = None
+        self._interval: Timeframe | None = None
         self._only_closed: bool = True
         self._stream_task: asyncio.Task | None = None
         self._running = False
 
         # Enhanced cache: latest, previous-closed, and candle history per (symbol, interval)
-        self._latest: dict[tuple[str, TimeInterval], Candle] = {}
-        self._prev_closed: dict[tuple[str, TimeInterval], Candle] = {}
-        self._candle_history: dict[tuple[str, TimeInterval], list[Candle]] = {}
+        self._latest: dict[tuple[str, Timeframe], Candle] = {}
+        self._prev_closed: dict[tuple[str, Timeframe], Candle] = {}
+        self._candle_history: dict[tuple[str, Timeframe], list[Candle]] = {}
 
         # Legacy subscriptions (backward compatibility)
         self._subs: dict[str, _Sub] = {}
@@ -110,7 +110,7 @@ class DataFeed:
         self,
         *,
         symbols: Iterable[str],
-        interval: TimeInterval = TimeInterval.M1,
+        interval: Timeframe = Timeframe.M1,
         only_closed: bool = True,
         # Warm-up behavior: 0 = disabled, >0 = fetch up to this many historical candles
         # per symbol via provider.get_candles before starting streams. Best-effort and
@@ -210,7 +210,7 @@ class DataFeed:
         callback: Callback,
         *,
         symbols: Iterable[str] | None = None,
-        interval: TimeInterval | None = None,
+        interval: Timeframe | None = None,
         only_closed: bool | None = None,
     ) -> str:
         """Subscribe to candle updates for given symbols.
@@ -301,7 +301,7 @@ class DataFeed:
         *,
         event_types: Optional[list[DataEventType]] = None,
         symbols: Optional[list[str]] = None,
-        interval: Optional[TimeInterval] = None,
+        interval: Optional[Timeframe] = None,
         only_closed: Optional[bool] = None,
     ) -> str:
         """Subscribe to structured data events.
@@ -410,26 +410,26 @@ class DataFeed:
     # Cache access
     # ----------------------
     def get_latest_candle(
-        self, symbol: str, *, interval: TimeInterval | None = None
+        self, symbol: str, *, interval: Timeframe | None = None
     ) -> Candle | None:
         """Get the latest candle from cache (O(1), non-blocking)."""
         if interval is None:
-            interval = self._interval or TimeInterval.M1
+            interval = self._interval or Timeframe.M1
         return self._latest.get((symbol.upper(), interval))
 
     def get_previous_closed(
-        self, symbol: str, *, interval: TimeInterval | None = None
+        self, symbol: str, *, interval: Timeframe | None = None
     ) -> Candle | None:
         if interval is None:
-            interval = self._interval or TimeInterval.M1
+            interval = self._interval or Timeframe.M1
         return self._prev_closed.get((symbol.upper(), interval))
 
     def snapshot(
-        self, symbols: Iterable[str] | None = None, *, interval: TimeInterval | None = None
+        self, symbols: Iterable[str] | None = None, *, interval: Timeframe | None = None
     ) -> dict[str, Candle | None]:
         """Return a dict of latest candles for given symbols (or all effective)."""
         if interval is None:
-            interval = self._interval or TimeInterval.M1
+            interval = self._interval or Timeframe.M1
         if symbols is None:
             symbols = list(self._symbols)
         out: dict[str, Candle | None] = {}
@@ -438,11 +438,11 @@ class DataFeed:
         return out
 
     def get_candle_history(
-        self, symbol: str, *, interval: Optional[TimeInterval] = None, count: Optional[int] = None
+        self, symbol: str, *, interval: Optional[Timeframe] = None, count: Optional[int] = None
     ) -> list[Candle]:
         """Get the last N closed candles for technical analysis."""
         if interval is None:
-            interval = self._interval or TimeInterval.M1
+            interval = self._interval or Timeframe.M1
         key = (symbol.upper(), interval)
         history = self._candle_history.get(key, [])
         if count is not None:
@@ -455,7 +455,7 @@ class DataFeed:
         callback: Callback,
         *,
         symbols: Iterable[str] | None = None,
-        interval: TimeInterval | None = None,
+        interval: Timeframe | None = None,
         only_closed: bool | None = None,
     ) -> str:
         return self.subscribe(callback, symbols=symbols, interval=interval, only_closed=only_closed)
@@ -467,7 +467,7 @@ class DataFeed:
         *,
         event_types: Optional[list[DataEventType]] = None,
         symbols: Optional[list[str]] = None,
-        interval: Optional[TimeInterval] = None,
+        interval: Optional[Timeframe] = None,
         only_closed: Optional[bool] = None,
     ) -> str:
         return self.subscribe_events(
@@ -655,7 +655,7 @@ class DataFeed:
             self._connection_status[idx] = ConnectionStatus.DISCONNECTED
 
     async def _prefill_from_historical(
-        self, symbols: list[str], interval: TimeInterval, limit: int | None
+        self, symbols: list[str], interval: Timeframe, limit: int | None
     ) -> None:
         """Best-effort prefill of latest-candle cache using provider REST method.
 

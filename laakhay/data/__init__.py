@@ -9,7 +9,7 @@ from .core import (
     MarketType,
     ProviderError,
     RateLimitError,
-    TimeInterval,
+    Timeframe,
     ValidationError,
 )
 from .models import (
@@ -30,7 +30,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     # Core enums
-    "TimeInterval",
+    "Timeframe",
     "MarketType",
     # Providers
     "BaseProvider",

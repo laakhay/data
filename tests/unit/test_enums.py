@@ -1,27 +1,27 @@
-"""Unit tests for TimeInterval enum."""
+"""Unit tests for Timeframe enum."""
 
-from laakhay.data.core import TimeInterval
+from laakhay.data.core import Timeframe
 
 
 def test_seconds_property():
     """Test seconds property."""
-    assert TimeInterval.M1.seconds == 60
-    assert TimeInterval.H1.seconds == 3600
-    assert TimeInterval.D1.seconds == 86400
+    assert Timeframe.M1.seconds == 60
+    assert Timeframe.H1.seconds == 3600
+    assert Timeframe.D1.seconds == 86400
 
 
 def test_milliseconds_property():
     """Test milliseconds property."""
-    assert TimeInterval.M1.milliseconds == 60000
-    assert TimeInterval.H1.milliseconds == 3600000
+    assert Timeframe.M1.milliseconds == 60000
+    assert Timeframe.H1.milliseconds == 3600000
 
 
 def test_from_seconds_match():
     """Test from_seconds with valid value."""
-    assert TimeInterval.from_seconds(60) == TimeInterval.M1
-    assert TimeInterval.from_seconds(3600) == TimeInterval.H1
+    assert Timeframe.from_seconds(60) == Timeframe.M1
+    assert Timeframe.from_seconds(3600) == Timeframe.H1
 
 
 def test_from_seconds_no_match():
     """Test from_seconds with invalid value returns None."""
-    assert TimeInterval.from_seconds(90) is None
+    assert Timeframe.from_seconds(90) is None

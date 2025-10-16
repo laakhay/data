@@ -23,7 +23,7 @@ _SECONDS_MAP = {
 }
 
 
-class TimeInterval(str, Enum):
+class Timeframe(str, Enum):
     """Standardized time intervals normalized across all exchanges."""
 
     # Minutes
@@ -58,7 +58,7 @@ class TimeInterval(str, Enum):
         return self.seconds * 1000
 
     @classmethod
-    def from_seconds(cls, seconds: int) -> Optional["TimeInterval"]:
+    def from_seconds(cls, seconds: int) -> Optional["Timeframe"]:
         """Get interval from seconds value. Returns None if no match."""
         for interval in cls:
             if interval.seconds == seconds:

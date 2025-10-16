@@ -4,7 +4,7 @@ This module centralizes URLs and interval mappings used by the REST and
 WebSocket mixins so the main provider can stay small and focused.
 """
 
-from ...core import MarketType, TimeInterval
+from ...core import MarketType, Timeframe
 
 # Market-specific REST base URLs
 BASE_URLS = {
@@ -27,21 +27,21 @@ WS_COMBINED_URLS = {
 
 # Binance interval mapping
 INTERVAL_MAP = {
-    TimeInterval.M1: "1m",
-    TimeInterval.M3: "3m",
-    TimeInterval.M5: "5m",
-    TimeInterval.M15: "15m",
-    TimeInterval.M30: "30m",
-    TimeInterval.H1: "1h",
-    TimeInterval.H2: "2h",
-    TimeInterval.H4: "4h",
-    TimeInterval.H6: "6h",
-    TimeInterval.H8: "8h",
-    TimeInterval.H12: "12h",
-    TimeInterval.D1: "1d",
-    TimeInterval.D3: "3d",
-    TimeInterval.W1: "1w",
-    TimeInterval.MO1: "1M",
+    Timeframe.M1: "1m",
+    Timeframe.M3: "3m",
+    Timeframe.M5: "5m",
+    Timeframe.M15: "15m",
+    Timeframe.M30: "30m",
+    Timeframe.H1: "1h",
+    Timeframe.H2: "2h",
+    Timeframe.H4: "4h",
+    Timeframe.H6: "6h",
+    Timeframe.H8: "8h",
+    Timeframe.H12: "12h",
+    Timeframe.D1: "1d",
+    Timeframe.D3: "3d",
+    Timeframe.W1: "1w",
+    Timeframe.MO1: "1M",
 }
 
 # Open Interest period mapping - reuse the same interval map since it's the same exchange

@@ -16,7 +16,7 @@ from decimal import Decimal
 
 import websockets
 
-from ...core import MarketType, TimeInterval
+from ...core import MarketType, Timeframe
 from ...models import Candle, FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from .constants import INTERVAL_MAP, OI_PERIOD_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
@@ -72,7 +72,7 @@ class BinanceWebSocketMixin:
     async def stream_candles(
         self,
         symbol: str,
-        interval: TimeInterval,
+        interval: Timeframe,
         only_closed: bool = False,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
@@ -150,7 +150,7 @@ class BinanceWebSocketMixin:
     async def stream_candles_multi(
         self,
         symbols: list[str],
-        interval: TimeInterval,
+        interval: Timeframe,
         only_closed: bool = False,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
@@ -231,7 +231,7 @@ class BinanceWebSocketMixin:
     async def _stream_chunk(
         self,
         symbols: list[str],
-        interval: TimeInterval,
+        interval: Timeframe,
         only_closed: bool,
     ) -> AsyncIterator[Candle]:
         """Yield candles for one combined-stream connection (one socket)."""

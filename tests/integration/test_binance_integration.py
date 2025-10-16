@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime, timedelta
 
-from laakhay.data.core import TimeInterval
+from laakhay.data.core import Timeframe
 from laakhay.data.providers import BinanceProvider
 
 
@@ -12,7 +12,7 @@ def test_binance_sync_wrapper():
 
     async def fetch():
         async with BinanceProvider() as provider:
-            return await provider.get_candles(symbol="BTCUSDT", interval=TimeInterval.M1, limit=2)
+            return await provider.get_candles(symbol="BTCUSDT", interval=Timeframe.M1, limit=2)
 
     candles = asyncio.run(fetch())
     assert len(candles) == 2
@@ -44,7 +44,7 @@ def test_binance_fetch_with_timeframe_sync():
         async with BinanceProvider() as provider:
             return await provider.get_candles(
                 symbol="ETHUSDT",
-                interval=TimeInterval.M5,
+                interval=Timeframe.M5,
                 start_time=start_time,
                 end_time=end_time,
                 limit=10,

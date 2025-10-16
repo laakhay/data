@@ -2,7 +2,7 @@
 
 import pytest
 
-from laakhay.data.core import BaseProvider
+from laakhay.data import BaseProvider
 
 
 def test_cannot_instantiate():
@@ -16,13 +16,13 @@ def test_validate_symbol_valid():
     # We need a concrete subclass to test instance methods
     from datetime import datetime
 
-    from laakhay.data.core import TimeInterval
+    from laakhay.data import Timeframe
 
     class TestProvider(BaseProvider):
         async def get_candles(
             self,
             symbol: str,
-            interval: TimeInterval,
+            interval: Timeframe,
             start_time: datetime | None = None,
             end_time: datetime | None = None,
             limit: int | None = None,
@@ -43,13 +43,13 @@ def test_validate_symbol_invalid():
     """Test validate_symbol with invalid input."""
     from datetime import datetime
 
-    from laakhay.data.core import TimeInterval
+    from laakhay.data import Timeframe
 
     class TestProvider(BaseProvider):
         async def get_candles(
             self,
             symbol: str,
-            interval: TimeInterval,
+            interval: Timeframe,
             start_time: datetime | None = None,
             end_time: datetime | None = None,
             limit: int | None = None,
