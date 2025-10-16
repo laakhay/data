@@ -2,7 +2,7 @@
 
 import pytest
 
-from laakhay.data.core import MarketType, TimeInterval
+from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.providers import BinanceProvider
 
 
@@ -26,10 +26,10 @@ def test_binance_interval_mapping():
     """Test interval mapping to Binance format."""
     provider = BinanceProvider()
 
-    assert provider.INTERVAL_MAP[TimeInterval.M1] == "1m"
-    assert provider.INTERVAL_MAP[TimeInterval.H1] == "1h"
-    assert provider.INTERVAL_MAP[TimeInterval.D1] == "1d"
-    assert provider.INTERVAL_MAP[TimeInterval.W1] == "1w"
+    assert provider.INTERVAL_MAP[Timeframe.M1] == "1m"
+    assert provider.INTERVAL_MAP[Timeframe.H1] == "1h"
+    assert provider.INTERVAL_MAP[Timeframe.D1] == "1d"
+    assert provider.INTERVAL_MAP[Timeframe.W1] == "1w"
 
 
 def test_binance_validate_interval_valid():
@@ -37,9 +37,9 @@ def test_binance_validate_interval_valid():
     provider = BinanceProvider()
 
     # Should not raise
-    provider.validate_interval(TimeInterval.M1)
-    provider.validate_interval(TimeInterval.H1)
-    provider.validate_interval(TimeInterval.D1)
+    provider.validate_interval(Timeframe.M1)
+    provider.validate_interval(Timeframe.H1)
+    provider.validate_interval(Timeframe.D1)
 
 
 def test_binance_validate_symbol():

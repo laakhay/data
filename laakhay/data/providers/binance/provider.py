@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, MarketType, TimeInterval
+from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, MarketType, Timeframe
 from ...models import Candle, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, OI_PERIOD_MAP
@@ -81,7 +81,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
             return "/fapi/v1/exchangeInfo"
         return "/api/v3/exchangeInfo"
 
-    def validate_interval(self, interval: TimeInterval) -> None:
+    def validate_interval(self, interval: Timeframe) -> None:
         """Validate interval is supported by Binance."""
         if interval not in self.INTERVAL_MAP:
             raise InvalidIntervalError(f"Interval {interval} not supported by Binance")
@@ -148,7 +148,7 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
     async def get_candles(
         self,
         symbol: str,
-        interval: TimeInterval,
+        interval: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,

@@ -1,7 +1,7 @@
 """Core components."""
 
 from .base import BaseProvider
-from .enums import MarketType, TimeInterval
+from .enums import MarketType, Timeframe
 from .exceptions import (
     DataError,
     InvalidIntervalError,
@@ -13,7 +13,7 @@ from .exceptions import (
 
 __all__ = [
     "BaseProvider",
-    "TimeInterval",
+    "Timeframe",
     "MarketType",
     "DataError",
     "ProviderError",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from .enums import TimeInterval
+from .enums import Timeframe
 
 
 class BaseProvider(ABC):
@@ -19,7 +19,7 @@ class BaseProvider(ABC):
     async def get_candles(
         self,
         symbol: str,
-        interval: TimeInterval,
+        interval: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
@@ -37,7 +37,7 @@ class BaseProvider(ABC):
         """Close provider connections and cleanup resources."""
         pass
 
-    def validate_interval(self, interval: TimeInterval) -> None:
+    def validate_interval(self, interval: Timeframe) -> None:
         """Validate if interval is supported by provider. Override if needed."""
         pass
 

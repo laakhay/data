@@ -8,7 +8,7 @@ from decimal import Decimal
 import pytest
 
 from laakhay.data import DataFeed
-from laakhay.data.core import MarketType, TimeInterval
+from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import Candle
 
 
@@ -25,7 +25,7 @@ class FakeProvider:
     async def stream_candles_multi(
         self,
         symbols: list[str],
-        interval: TimeInterval,
+        interval: Timeframe,
         only_closed: bool = False,
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
@@ -71,14 +71,14 @@ async def test_data_feed_cache_and_subscribe_dynamic_symbols():
         received.append(c)
 
     # Start with BTC only
-    await feed.start(symbols=["BTCUSDT"], interval=TimeInterval.M1, only_closed=True)
-    feed.subscribe(on_candle, symbols=["BTCUSDT"], interval=TimeInterval.M1, only_closed=True)
+    await feed.start(symbols=["BTCUSDT"], interval=Timeframe.M1, only_closed=True)
+    feed.subscribe(on_candle, symbols=["BTCUSDT"], interval=Timeframe.M1, only_closed=True)
 
     # Let the stream loop process queued events
     await asyncio.sleep(0.05)
 
     # Cache hit for BTC
-    c = feed.get_latest_candle("BTCUSDT", interval=TimeInterval.M1)
+    c = feed.get_latest_candle("BTCUSDT", interval=Timeframe.M1)
     assert c is not None and c.symbol == "BTCUSDT"
     assert any(x.symbol == "BTCUSDT" for x in received)
 
@@ -87,9 +87,9 @@ async def test_data_feed_cache_and_subscribe_dynamic_symbols():
     await asyncio.sleep(0.05)
 
     # Subscribe for ETH and ensure cache gets populated
-    feed.subscribe(on_candle, symbols=["ETHUSDT"], interval=TimeInterval.M1, only_closed=True)
+    feed.subscribe(on_candle, symbols=["ETHUSDT"], interval=Timeframe.M1, only_closed=True)
     await asyncio.sleep(0.05)
-    c2 = feed.get_latest_candle("ETHUSDT", interval=TimeInterval.M1)
+    c2 = feed.get_latest_candle("ETHUSDT", interval=Timeframe.M1)
     assert c2 is not None and c2.symbol == "ETHUSDT"
 
     await feed.stop()

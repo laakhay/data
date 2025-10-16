@@ -15,13 +15,13 @@ pip install -e .
 ```python
 import asyncio
 from laakhay.data.providers.binance import BinanceProvider
-from laakhay.data.core import TimeInterval, MarketType
+from laakhay.data.core import Timeframe, MarketType
 
 async def main():
     # Spot market
     async with BinanceProvider(market_type=MarketType.SPOT) as provider:
         # Candles
-        candles = await provider.get_candles("BTCUSDT", TimeInterval.M1, limit=100)
+        candles = await provider.get_candles("BTCUSDT", Timeframe.M1, limit=100)
         
         # Order book
         ob = await provider.get_order_book("BTCUSDT", limit=20)
@@ -137,7 +137,7 @@ from laakhay.data.core import (
 )
 
 try:
-    candles = await provider.get_candles("INVALID", TimeInterval.M1)
+    candles = await provider.get_candles("INVALID", Timeframe.M1)
 except InvalidSymbolError:
     print("Symbol not found")
 except ProviderError as e:

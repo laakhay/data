@@ -22,7 +22,7 @@ class BinanceFuturesProvider(BinanceProvider):
         >>> provider = BinanceFuturesProvider()
         >>> async with provider:
         ...     # Get candles for BTC perpetual futures
-        ...     candles = await provider.get_candles("BTCUSDT", TimeInterval.M1)
+        ...     candles = await provider.get_candles("BTCUSDT", Timeframe.M1)
         ...     # Get all USDT perpetual contracts
         ...     symbols = await provider.get_symbols(quote_asset="USDT")
     """
@@ -41,7 +41,7 @@ class BinanceSpotProvider(BinanceProvider):
         >>> provider = BinanceSpotProvider()
         >>> async with provider:
         ...     # Get candles for BTC spot
-        ...     candles = await provider.get_candles("BTCUSDT", TimeInterval.M1)
+        ...     candles = await provider.get_candles("BTCUSDT", Timeframe.M1)
         ...     # Get all USDT spot pairs
         ...     symbols = await provider.get_symbols(quote_asset="USDT")
     """
