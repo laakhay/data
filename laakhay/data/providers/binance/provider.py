@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from ...core import BaseProvider, InvalidIntervalError, InvalidSymbolError, MarketType, Timeframe
-from ...models import Bar, FundingRate, OHLCV, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
+from ...models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
 from ...utils import HTTPClient, retry_async
 from .constants import BASE_URLS, OI_PERIOD_MAP
 from .constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
@@ -180,10 +180,10 @@ class BinanceProvider(BinanceWebSocketMixin, BaseProvider):
 
         # Create series metadata
         meta = SeriesMeta(symbol=symbol.upper(), timeframe=interval.value)
-        
+
         # Parse bars
         bars = [self._parse_bar(bar_data) for bar_data in data]
-        
+
         return OHLCV(meta=meta, bars=bars)
 
     def _parse_bar(self, data: list) -> Bar:

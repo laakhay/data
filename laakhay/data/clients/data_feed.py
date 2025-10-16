@@ -21,11 +21,19 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from ..core import Timeframe
-from ..models import Bar, ConnectionEvent, ConnectionStatus, DataEvent, DataEventType, OHLCV, SeriesMeta, StreamingBar
+from ..models import (
+    OHLCV,
+    Bar,
+    ConnectionEvent,
+    ConnectionStatus,
+    DataEvent,
+    DataEventType,
+    SeriesMeta,
+    StreamingBar,
+)
 
 Callback = Callable[[StreamingBar], Awaitable[None]] | Callable[[StreamingBar], None]
 EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
@@ -42,6 +50,7 @@ class _Sub:
 @dataclass(frozen=True)
 class _EventSub:
     """Enhanced subscription for event system."""
+
     callback: EventCallback
     event_types: set[DataEventType] | None  # None means all event types
     symbols: set[str] | None  # None means all symbols
@@ -88,10 +97,10 @@ class DataFeed:
 
         # Legacy subscriptions (backward compatibility)
         self._subs: dict[str, _Sub] = {}
-        
+
         # Enhanced event subscriptions
         self._event_subs: dict[str, _EventSub] = {}
-        
+
         # Connection event subscriptions
         self._connection_callbacks: list[EventCallback] = []
 
@@ -134,12 +143,12 @@ class DataFeed:
             self._interval = interval
             self._only_closed = only_closed
             self._assign_chunk_ids(self._symbols)
-            
+
             # Initialize candle history tracking
             for symbol in self._symbols:
                 key = (symbol.upper(), interval)
                 self._bar_history[key] = []
-            
+
             # Optionally prefill cache from provider REST before starting streams.
             # warm_up > 0 indicates the per-symbol limit to request; 0 disables warm-up.
             if warm_up and warm_up > 0:
@@ -299,10 +308,10 @@ class DataFeed:
         self,
         callback: EventCallback,
         *,
-        event_types: Optional[list[DataEventType]] = None,
-        symbols: Optional[list[str]] = None,
-        interval: Optional[Timeframe] = None,
-        only_closed: Optional[bool] = None,
+        event_types: list[DataEventType] | None = None,
+        symbols: list[str] | None = None,
+        interval: Timeframe | None = None,
+        only_closed: bool | None = None,
     ) -> str:
         """Subscribe to structured data events.
 
@@ -343,6 +352,7 @@ class DataFeed:
 
         # If subscriber requested additional symbols, fold into effective set
         if symbols_set:
+
             async def _maybe_update():
                 async with self._lock:
                     self._requested_symbols |= symbols_set
@@ -409,17 +419,13 @@ class DataFeed:
     # ----------------------
     # Cache access
     # ----------------------
-    def get_latest_bar(
-        self, symbol: str, *, interval: Timeframe | None = None
-    ) -> Bar | None:
+    def get_latest_bar(self, symbol: str, *, interval: Timeframe | None = None) -> Bar | None:
         """Get the latest bar from cache (O(1), non-blocking)."""
         if interval is None:
             interval = self._interval or Timeframe.M1
         return self._latest.get((symbol.upper(), interval))
 
-    def get_previous_closed(
-        self, symbol: str, *, interval: Timeframe | None = None
-    ) -> Bar | None:
+    def get_previous_closed(self, symbol: str, *, interval: Timeframe | None = None) -> Bar | None:
         """Get the previous closed bar from cache."""
         if interval is None:
             interval = self._interval or Timeframe.M1
@@ -439,7 +445,7 @@ class DataFeed:
         return out
 
     def get_bar_history(
-        self, symbol: str, *, interval: Optional[Timeframe] = None, count: Optional[int] = None
+        self, symbol: str, *, interval: Timeframe | None = None, count: int | None = None
     ) -> list[Bar]:
         """Get the last N closed bars for technical analysis."""
         if interval is None:
@@ -451,15 +457,15 @@ class DataFeed:
         return history.copy()
 
     def get_ohlcv(
-        self, symbol: str, *, interval: Optional[Timeframe] = None, count: Optional[int] = None
+        self, symbol: str, *, interval: Timeframe | None = None, count: int | None = None
     ) -> OHLCV:
         """Get OHLCV series for a symbol."""
         if interval is None:
             interval = self._interval or Timeframe.M1
-        
+
         bars = self.get_bar_history(symbol, interval=interval, count=count)
         meta = SeriesMeta(symbol=symbol.upper(), timeframe=interval.value)
-        
+
         return OHLCV(meta=meta, bars=bars)
 
     # Sugar alias for subscribe
@@ -478,10 +484,10 @@ class DataFeed:
         self,
         callback: EventCallback,
         *,
-        event_types: Optional[list[DataEventType]] = None,
-        symbols: Optional[list[str]] = None,
-        interval: Optional[Timeframe] = None,
-        only_closed: Optional[bool] = None,
+        event_types: list[DataEventType] | None = None,
+        symbols: list[str] | None = None,
+        interval: Timeframe | None = None,
+        only_closed: bool | None = None,
     ) -> str:
         return self.subscribe_events(
             callback,
@@ -499,7 +505,7 @@ class DataFeed:
         now = time.time()
         stale_ids: list[str] = []
         healthy = 0
-        
+
         for cid, ts in self._chunk_last_msg.items():
             if now - ts <= self._stale_threshold:
                 healthy += 1
@@ -508,12 +514,14 @@ class DataFeed:
                 if self._enable_connection_events:
                     # Mark connection as stale
                     self._connection_status[cid] = ConnectionStatus.STALE
-        
+
         return {
             "active_connections": len(self._chunk_last_msg),
             "healthy_connections": healthy,
             "stale_connections": stale_ids,
-            "connection_status": {f"connection_{cid}": status.value for cid, status in self._connection_status.items()},
+            "connection_status": {
+                f"connection_{cid}": status.value for cid, status in self._connection_status.items()
+            },
             "last_message_time": {
                 f"connection_{cid}": ts for cid, ts in self._chunk_last_msg.items()
             },
@@ -536,21 +544,21 @@ class DataFeed:
                 symbol = streaming_bar.symbol
                 key = (symbol.upper(), self._interval)
                 closed = bool(streaming_bar.is_closed)
-                
+
                 if closed:
                     # Store previous closed bar
                     prev = self._latest.get(key)
                     if prev is not None and prev.is_closed:
                         self._prev_closed[key] = prev
-                    
+
                     # Add to bar history
                     if key not in self._bar_history:
                         self._bar_history[key] = []
                     self._bar_history[key].append(streaming_bar)
                     # Keep only last N bars to prevent memory growth
                     if len(self._bar_history[key]) > self._max_bar_history:
-                        self._bar_history[key] = self._bar_history[key][-self._max_bar_history:]
-                
+                        self._bar_history[key] = self._bar_history[key][-self._max_bar_history :]
+
                 self._latest[key] = streaming_bar
 
                 # Update health tracking
@@ -590,10 +598,12 @@ class DataFeed:
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, cb, streaming_bar)
 
-    async def _dispatch_events(self, streaming_bar: StreamingBar, connection_id: Optional[int]) -> None:
+    async def _dispatch_events(
+        self, streaming_bar: StreamingBar, connection_id: int | None
+    ) -> None:
         """Dispatch events to enhanced event subscribers."""
         connection_id_str = f"connection_{connection_id}" if connection_id is not None else None
-        
+
         # Create bar event
         bar_event = DataEvent.bar_update(
             bar=streaming_bar.bar,
@@ -603,25 +613,25 @@ class DataFeed:
         )
 
         to_call: list[tuple[EventCallback, DataEvent]] = []
-        
+
         for sub in self._event_subs.values():
             if sub.interval != self._interval:
                 continue
-            
+
             # Filter by event type
             if sub.event_types is not None and bar_event.event_type not in sub.event_types:
                 continue
-            
+
             # Filter by symbol
             if sub.symbols is not None and streaming_bar.symbol.upper() not in sub.symbols:
                 continue
-            
+
             # Filter by closed status
             if sub.only_closed and not streaming_bar.bar.is_closed:
                 continue
-            
+
             to_call.append((sub.callback, bar_event))
-        
+
         # Fire callbacks
         for cb, event in to_call:
             if asyncio.iscoroutinefunction(cb):
@@ -634,9 +644,9 @@ class DataFeed:
         """Emit connection status events."""
         if not self._enable_connection_events:
             return
-        
+
         data_event = DataEvent.connection_status(event)
-        
+
         for callback in self._connection_callbacks:
             try:
                 if asyncio.iscoroutinefunction(callback):
@@ -647,6 +657,7 @@ class DataFeed:
             except Exception as e:
                 # Log error but don't crash
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Error in connection event callback: {e}")
 
@@ -659,11 +670,11 @@ class DataFeed:
             or 200
         )
         chunks = [symbols[i : i + max_per_conn] for i in range(0, len(symbols), max_per_conn)]
-        
+
         self._symbol_chunk_id.clear()
         self._chunk_last_msg.clear()
         self._connection_status.clear()
-        
+
         for idx, chunk in enumerate(chunks):
             for s in chunk:
                 self._symbol_chunk_id[s.upper()] = idx
@@ -710,15 +721,15 @@ class DataFeed:
     def _compute_effective_symbols(self) -> list[str]:
         """Union of requested symbols and all subscriber symbols (if any)."""
         subs_union: set[str] = set()
-        
+
         # Legacy subscribers
         for sub in self._subs.values():
             if sub.symbols:
                 subs_union |= sub.symbols
-        
+
         # Enhanced event subscribers
         for sub in self._event_subs.values():
             if sub.symbols:
                 subs_union |= sub.symbols
-        
+
         return sorted(self._requested_symbols | subs_union)

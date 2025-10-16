@@ -13,12 +13,12 @@ from .core import (
     ValidationError,
 )
 from .models import (
+    OHLCV,
     Bar,
     ConnectionEvent,
     ConnectionStatus,
     DataEvent,
     DataEventType,
-    OHLCV,
     SeriesMeta,
     StreamingBar,
     Symbol,

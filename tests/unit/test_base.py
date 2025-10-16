@@ -2,7 +2,7 @@
 
 import pytest
 
-from laakhay.data import BaseProvider, OHLCV
+from laakhay.data import OHLCV, BaseProvider
 
 
 def test_cannot_instantiate():
@@ -28,11 +28,11 @@ def test_validate_symbol_valid():
             limit: int | None = None,
         ) -> OHLCV:
             from laakhay.data.models import SeriesMeta
-            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval), bars=[])
+
+            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval.value), bars=[])
 
         async def get_symbols(self) -> list[dict]:
-            from laakhay.data.models import SeriesMeta
-            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval), bars=[])
+            return [{"symbol": "TEST", "status": "TRADING"}]
 
         async def close(self) -> None:
             pass
@@ -57,11 +57,11 @@ def test_validate_symbol_invalid():
             limit: int | None = None,
         ) -> OHLCV:
             from laakhay.data.models import SeriesMeta
-            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval), bars=[])
+
+            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval.value), bars=[])
 
         async def get_symbols(self) -> list[dict]:
-            from laakhay.data.models import SeriesMeta
-            return OHLCV(meta=SeriesMeta(symbol="TEST", timeframe=interval), bars=[])
+            return [{"symbol": "TEST", "status": "TRADING"}]
 
         async def close(self) -> None:
             pass

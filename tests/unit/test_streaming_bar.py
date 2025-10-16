@@ -20,7 +20,7 @@ def test_streaming_bar_creation():
         volume=Decimal("100"),
         is_closed=True,
     )
-    
+
     assert streaming_bar.symbol == "BTCUSDT"
     assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     assert streaming_bar.close == Decimal("50500")
@@ -38,7 +38,7 @@ def test_streaming_bar_inheritance():
         volume=Decimal("100"),
         is_closed=True,
     )
-    
+
     # Test inherited properties
     assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     assert streaming_bar.open == Decimal("50000")
@@ -46,7 +46,7 @@ def test_streaming_bar_inheritance():
     assert streaming_bar.low == Decimal("49000")
     assert streaming_bar.close == Decimal("50500")
     assert streaming_bar.volume == Decimal("100")
-    assert streaming_bar.is_closed == True
+    assert streaming_bar.is_closed
     # Test symbol property
     assert streaming_bar.symbol == "BTCUSDT"
 
@@ -63,7 +63,7 @@ def test_streaming_bar_method_inheritance():
         volume=Decimal("100"),
         is_closed=True,
     )
-    
+
     # Test inherited methods
     assert streaming_bar.open_time_ms == 1704110400000
     assert streaming_bar.close_time_ms(60) == 1704110460000
@@ -71,7 +71,9 @@ def test_streaming_bar_method_inheritance():
     # Test hlc3 calculation: (51000 + 49000 + 50500) / 3 = 150500 / 3 ≈ 50166.67
     expected_hlc3 = (streaming_bar.high + streaming_bar.low + streaming_bar.close) / 3
     assert streaming_bar.hlc3 == expected_hlc3
-    expected_ohlc4 = (streaming_bar.open + streaming_bar.high + streaming_bar.low + streaming_bar.close) / 4
+    expected_ohlc4 = (
+        streaming_bar.open + streaming_bar.high + streaming_bar.low + streaming_bar.close
+    ) / 4
     assert streaming_bar.ohlc4 == expected_ohlc4
 
 
@@ -87,6 +89,6 @@ def test_streaming_bar_immutable():
         volume=Decimal("100"),
         is_closed=True,
     )
-    
+
     with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
         streaming_bar.symbol = "ETHUSDT"

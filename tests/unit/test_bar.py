@@ -79,11 +79,11 @@ def test_bar_time_utilities():
         close=Decimal("50500"),
         volume=Decimal("100"),
     )
-    
+
     # Test open_time_ms
     expected_ms = int(timestamp.timestamp() * 1000)
     assert bar.open_time_ms == expected_ms
-    
+
     # Test close_time_ms
     close_ms = bar.close_time_ms(interval_seconds=60)
     assert close_ms == expected_ms + 60000
@@ -99,17 +99,19 @@ def test_bar_price_calculations():
         close=Decimal("50500"),
         volume=Decimal("100"),
     )
-    
+
     # Test hl2
     expected_hl2 = (Decimal("51000") + Decimal("49000")) / Decimal("2")
     assert bar.hl2 == expected_hl2
-    
+
     # Test hlc3
     expected_hlc3 = (Decimal("51000") + Decimal("49000") + Decimal("50500")) / Decimal("3")
     assert bar.hlc3 == expected_hlc3
-    
+
     # Test ohlc4
-    expected_ohlc4 = (Decimal("50000") + Decimal("51000") + Decimal("49000") + Decimal("50500")) / Decimal("4")
+    expected_ohlc4 = (
+        Decimal("50000") + Decimal("51000") + Decimal("49000") + Decimal("50500")
+    ) / Decimal("4")
     assert bar.ohlc4 == expected_ohlc4
 
 
@@ -126,7 +128,7 @@ def test_bar_candle_properties():
     )
     assert bullish_bar.is_bullish is True
     assert bullish_bar.is_bearish is False
-    
+
     # Bearish bar
     bearish_bar = Bar(
         timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -150,15 +152,15 @@ def test_bar_shadow_calculations():
         close=Decimal("50500"),
         volume=Decimal("100"),
     )
-    
+
     # Upper shadow = high - max(open, close)
     expected_upper = Decimal("51000") - Decimal("50500")  # max(50000, 50500)
     assert bar.upper_shadow == expected_upper
-    
+
     # Lower shadow = min(open, close) - low
     expected_lower = Decimal("50000") - Decimal("49000")  # min(50000, 50500)
     assert bar.lower_shadow == expected_lower
-    
+
     # Body size = |close - open|
     expected_body = abs(Decimal("50500") - Decimal("50000"))
     assert bar.body_size == expected_body
