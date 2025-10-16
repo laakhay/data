@@ -8,6 +8,7 @@ providing a clean REST-only surface.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any, Callable, Type
 
 from ...core import MarketType, Timeframe
 from ...io import RESTProvider
@@ -44,6 +45,20 @@ class BinanceRESTProvider(RESTProvider):
 
         self._transport = RESTTransport(base_url=BASE_URLS[market_type])
         self._runner = RestRunner(self._transport)
+        # Registry: key -> (spec_builder, adapter_class)
+        self._ENDPOINTS: dict[str, tuple[Callable[..., Any], Type]] = {
+            "ohlcv": (candles_spec, CandlesResponseAdapter),
+            "symbols": (exchange_info_spec, ExchangeInfoSymbolsAdapter),
+            "order_book": (order_book_spec, OrderBookResponseAdapter),
+        }
+
+    async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
+        if endpoint not in self._ENDPOINTS:
+            raise ValueError(f"Unknown REST endpoint: {endpoint}")
+        spec_fn, adapter_cls = self._ENDPOINTS[endpoint]
+        spec = spec_fn()
+        adapter = adapter_cls()
+        return await self._runner.run(spec=spec, adapter=adapter, params=params)
 
     async def get_candles(
         self,
@@ -64,24 +79,18 @@ class BinanceRESTProvider(RESTProvider):
             "end_time": end_time,
             "limit": limit,
         }
-        return await self._runner.run(
-            spec=candles_spec(), adapter=CandlesResponseAdapter(), params=params
-        )
+        return await self.fetch("ohlcv", params)
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         params = {"market_type": self.market_type, "quote_asset": quote_asset}
-        data = await self._runner.run(
-            spec=exchange_info_spec(), adapter=ExchangeInfoSymbolsAdapter(), params=params
-        )
+        data = await self.fetch("symbols", params)
         return list(data) if use_cache else data
 
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
         params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
-        return await self._runner.run(
-            spec=order_book_spec(), adapter=OrderBookResponseAdapter(), params=params
-        )
+        return await self.fetch("order_book", params)
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         raise NotImplementedError
