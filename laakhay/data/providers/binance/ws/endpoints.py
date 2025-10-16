@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...core import MarketType, Timeframe
-from ...io import EndpointSpec
-from .constants import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
+from ....core import MarketType, Timeframe
+from ....io import EndpointSpec
+from ..constants import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 
 def candles_spec(market_type: MarketType) -> EndpointSpec:
-    """Create EndpointSpec for kline/candles stream."""
     ws_single = WS_SINGLE_URLS.get(market_type)
     ws_combined = WS_COMBINED_URLS.get(market_type)
     if not ws_single:
@@ -28,9 +27,7 @@ def candles_spec(market_type: MarketType) -> EndpointSpec:
     def build_single_url(name: str) -> str:
         return f"{ws_single}/{name}"
 
-    # Futures typical limit 200, Spot can be 1024
     max_streams = 200 if market_type == MarketType.FUTURES else 1024
-
     return EndpointSpec(
         id="candles",
         combined_supported=bool(ws_combined),
@@ -87,7 +84,6 @@ def open_interest_spec(market_type: MarketType) -> EndpointSpec:
     def build_single_url(name: str) -> str:
         return f"{ws_single}/{name}"
 
-    # Futures-only stream; keep conservative default
     max_streams = 200
     return EndpointSpec(
         id="open_interest",
