@@ -6,32 +6,32 @@ Binance-specific endpoint specs and adapters.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, Callable, Type
+from collections.abc import AsyncIterator, Callable
+from typing import TYPE_CHECKING, Any
 
 from ...core import MarketType, Timeframe
-from ...io import StreamRunner, WSProvider, MessageAdapter
+from ...io import MessageAdapter, StreamRunner, WSProvider
 from ...models.streaming_bar import StreamingBar
 from .ws.adapters import (
     FundingRateAdapter,
+    LiquidationsAdapter,
     MarkPriceAdapter,
     OhlcvAdapter,
     OpenInterestAdapter,
     OrderBookAdapter,
     TradesAdapter,
-    LiquidationsAdapter,
 )
 from .ws.endpoints import (
+    liquidations_spec,
     mark_price_spec,
     ohlcv_spec,
     open_interest_spec,
     order_book_spec,
     trades_spec,
-    liquidations_spec,
 )
 
 if TYPE_CHECKING:
-    from ...models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade, Liquidation
+    from ...models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 
 
 class BinanceWSProvider(WSProvider):
@@ -40,7 +40,7 @@ class BinanceWSProvider(WSProvider):
     def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
         self.market_type = market_type
         # Endpoint registry: key -> (spec_builder, adapter_class)
-        self._ENDPOINTS: dict[str, tuple[Callable[[MarketType], Any], Type[MessageAdapter]]] = {
+        self._ENDPOINTS: dict[str, tuple[Callable[[MarketType], Any], type[MessageAdapter]]] = {
             "ohlcv": (ohlcv_spec, OhlcvAdapter),
             "trades": (trades_spec, TradesAdapter),
             "open_interest": (open_interest_spec, OpenInterestAdapter),
@@ -134,8 +134,10 @@ class BinanceWSProvider(WSProvider):
         adapter = adapter_cls()
         # Apply endpoint-specific defaults
         if endpoint == "ohlcv" and not only_closed and dedupe_key is None:
+
             def _ohlcv_key(obj) -> tuple[str, int, str]:
                 return (obj.symbol, int(obj.timestamp.timestamp() * 1000), str(obj.close))
+
             dedupe_key = _ohlcv_key
         async for obj in self._stream(
             spec,

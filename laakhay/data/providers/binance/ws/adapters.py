@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from ....io import MessageAdapter
-from ....models import FundingRate, MarkPrice, OpenInterest, OrderBook, Trade, Liquidation
+from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from ....models.streaming_bar import StreamingBar
 
 

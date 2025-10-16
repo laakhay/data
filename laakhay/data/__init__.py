@@ -24,6 +24,7 @@ from .models import (
     Symbol,
 )
 from .providers.binance import (
+    BinanceProvider,
     BinanceRESTProvider,
     BinanceWSProvider,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "MarketType",
     # Providers
     "BaseProvider",
+    "BinanceProvider",
     "BinanceRESTProvider",
     "BinanceWSProvider",
     # Models

@@ -7,8 +7,9 @@ providing a clean REST-only surface.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Type
+from typing import Any
 
 from ...core import MarketType, Timeframe
 from ...io import RESTProvider
@@ -46,7 +47,7 @@ class BinanceRESTProvider(RESTProvider):
         self._transport = RESTTransport(base_url=BASE_URLS[market_type])
         self._runner = RestRunner(self._transport)
         # Registry: key -> (spec_builder, adapter_class)
-        self._ENDPOINTS: dict[str, tuple[Callable[..., Any], Type]] = {
+        self._ENDPOINTS: dict[str, tuple[Callable[..., Any], type]] = {
             "ohlcv": (candles_spec, CandlesResponseAdapter),
             "symbols": (exchange_info_spec, ExchangeInfoSymbolsAdapter),
             "order_book": (order_book_spec, OrderBookResponseAdapter),
