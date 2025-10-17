@@ -41,13 +41,13 @@ asyncio.run(main())
 | OHLCV Bars | ✅ | ✅ | Spot, Futures |
 | Symbols | ✅ | - | Spot, Futures |
 | Order Book | ✅ | ✅ | Spot, Futures |
-| Trades | ❌ | ✅ | Spot, Futures |
+| Trades | ✅ | ✅ | Spot, Futures |
 | Liquidations | ❌ | ✅ | Futures |
-| Open Interest | ❌ | ✅ | Futures |
-| Funding Rates | ❌ | ✅ | Futures |
+| Open Interest | ✅ | ✅ | Futures |
+| Funding Rates | ✅ | ✅ | Futures |
 | Mark Price | ❌ | ✅ | Futures |
 
-> REST coverage currently includes candles, symbol metadata, and order books. Additional REST endpoints are planned.
+> REST coverage includes candles, symbols, order books, recent trades, open interest (current + historical), and funding rates.
 
 ## Key Features
 
@@ -102,7 +102,28 @@ laakhay/data/
 ├── providers/      # Exchange implementations
 │   └── binance/    # Binance provider + WebSocket mixin
 ├── clients/        # High-level clients
-└── utils/          # HTTP, retry, WebSocket utilities
+└── io/             # REST/WS providers, transports, and clients
+
+## Examples
+
+Run examples from `data/examples/`:
+
+```bash
+# REST
+python data/examples/binance_rest_ohlcv.py BTCUSDT M1 10 SPOT
+python data/examples/binance_rest_order_book.py BTCUSDT 50 SPOT
+python data/examples/binance_rest_open_interest.py BTCUSDT current
+python data/examples/binance_rest_open_interest.py BTCUSDT hist 5m 100
+python data/examples/binance_rest_recent_trades.py BTCUSDT 50 SPOT
+python data/examples/binance_rest_funding_rate.py BTCUSDT 50
+
+# WebSocket
+python data/examples/binance_ws_ohlcv_multi.py BTCUSDT ETHUSDT M1 SPOT
+python data/examples/binance_ws_trades.py BTCUSDT SPOT
+
+# High-level DataFeed
+python data/examples/data_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
+```
 ```
 
 **Principles:**
