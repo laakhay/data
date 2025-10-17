@@ -24,9 +24,17 @@ from ...models import (
 from .rest.adapters import (
     CandlesResponseAdapter,
     ExchangeInfoSymbolsAdapter,
+    OpenInterestCurrentAdapter,
+    OpenInterestHistAdapter,
     OrderBookResponseAdapter,
 )
-from .rest.endpoints import candles_spec, exchange_info_spec, order_book_spec
+from .rest.endpoints import (
+    candles_spec,
+    exchange_info_spec,
+    open_interest_current_spec,
+    open_interest_hist_spec,
+    order_book_spec,
+)
 
 
 class BinanceRESTProvider(RESTProvider):
@@ -49,6 +57,8 @@ class BinanceRESTProvider(RESTProvider):
             "ohlcv": (candles_spec, CandlesResponseAdapter),
             "symbols": (exchange_info_spec, ExchangeInfoSymbolsAdapter),
             "order_book": (order_book_spec, OrderBookResponseAdapter),
+            "open_interest_current": (open_interest_current_spec, OpenInterestCurrentAdapter),
+            "open_interest_hist": (open_interest_hist_spec, OpenInterestHistAdapter),
         }
 
     async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
@@ -112,7 +122,19 @@ class BinanceRESTProvider(RESTProvider):
         end_time: datetime | None = None,
         limit: int = 30,
     ) -> list[OpenInterest]:
-        raise NotImplementedError
+        params: dict[str, Any] = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "period": period,
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+        if historical:
+            data = await self.fetch("open_interest_hist", params)
+        else:
+            data = await self.fetch("open_interest_current", params)
+        return list(data)
 
     async def close(self) -> None:
         await self._transport.close()
