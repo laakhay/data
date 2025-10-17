@@ -41,13 +41,13 @@ asyncio.run(main())
 | OHLCV Bars | ✅ | ✅ | Spot, Futures |
 | Symbols | ✅ | - | Spot, Futures |
 | Order Book | ✅ | ✅ | Spot, Futures |
-| Trades | ✅ | ✅ | Spot, Futures |
+| Trades | ❌ | ✅ | Spot, Futures |
 | Liquidations | ❌ | ✅ | Futures |
-| Open Interest | ✅ | ✅ | Futures |
-| Funding Rates | ✅ | ✅ | Futures |
+| Open Interest | ❌ | ✅ | Futures |
+| Funding Rates | ❌ | ✅ | Futures |
 | Mark Price | ❌ | ✅ | Futures |
 
-> REST coverage includes candles, symbols, order books, recent trades, open interest (current + historical), and funding rates.
+> REST coverage currently includes candles, symbol metadata, and order books.
 
 ## Key Features
 
@@ -121,9 +121,8 @@ python data/examples/binance_rest_funding_rate.py BTCUSDT 50
 python data/examples/binance_ws_ohlcv_multi.py BTCUSDT ETHUSDT M1 SPOT
 python data/examples/binance_ws_trades.py BTCUSDT SPOT
 
-# High-level DataFeed
-python data/examples/data_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
-```
+# High-level OHLCV Feed
+python data/examples/ohlcv_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
 ```
 
 **Principles:**
