@@ -1,4 +1,4 @@
-"""Unit tests for DataFeed behavior with a fake provider."""
+"""Unit tests for OHLCVFeed behavior with a fake provider."""
 
 import asyncio
 from collections.abc import AsyncIterator
@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from laakhay.data import DataFeed
+from laakhay.data import OHLCVFeed
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import Bar, StreamingBar
 
@@ -52,9 +52,9 @@ class FakeProvider:
 
 
 @pytest.mark.asyncio
-async def test_data_feed_cache_and_subscribe_dynamic_symbols():
+async def test_ohlcv_feed_cache_and_subscribe_dynamic_symbols():
     fp = FakeProvider()
-    feed = DataFeed(fp)
+    feed = OHLCVFeed(fp)
 
     # Prepare bars for BTC and ETH
     btc_bar = Bar(

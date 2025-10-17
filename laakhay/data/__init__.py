@@ -1,6 +1,6 @@
 """Laakhay Data - Multi-exchange market data aggregation library."""
 
-from .clients.data_feed import DataFeed
+from .clients.ohlcv_feed import OHLCVFeed
 from .core import (
     BaseProvider,
     DataError,
@@ -51,7 +51,7 @@ __all__ = [
     "DataEvent",
     "DataEventType",
     # Clients
-    "DataFeed",
+    "OHLCVFeed",
     # Exceptions
     "DataError",
     "ProviderError",
