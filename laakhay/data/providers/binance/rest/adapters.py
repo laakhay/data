@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from ....io import ResponseAdapter
-from ....models import OHLCV, Bar, OrderBook, SeriesMeta, Symbol
+from ....models import OHLCV, Bar, OpenInterest, OrderBook, SeriesMeta, Symbol
 
 
 class CandlesResponseAdapter(ResponseAdapter):
@@ -83,3 +83,40 @@ class OrderBookResponseAdapter(ResponseAdapter):
             asks=asks,
             timestamp=datetime.now(timezone.utc),
         )
+
+
+class OpenInterestCurrentAdapter(ResponseAdapter):
+    def parse(self, response: Any, params: dict[str, Any]) -> list[OpenInterest]:
+        symbol = params["symbol"].upper()
+        oi_str = response.get("openInterest")
+        ts_ms = response.get("time")
+        if oi_str is None or ts_ms is None:
+            return []
+        return [
+            OpenInterest(
+                symbol=symbol,
+                timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                open_interest=Decimal(str(oi_str)),
+                open_interest_value=None,
+            )
+        ]
+
+
+class OpenInterestHistAdapter(ResponseAdapter):
+    def parse(self, response: Any, params: dict[str, Any]) -> list[OpenInterest]:
+        symbol = params["symbol"].upper()
+        out: list[OpenInterest] = []
+        for row in response or []:
+            ts_ms = row.get("timestamp")
+            oi_str = row.get("sumOpenInterest")
+            if ts_ms is None or oi_str is None:
+                continue
+            out.append(
+                OpenInterest(
+                    symbol=symbol,
+                    timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                    open_interest=Decimal(str(oi_str)),
+                    open_interest_value=None,
+                )
+            )
+        return out

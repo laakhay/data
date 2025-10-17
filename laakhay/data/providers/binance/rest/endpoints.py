@@ -65,3 +65,51 @@ def order_book_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
     )
+
+
+def open_interest_current_spec() -> RestEndpointSpec:
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        # Current OI supported on Futures only
+        if market != MarketType.FUTURES:
+            raise ValueError("Open interest current endpoint is Futures-only on Binance")
+        return "/fapi/v1/openInterest"
+
+    def build_query(params: dict[str, Any]) -> dict[str, Any]:
+        return {"symbol": params["symbol"].upper()}
+
+    return RestEndpointSpec(
+        id="open_interest_current",
+        method="GET",
+        build_path=build_path,
+        build_query=build_query,
+    )
+
+
+def open_interest_hist_spec() -> RestEndpointSpec:
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        # Historical OI supported on Futures only
+        if market != MarketType.FUTURES:
+            raise ValueError("Open interest history endpoint is Futures-only on Binance")
+        # Binance endpoint for OI history
+        return "/futures/data/openInterestHist"
+
+    def build_query(params: dict[str, Any]) -> dict[str, Any]:
+        q: dict[str, Any] = {
+            "symbol": params["symbol"].upper(),
+            "period": params.get("period", "5m"),
+            "limit": min(int(params.get("limit", 30)), 500),
+        }
+        if params.get("start_time"):
+            q["startTime"] = int(params["start_time"].timestamp() * 1000)
+        if params.get("end_time"):
+            q["endTime"] = int(params["end_time"].timestamp() * 1000)
+        return q
+
+    return RestEndpointSpec(
+        id="open_interest_hist",
+        method="GET",
+        build_path=build_path,
+        build_query=build_query,
+    )
