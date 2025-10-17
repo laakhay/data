@@ -65,6 +65,14 @@ class Timeframe(str, Enum):
                 return interval
         return None
 
+    @classmethod
+    def from_str(cls, tf: str) -> Optional["Timeframe"]:
+        """Get interval from string value. Returns None if no match."""
+        try:
+            return cls(tf)
+        except ValueError:
+            return None
+
 
 class MarketType(str, Enum):
     """Market type for exchange trading.

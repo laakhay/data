@@ -78,18 +78,23 @@ class BinanceRESTProvider(RESTProvider):
     async def get_candles(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: str | Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
     ) -> OHLCV:
         from .constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
 
+        if isinstance(timeframe, str):
+            timeframe = Timeframe.from_str(timeframe)
+        if timeframe not in BINANCE_INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
+
         params = {
             "market_type": self.market_type,
             "symbol": symbol,
-            "interval": interval,
-            "interval_str": BINANCE_INTERVAL_MAP[interval],
+            "interval": timeframe,
+            "interval_str": BINANCE_INTERVAL_MAP[timeframe],
             "start_time": start_time,
             "end_time": end_time,
             "limit": limit,
