@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from ....io import ResponseAdapter
-from ....models import OHLCV, Bar, OpenInterest, OrderBook, SeriesMeta, Symbol
+from ....models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
 
 
 class CandlesResponseAdapter(ResponseAdapter):
@@ -117,6 +117,54 @@ class OpenInterestHistAdapter(ResponseAdapter):
                     timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=None,
+                )
+            )
+        return out
+
+
+class RecentTradesAdapter(ResponseAdapter):
+    def parse(self, response: Any, params: dict[str, Any]) -> list[Trade]:
+        symbol = params["symbol"].upper()
+        out: list[Trade] = []
+        for row in response or []:
+            out.append(
+                Trade(
+                    symbol=symbol,
+                    trade_id=int(row.get("id")),
+                    price=Decimal(str(row.get("price"))),
+                    quantity=Decimal(str(row.get("qty"))),
+                    quote_quantity=(
+                        Decimal(str(row.get("quoteQty")))
+                        if row.get("quoteQty") is not None
+                        else None
+                    ),
+                    timestamp=datetime.fromtimestamp(
+                        int(row.get("time", 0)) / 1000, tz=timezone.utc
+                    ),
+                    is_buyer_maker=bool(row.get("isBuyerMaker")),
+                    is_best_match=row.get("isBestMatch"),
+                )
+            )
+        return out
+
+
+class FundingRateAdapter(ResponseAdapter):
+    def parse(self, response: Any, params: dict[str, Any]) -> list[FundingRate]:
+        symbol = params["symbol"].upper()
+        out: list[FundingRate] = []
+        for row in response or []:
+            fr = Decimal(str(row.get("fundingRate")))
+            ts_ms = int(row.get("fundingTime", 0))
+            out.append(
+                FundingRate(
+                    symbol=symbol,
+                    funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                    funding_rate=fr,
+                    mark_price=(
+                        Decimal(str(row.get("markPrice")))
+                        if row.get("markPrice") is not None
+                        else None
+                    ),
                 )
             )
         return out

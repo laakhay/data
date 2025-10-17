@@ -113,3 +113,49 @@ def open_interest_hist_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
     )
+
+
+def recent_trades_spec() -> RestEndpointSpec:
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        return "/fapi/v1/trades" if market == MarketType.FUTURES else "/api/v3/trades"
+
+    def build_query(params: dict[str, Any]) -> dict[str, Any]:
+        q: dict[str, Any] = {
+            "symbol": params["symbol"].upper(),
+            "limit": min(int(params.get("limit", 500)), 1000),
+        }
+        return q
+
+    return RestEndpointSpec(
+        id="recent_trades",
+        method="GET",
+        build_path=build_path,
+        build_query=build_query,
+    )
+
+
+def funding_rate_spec() -> RestEndpointSpec:
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        if market != MarketType.FUTURES:
+            raise ValueError("Funding rate endpoint is Futures-only on Binance")
+        return "/fapi/v1/fundingRate"
+
+    def build_query(params: dict[str, Any]) -> dict[str, Any]:
+        q: dict[str, Any] = {
+            "symbol": params["symbol"].upper(),
+            "limit": min(int(params.get("limit", 100)), 1000),
+        }
+        if params.get("start_time"):
+            q["startTime"] = int(params["start_time"].timestamp() * 1000)
+        if params.get("end_time"):
+            q["endTime"] = int(params["end_time"].timestamp() * 1000)
+        return q
+
+    return RestEndpointSpec(
+        id="funding_rate",
+        method="GET",
+        build_path=build_path,
+        build_query=build_query,
+    )

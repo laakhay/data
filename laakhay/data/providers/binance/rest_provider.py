@@ -24,16 +24,20 @@ from ...models import (
 from .rest.adapters import (
     CandlesResponseAdapter,
     ExchangeInfoSymbolsAdapter,
+    FundingRateAdapter,
     OpenInterestCurrentAdapter,
     OpenInterestHistAdapter,
     OrderBookResponseAdapter,
+    RecentTradesAdapter,
 )
 from .rest.endpoints import (
     candles_spec,
     exchange_info_spec,
+    funding_rate_spec,
     open_interest_current_spec,
     open_interest_hist_spec,
     order_book_spec,
+    recent_trades_spec,
 )
 
 
@@ -59,6 +63,8 @@ class BinanceRESTProvider(RESTProvider):
             "order_book": (order_book_spec, OrderBookResponseAdapter),
             "open_interest_current": (open_interest_current_spec, OpenInterestCurrentAdapter),
             "open_interest_hist": (open_interest_hist_spec, OpenInterestHistAdapter),
+            "recent_trades": (recent_trades_spec, RecentTradesAdapter),
+            "funding_rate": (funding_rate_spec, FundingRateAdapter),
         }
 
     async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
@@ -102,7 +108,9 @@ class BinanceRESTProvider(RESTProvider):
         return await self.fetch("order_book", params)
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
-        raise NotImplementedError
+        params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
+        data = await self.fetch("recent_trades", params)
+        return list(data)
 
     async def get_funding_rate(
         self,
@@ -111,7 +119,15 @@ class BinanceRESTProvider(RESTProvider):
         end_time: datetime | None = None,
         limit: int = 100,
     ) -> list[FundingRate]:
-        raise NotImplementedError
+        params: dict[str, Any] = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+        data = await self.fetch("funding_rate", params)
+        return list(data)
 
     async def get_open_interest(
         self,
