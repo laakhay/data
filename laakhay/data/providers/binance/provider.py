@@ -47,14 +47,14 @@ class BinanceProvider(BaseProvider):
     async def get_candles(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: str | Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
     ) -> OHLCV:
         return await self._rest.get_candles(
             symbol=symbol,
-            interval=interval,
+            timeframe=timeframe,
             start_time=start_time,
             end_time=end_time,
             limit=limit,
@@ -104,7 +104,7 @@ class BinanceProvider(BaseProvider):
     async def stream_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -112,7 +112,7 @@ class BinanceProvider(BaseProvider):
     ) -> AsyncIterator[StreamingBar]:
         async for bar in self._ws.stream_ohlcv(
             symbol,
-            interval,
+            timeframe,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_same_candle=dedupe_same_candle,
@@ -122,7 +122,7 @@ class BinanceProvider(BaseProvider):
     async def stream_ohlcv_multi(
         self,
         symbols: list[str],
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -130,7 +130,7 @@ class BinanceProvider(BaseProvider):
     ) -> AsyncIterator[StreamingBar]:
         async for bar in self._ws.stream_ohlcv_multi(
             symbols,
-            interval,
+            timeframe,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_same_candle=dedupe_same_candle,
