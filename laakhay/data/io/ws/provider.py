@@ -18,7 +18,7 @@ class WSProvider(ABC):
     """Pure streaming interface for market data providers."""
 
     # Optional hint: maximum number of per-connection streams supported by the provider.
-    # DataFeed may read this to decide chunking when multiplexing streams.
+    # OHLCVFeed may read this to decide chunking when multiplexing streams.
     max_streams_per_connection: int | None = None
 
     @abstractmethod
