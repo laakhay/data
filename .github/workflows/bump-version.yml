@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Compute next version from tags
         id: v
@@ -36,5 +37,9 @@ jobs:
 
       - name: Create Git tag
         run: |
+          if git rev-parse "${{ steps.v.outputs.next }}" >/dev/null 2>&1; then
+            echo "Tag ${{ steps.v.outputs.next }} already exists. Skipping tag creation."
+            exit 1
+          fi
           git tag ${{ steps.v.outputs.next }}
           git push origin ${{ steps.v.outputs.next }}
