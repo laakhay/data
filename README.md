@@ -1,13 +1,15 @@
 # Laakhay Data
 
-**Production-grade async-first cryptocurrency market data aggregation library.**
+**Beta-stage async-first cryptocurrency market data aggregation library.**
+
+> ⚠️ **Beta Software**: This library is in active development. Use with caution in production environments. APIs may change between versions.
 
 Unified API for multi-exchange market data with support for **Binance**, **Bybit**, **OKX**, **Hyperliquid**, **Kraken**, and **Coinbase**. Modular provider architecture with REST/WebSocket abstraction, type-safe Pydantic models, and high-level streaming feeds.
 
 ## Installation
 
 ```bash
-pip install -e .
+pip install laakhay-data
 ```
 
 ## Quick Start
@@ -199,16 +201,16 @@ All models are immutable Pydantic v2 models with validation:
 from laakhay.data.models import (
     Bar,              # Individual OHLCV bar
     OHLCV,            # OHLCV series with SeriesMeta
-    StreamingBar,      # Real-time bar updates
-    Symbol,            # Trading pair metadata
-    OrderBook,         # Market depth (25+ computed properties)
-    Trade,             # Individual trades with size categorization
-    Liquidation,       # Forced closures with large liquidation detection
-    OpenInterest,      # Outstanding contracts
-    FundingRate,       # Perpetual funding rates
-    MarkPrice,         # Mark/index prices
-    ConnectionEvent,   # WebSocket connection events
-    DataEvent,         # Typed data events for feeds
+    StreamingBar,     # Real-time bar updates
+    Symbol,           # Trading pair metadata
+    OrderBook,        # Market depth (25+ computed properties)
+    Trade,            # Individual trades with size categorization
+    Liquidation,      # Forced closures with large liquidation detection
+    OpenInterest,     # Outstanding contracts
+    FundingRate,      # Perpetual funding rates
+    MarkPrice,        # Mark/index prices
+    ConnectionEvent,  # WebSocket connection events
+    DataEvent,        # Typed data events for feeds
 )
 ```
 
@@ -260,35 +262,16 @@ Integration tests hit live exchange APIs and are skipped by default:
 RUN_LAAKHAY_NETWORK_TESTS=1 pytest tests/integration
 ```
 
-## Examples
-
-```bash
-# REST API examples
-python examples/binance_rest_ohlcv.py BTCUSDT M1 100 SPOT
-python examples/binance_rest_order_book.py BTCUSDT 50 SPOT
-python examples/binance_rest_open_interest.py BTCUSDT current
-python examples/binance_rest_funding_rate.py BTCUSDT 50
-
-# WebSocket streaming examples
-python examples/binance_ws_ohlcv_multi.py BTCUSDT ETHUSDT M1 SPOT
-python examples/binance_ws_trades.py BTCUSDT SPOT
-python examples/binance_ws_order_book.py BTCUSDT SPOT
-
-# High-level feed examples
-python examples/ohlcv_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
-```
-
 ## Design Principles
 
 - **Async-first**: Built on `asyncio`, `aiohttp`, and `websockets`
 - **Type-safe**: Full Pydantic v2 validation with type hints
 - **Modular**: Provider-agnostic architecture with pluggable transports
 - **DRY**: Shared REST/WS infrastructure across providers
-- **Production-ready**: Comprehensive error handling, reconnection logic, rate limiting
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.12+
 - `pydantic>=2.0`
 - `aiohttp>=3.8`
 - `websockets>=10`
