@@ -2,7 +2,7 @@
 
 **Production-grade async-first cryptocurrency market data aggregation library.**
 
-Unified API for multi-exchange market data with support for **Binance**, **Bybit**, **OKX**, **Hyperliquid**, and **Kraken**. Modular provider architecture with REST/WebSocket abstraction, type-safe Pydantic models, and high-level streaming feeds.
+Unified API for multi-exchange market data with support for **Binance**, **Bybit**, **OKX**, **Hyperliquid**, **Kraken**, and **Coinbase**. Modular provider architecture with REST/WebSocket abstraction, type-safe Pydantic models, and high-level streaming feeds.
 
 ## Installation
 
@@ -39,6 +39,7 @@ asyncio.run(main())
 | **OKX** | ✅ | ✅ | ✅ | ✅ |
 | **Hyperliquid** | ❌ | ✅ | ✅ | ✅ |
 | **Kraken** | ✅ | ✅ | ✅ | ✅ |
+| **Coinbase** | ✅ | ❌ | ✅ | ✅ |
 
 All providers implement the unified `BaseProvider` interface—switch exchanges without code changes.
 
@@ -66,7 +67,8 @@ laakhay/data/
 │   ├── bybit/         # Bybit REST + WS
 │   ├── okx/           # OKX REST + WS
 │   ├── hyperliquid/   # Hyperliquid REST + WS (Futures only)
-│   └── kraken/        # Kraken REST + WS
+│   ├── kraken/        # Kraken REST + WS
+│   └── coinbase/      # Coinbase REST + WS (Spot only)
 ├── io/                # REST/WS abstraction layer
 │   ├── rest/          # RESTProvider, HTTP transport, adapters
 │   └── ws/            # WSProvider, WebSocket transport, message adapters
@@ -93,7 +95,7 @@ Providers use modular components:
 ### Multi-Exchange Support
 
 ```python
-from laakhay.data import BinanceProvider, BybitProvider, OKXProvider, HyperliquidProvider, KrakenProvider
+from laakhay.data import BinanceProvider, BybitProvider, OKXProvider, HyperliquidProvider, KrakenProvider, CoinbaseProvider
 
 # Same API across all exchanges
 providers = [
@@ -102,6 +104,7 @@ providers = [
     OKXProvider(market_type=MarketType.FUTURES),
     HyperliquidProvider(market_type=MarketType.FUTURES),
     KrakenProvider(market_type=MarketType.FUTURES),
+    CoinbaseProvider(market_type=MarketType.SPOT),  # Spot only
 ]
 
 for provider in providers:
@@ -239,6 +242,7 @@ Providers handle exchange-specific symbol formats automatically:
 - **Hyperliquid**: `BTC` → normalized to `BTCUSDT`
 - **Kraken Spot**: `XBT/USD` → normalized to `BTCUSD`
 - **Kraken Futures**: `PI_XBTUSD` → normalized to `BTCUSD`
+- **Coinbase**: `BTC-USD` → normalized to `BTCUSD` (USDT pairs map to USD)
 
 ## Testing
 
