@@ -7,7 +7,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
 
 from ..core import Timeframe
 from ..models import (
@@ -21,8 +21,8 @@ from ..models import (
 )
 from .base_feed import SymbolStreamFeed
 
-Callback = Callable[[StreamingBar], Awaitable[None]] | Callable[[StreamingBar], None]
-EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
+Callback = Union[Callable[[StreamingBar], Awaitable[None]], Callable[[StreamingBar], None]]
+EventCallback = Union[Callable[[DataEvent], Awaitable[None]], Callable[[DataEvent], None]]
 
 
 @dataclass(frozen=True)

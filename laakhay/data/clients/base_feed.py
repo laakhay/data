@@ -7,11 +7,11 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, Union
 
 T = TypeVar("T")
 
-Callback = Callable[[T], Awaitable[None]] | Callable[[T], None]
+Callback = Union[Callable[[T], Awaitable[None]], Callable[[T], None]]
 
 _SINGLETON_KEY = "__single__"
 
