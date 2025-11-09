@@ -104,6 +104,8 @@ class WebSocketClient:
 
     async def _receive_loop(self) -> None:
         """Receive messages from WebSocket."""
+        if self._ws is None:
+            return
         try:
             async for message in self._ws:
                 try:
@@ -180,7 +182,7 @@ class WebSocketClient:
         Raises:
             RuntimeError: If not connected
         """
-        if not self.is_connected:
+        if not self.is_connected or self._ws is None:
             raise RuntimeError("WebSocket not connected")
 
         import json

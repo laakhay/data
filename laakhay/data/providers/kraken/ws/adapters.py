@@ -202,7 +202,8 @@ class OrderBookAdapter(MessageAdapter):
                 ]
 
             # Handle both snapshot and delta types
-            last_update_id = data.get("sequenceNumber", data.get("seq", 0))
+            last_update_id_raw = data.get("sequenceNumber") or data.get("seq") or 0
+            last_update_id = int(last_update_id_raw) if last_update_id_raw is not None else 0
 
             timestamp = datetime.fromtimestamp(ts_ms / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
 

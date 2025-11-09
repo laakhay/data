@@ -62,7 +62,7 @@ class KrakenWebSocketTransport:
                         channel_type = parts[0]  # e.g., "ohlc", "trade", "book"
                         symbol = "-".join(parts[1:])  # Rest is symbol (may contain dashes)
 
-                        subscribe_msg = {
+                        subscribe_msg: dict[str, Any] = {
                             "method": "subscribe",
                             "params": {
                                 "channel": channel_type,
@@ -72,7 +72,9 @@ class KrakenWebSocketTransport:
 
                         # Add interval for OHLC channels
                         if channel_type == "ohlc" and len(parts) > 2:
-                            subscribe_msg["params"]["interval"] = parts[-1]
+                            params = subscribe_msg["params"]
+                            if isinstance(params, dict):
+                                params["interval"] = parts[-1]
 
                         await websocket.send(json.dumps(subscribe_msg))
                         logger.debug(f"Subscribed to channel: {channel}")
@@ -106,7 +108,8 @@ class KrakenWebSocketTransport:
                                     continue
                             yield data
                         except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse message: {message}")
+                            msg_str = message.decode("utf-8", errors="replace") if isinstance(message, bytes) else str(message)
+                            logger.warning(f"Failed to parse message: {msg_str}")
                             continue
 
             except asyncio.CancelledError:

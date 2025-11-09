@@ -10,7 +10,7 @@ endif
 PYTHON_VERSION ?= 3.12
 PY := $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
-.PHONY: help install test unit-test integration-test lint format format-check fix coverage clean build publish
+.PHONY: help install test unit-test integration-test lint format format-check type-check fix coverage clean build publish
 
 help:
 	@echo "Make targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  lint            Run ruff lint if available."
 	@echo "  format          Run ruff format if available."
 	@echo "  format-check    Check if code formatting is correct."
+	@echo "  type-check      Run mypy type checker."
 	@echo "  fix             Auto-fix linting issues and format code."
 	@echo "  coverage        Run tests with coverage report."
 	@echo "  clean           Remove caches and compiled artifacts."
@@ -58,6 +59,9 @@ format:
 
 format-check:
 	@command -v ruff >/dev/null 2>&1 && ruff format --check . || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
+
+type-check:
+	@command -v mypy >/dev/null 2>&1 && $(PY) -m mypy laakhay/data || (echo "mypy not installed; skipping type check" && exit 1)
 
 fix:
 	@command -v ruff >/dev/null 2>&1 && ruff check --fix . || echo "ruff not installed; skipping ruff fix"

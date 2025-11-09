@@ -141,7 +141,7 @@ class BaseStreamFeed[T]:
         """Hook before launching or restarting the stream."""
         _ = is_restart
 
-    async def _stream_iterator(self) -> AsyncIterator[T]:
+    def _stream_iterator(self) -> AsyncIterator[T]:
         """Return the provider async iterator for the current stream args."""
         raise NotImplementedError
 

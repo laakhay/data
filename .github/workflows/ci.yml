@@ -66,6 +66,6 @@ jobs:
       - name: Run format check
         run: make format-check
       
-      - name: Run mypy
-        run: mypy laakhay/data --ignore-missing-imports
+      - name: Run type check
+        run: make type-check
         continue-on-error: true

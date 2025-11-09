@@ -54,6 +54,9 @@ class OhlcvAdapter(MessageAdapter):
                 if not all([start_ms, open_price, high_price, low_price, close_price, volume]):
                     continue
 
+                if start_ms is None:
+                    continue
+
                 out.append(
                     StreamingBar(
                         symbol=symbol,
@@ -193,7 +196,8 @@ class OrderBookAdapter(MessageAdapter):
 
             # Handle both snapshot and delta types
             # Bybit uses "u" for update ID or "seq" for sequence number
-            last_update_id = data.get("u", data.get("seq", 0))
+            last_update_id_raw = data.get("u") or data.get("seq") or 0
+            last_update_id = int(last_update_id_raw) if last_update_id_raw is not None else 0
 
             timestamp = datetime.fromtimestamp(ts_ms / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
 

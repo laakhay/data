@@ -154,8 +154,9 @@ class CoinbaseWebSocketTransport:
                             # Yield actual data messages (match, l2update, ticker, etc.)
                             yield data
                         except json.JSONDecodeError as e:
+                            msg_str = message.decode("utf-8", errors="replace")[:100] if isinstance(message, bytes) else str(message)[:100]
                             logger.warning(
-                                f"Failed to parse message: {message[:100]}... Error: {e}"
+                                f"Failed to parse message: {msg_str}... Error: {e}"
                             )
                             continue
                         except Exception as e:

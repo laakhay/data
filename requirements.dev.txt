@@ -1,2 +1,0 @@
-# Dev dependencies are specified in pyproject.toml
-# This file is kept for compatibility

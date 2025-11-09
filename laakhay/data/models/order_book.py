@@ -124,22 +124,22 @@ class OrderBook(BaseModel):
     @property
     def total_bid_volume(self) -> Decimal:
         """Total volume on bid side."""
-        return sum(qty for _, qty in self.bids)
+        return Decimal(sum(qty for _, qty in self.bids))
 
     @property
     def total_ask_volume(self) -> Decimal:
         """Total volume on ask side."""
-        return sum(qty for _, qty in self.asks)
+        return Decimal(sum(qty for _, qty in self.asks))
 
     @property
     def total_bid_value(self) -> Decimal:
         """Total value on bid side (price * quantity)."""
-        return sum(price * qty for price, qty in self.bids)
+        return Decimal(sum(price * qty for price, qty in self.bids))
 
     @property
     def total_ask_value(self) -> Decimal:
         """Total value on ask side (price * quantity)."""
-        return sum(price * qty for price, qty in self.asks)
+        return Decimal(sum(price * qty for price, qty in self.asks))
 
     @property
     def bid_ask_volume_ratio(self) -> Decimal | None:
