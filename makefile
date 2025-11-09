@@ -61,7 +61,7 @@ format-check:
 	@command -v ruff >/dev/null 2>&1 && ruff format --check . || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
 
 type-check:
-	@command -v mypy >/dev/null 2>&1 && $(PY) -m mypy laakhay/data || (echo "mypy not installed; skipping type check" && exit 1)
+	@$(PY) -m mypy laakhay/data 2>&1 || (echo "mypy check failed or not installed" && exit 1)
 
 fix:
 	@command -v ruff >/dev/null 2>&1 && ruff check --fix . || echo "ruff not installed; skipping ruff fix"
