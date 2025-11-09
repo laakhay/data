@@ -180,25 +180,53 @@ class OrderBookAdapter(MessageAdapter):
         bids = []
         asks = []
 
-        # Parse bids: Hyperliquid format is [[price, size], [price, size], ...]
+        # Parse bids: Hyperliquid format can be either:
+        # 1. Array format: [[price, size], [price, size], ...]
+        # 2. Dict format: [{"px": price, "sz": size, "n": orders}, ...]
         for item in bids_data:
-            if isinstance(item, list) and len(item) >= 2:
-                try:
+            try:
+                if isinstance(item, dict):
+                    # Dictionary format: {"px": price, "sz": size, "n": orders}
+                    px_str = item.get("px")
+                    sz_str = item.get("sz")
+                    if px_str is not None and sz_str is not None:
+                        price = Decimal(str(px_str))
+                        size = Decimal(str(sz_str))
+                        if price > 0 and size >= 0:
+                            bids.append((price, size))
+                elif isinstance(item, list) and len(item) >= 2:
+                    # Array format: [price, size]
                     px_str = item[0]
                     sz_str = item[1]
-                    bids.append((Decimal(str(px_str)), Decimal(str(sz_str))))
-                except (ValueError, TypeError, IndexError):
-                    continue
+                    price = Decimal(str(px_str))
+                    size = Decimal(str(sz_str))
+                    if price > 0 and size >= 0:
+                        bids.append((price, size))
+            except (ValueError, TypeError, IndexError, KeyError):
+                continue
 
         # Parse asks: same format as bids
         for item in asks_data:
-            if isinstance(item, list) and len(item) >= 2:
-                try:
+            try:
+                if isinstance(item, dict):
+                    # Dictionary format: {"px": price, "sz": size, "n": orders}
+                    px_str = item.get("px")
+                    sz_str = item.get("sz")
+                    if px_str is not None and sz_str is not None:
+                        price = Decimal(str(px_str))
+                        size = Decimal(str(sz_str))
+                        if price > 0 and size >= 0:
+                            asks.append((price, size))
+                elif isinstance(item, list) and len(item) >= 2:
+                    # Array format: [price, size]
                     px_str = item[0]
                     sz_str = item[1]
-                    asks.append((Decimal(str(px_str)), Decimal(str(sz_str))))
-                except (ValueError, TypeError, IndexError):
-                    continue
+                    price = Decimal(str(px_str))
+                    size = Decimal(str(sz_str))
+                    if price > 0 and size >= 0:
+                        asks.append((price, size))
+            except (ValueError, TypeError, IndexError, KeyError):
+                continue
 
         # OrderBook requires at least one level in both bids and asks
         if not bids or not asks:
