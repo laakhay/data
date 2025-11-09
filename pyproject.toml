@@ -1,11 +1,10 @@
 
 [build-system]
 requires = [
-    "setuptools>=65.0",
-    "wheel",
-    "setuptools-scm[toml]>=8.0",
+    "hatchling>=1.18.0",
+    "hatch-vcs>=0.3.0",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 
 [project]
 name = "laakhay-data"
@@ -13,7 +12,7 @@ dynamic = ["version"]
 description = "Data infrastructure built with ♥︎ by Laakhay"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Laakhay Corporation", email = "laakhay.corp@gmail.com"}
 ]
@@ -22,7 +21,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
@@ -38,12 +36,34 @@ dependencies = [
 [project.urls]
 Homepage = "https://laakhay.com"
 
-[tool.setuptools]
-package-dir = {"" = "."}
+[tool.hatch.build.targets.wheel]
+packages = ["laakhay"]
 
-[tool.setuptools.packages.find]
-include = ["laakhay*"]
-exclude = ["tests*", "*.pyc", "*.pyo", "*.pyd", "__pycache__", ".pytest_cache"]
+[tool.hatch.build.targets.sdist]
+include = [
+    "/laakhay",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+exclude = [
+    "/tests",
+    "/.pytest_cache",
+    "/__pycache__",
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    "/.venv",
+    "/venv",
+    "/build",
+    "/dist",
+    "*.egg-info",
+]
+
+[tool.hatch.version]
+source = "vcs"
+version-scheme = "guess-next-dev"
+local-scheme = "node-and-date"
 
 [project.optional-dependencies]
 dev = [
@@ -56,11 +76,6 @@ dev = [
     "pytest-cov>=4.0.0",
 ]
 
-[tool.setuptools_scm]
-# Default config will infer version from Git tags.
-# Tag format like v1.2.3 will yield version 1.2.3
-version_scheme = "guess-next-dev"
-local_scheme = "node-and-date"
 
 [tool.ruff]
 line-length = 100

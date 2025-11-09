@@ -80,7 +80,7 @@ clean:
 
 build: clean
 	@$(UV) sync --extra dev
-	@$(UV) run python -m build --sdist --wheel
+	@$(UV) build
 
 publish: build
 	@$(UV) sync --extra dev
