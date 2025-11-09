@@ -1,4 +1,4 @@
-"""Unified Binance provider that wraps REST and WebSocket implementations."""
+"""Unified Bybit provider that wraps REST and WebSocket implementations."""
 
 from __future__ import annotations
 
@@ -17,12 +17,12 @@ from ...models import (
     Symbol,
     Trade,
 )
-from .rest.provider import BinanceRESTProvider
-from .ws.provider import BinanceWSProvider
+from .rest.provider import BybitRESTProvider
+from .ws.provider import BybitWSProvider
 
 
-class BinanceProvider(BaseProvider):
-    """High-level Binance provider exposing REST and streaming helpers."""
+class BybitProvider(BaseProvider):
+    """High-level Bybit provider exposing REST and streaming helpers."""
 
     def __init__(
         self,
@@ -30,15 +30,15 @@ class BinanceProvider(BaseProvider):
         market_type: MarketType = MarketType.SPOT,
         api_key: str | None = None,
         api_secret: str | None = None,
-        rest_provider: BinanceRESTProvider | None = None,
-        ws_provider: BinanceWSProvider | None = None,
+        rest_provider: BybitRESTProvider | None = None,
+        ws_provider: BybitWSProvider | None = None,
     ) -> None:
-        super().__init__(name="binance")
+        super().__init__(name="bybit")
         self.market_type = market_type
-        self._rest = rest_provider or BinanceRESTProvider(
+        self._rest = rest_provider or BybitRESTProvider(
             market_type=market_type, api_key=api_key, api_secret=api_secret
         )
-        self._ws = ws_provider or BinanceWSProvider(market_type=market_type)
+        self._ws = ws_provider or BybitWSProvider(market_type=market_type)
         self._owns_rest = rest_provider is None
         self._owns_ws = ws_provider is None
         self._closed = False
@@ -190,3 +190,4 @@ class BinanceProvider(BaseProvider):
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
+

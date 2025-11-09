@@ -28,6 +28,11 @@ from .providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
+from .providers.bybit import (
+    BybitProvider,
+    BybitRESTProvider,
+    BybitWSProvider,
+)
 
 __version__ = "0.1.0"
 
@@ -40,6 +45,9 @@ __all__ = [
     "BinanceProvider",
     "BinanceRESTProvider",
     "BinanceWSProvider",
+    "BybitProvider",
+    "BybitRESTProvider",
+    "BybitWSProvider",
     # Models
     "Bar",
     "OHLCV",

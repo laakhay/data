@@ -2,7 +2,7 @@
 
 **Professional Python library for cryptocurrency market data.**
 
-Async-first market data toolkit with REST/WS providers, reusable transport, and a high-level OHLCV feed. Supports OHLCV, order books, trades, liquidations, open interest, and funding rates.
+Async-first market data toolkit supporting **Binance** and **Bybit** exchanges. Unified API for REST/WS providers with reusable transport and high-level OHLCV feed. Supports OHLCV, order books, trades, liquidations, open interest, and funding rates.
 
 ## Install
 
@@ -14,10 +14,11 @@ pip install -e .
 
 ```python
 import asyncio
-from laakhay.data import BinanceProvider, MarketType, Timeframe
+from laakhay.data import BinanceProvider, BybitProvider, MarketType, Timeframe
 
 
 async def main():
+    # Use Binance or Bybit - same API!
     async with BinanceProvider(market_type=MarketType.SPOT) as provider:
         candles = await provider.get_candles("BTCUSDT", Timeframe.M1, limit=100)
         print(f"{candles.meta.symbol} bars fetched: {len(candles)}")
@@ -69,6 +70,7 @@ async for trade in provider.stream_trades("BTCUSDT"):
 
 ### Liquidations (Futures)
 ```python
+# Works with both BinanceProvider and BybitProvider
 async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
     async for liq in provider.stream_liquidations():
         if liq.is_large:
@@ -78,7 +80,7 @@ async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
 
 ### Open Interest (Futures)
 ```python
-async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
+async with BybitProvider(market_type=MarketType.FUTURES) as provider:
     async for oi in provider.stream_open_interest(["BTCUSDT"], period="5m"):
         print(f"OI: {oi.open_interest}")
         break
@@ -93,6 +95,13 @@ async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
 ```
 
 
+## Supported Exchanges
+
+- **Binance** - Spot and Futures markets
+- **Bybit** - Spot and Futures markets
+
+Both exchanges share the same unified API - switch providers without changing your code.
+
 ## Architecture
 
 ```
@@ -100,7 +109,8 @@ laakhay/data/
 ├── core/           # Base classes, enums, exceptions
 ├── models/         # Pydantic models (Bar, OHLCV, OrderBook, Trade, etc.)
 ├── providers/      # Exchange implementations
-│   └── binance/    # Binance provider + WebSocket mixin
+│   ├── binance/    # Binance provider
+│   └── bybit/      # Bybit provider
 ├── clients/        # High-level clients
 └── io/             # REST/WS providers, transports, and clients
 
@@ -169,7 +179,7 @@ except ProviderError as e:
 
 ## Integration Tests
 
-Integration tests hit the live Binance API and are skipped by default. Enable them explicitly when you have network access and credentials configured:
+Integration tests hit live exchange APIs (Binance and Bybit) and are skipped by default. Enable them explicitly when you have network access:
 
 ```bash
 RUN_LAAKHAY_NETWORK_TESTS=1 pytest tests/integration

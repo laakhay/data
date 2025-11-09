@@ -9,10 +9,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
 
-from ...core import MarketType, Timeframe
-from ...io import MessageAdapter, StreamRunner, WSProvider
-from ...models.streaming_bar import StreamingBar
-from .ws.adapters import (
+from ....core import MarketType, Timeframe
+from ....io import MessageAdapter, StreamRunner, WSProvider
+from ....models.streaming_bar import StreamingBar
+from .adapters import (
     FundingRateAdapter,
     LiquidationsAdapter,
     MarkPriceAdapter,
@@ -21,7 +21,7 @@ from .ws.adapters import (
     OrderBookAdapter,
     TradesAdapter,
 )
-from .ws.endpoints import (
+from .endpoints import (
     liquidations_spec,
     mark_price_spec,
     ohlcv_spec,
@@ -31,7 +31,7 @@ from .ws.endpoints import (
 )
 
 if TYPE_CHECKING:
-    from ...models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
+    from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 
 
 class BinanceWSProvider(WSProvider):
