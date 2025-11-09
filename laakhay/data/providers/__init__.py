@@ -2,6 +2,7 @@
 
 from .binance import BinanceProvider, BinanceRESTProvider, BinanceWSProvider
 from .bybit import BybitProvider, BybitRESTProvider, BybitWSProvider
+from .okx import OKXProvider, OKXRESTProvider, OKXWSProvider
 
 __all__ = [
     "BinanceProvider",
@@ -10,4 +11,7 @@ __all__ = [
     "BybitProvider",
     "BybitRESTProvider",
     "BybitWSProvider",
+    "OKXProvider",
+    "OKXRESTProvider",
+    "OKXWSProvider",
 ]

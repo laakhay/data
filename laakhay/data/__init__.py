@@ -33,6 +33,11 @@ from .providers.bybit import (
     BybitRESTProvider,
     BybitWSProvider,
 )
+from .providers.okx import (
+    OKXProvider,
+    OKXRESTProvider,
+    OKXWSProvider,
+)
 
 __version__ = "0.1.0"
 
@@ -48,6 +53,9 @@ __all__ = [
     "BybitProvider",
     "BybitRESTProvider",
     "BybitWSProvider",
+    "OKXProvider",
+    "OKXRESTProvider",
+    "OKXWSProvider",
     # Models
     "Bar",
     "OHLCV",
