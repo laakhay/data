@@ -73,45 +73,32 @@ class HyperliquidWebSocketTransport:
                             await websocket.send(json.dumps(subscribe_msg))
                     logger.debug(f"Subscribed to {len(topics)} topics on Hyperliquid WebSocket")
 
-                    # Wait for subscription confirmations
-                    # Hyperliquid sends {"channel": "subscriptionResponse", "data": {...}}
-                    # Collect confirmations but don't block indefinitely
-                    confirmations_received = 0
-                    pending_messages = []
-                    try:
-                        # Try to receive confirmations with timeout
-                        while confirmations_received < len(topics):
-                            try:
-                                confirm = await asyncio.wait_for(websocket.recv(), timeout=2.0)
-                                confirm_data = json.loads(confirm)
-                                if confirm_data.get("channel") == "subscriptionResponse":
-                                    confirmations_received += 1
-                                    logger.debug(f"Subscription confirmed ({confirmations_received}/{len(topics)}): {confirm_data.get('data')}")
-                                else:
-                                    # Non-confirmation message - queue it for later
-                                    pending_messages.append(confirm_data)
-                            except asyncio.TimeoutError:
-                                # Timeout waiting for confirmation - continue anyway
-                                logger.warning(f"Timeout waiting for subscription confirmations ({confirmations_received}/{len(topics)})")
-                                break
-                    except Exception as e:
-                        logger.warning(f"Error receiving subscription confirmations: {e}")
-                    
-                    # Yield any pending messages that came before confirmations
-                    for msg in pending_messages:
-                        yield msg
+                    # Hyperliquid may send subscription responses or start streaming immediately
+                    # Don't block waiting for confirmations - start streaming right away
+                    # The server will send data messages or error messages if subscription fails
+                    logger.debug(f"Sent {len(topics)} subscription messages, starting to stream")
 
                     # Stream messages
                     async for message in websocket:
                         try:
                             data = json.loads(message)
-                            # Skip subscription confirmations
+                            # Skip subscription confirmations and empty messages
                             if isinstance(data, dict):
-                                if data.get("channel") == "subscriptionResponse":
+                                channel = data.get("channel", "")
+                                # Skip subscription responses
+                                if channel == "subscriptionResponse":
+                                    logger.debug(f"Subscription response: {data.get('data')}")
                                     continue
+                                # Skip ping/pong messages
+                                if channel == "pong" or data.get("method") == "pong":
+                                    continue
+                            # Yield actual data messages
                             yield data
-                        except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse message: {message}")
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Failed to parse message: {message[:100]}... Error: {e}")
+                            continue
+                        except Exception as e:
+                            logger.error(f"Error processing message: {e}")
                             continue
 
             except asyncio.CancelledError:
