@@ -33,6 +33,11 @@ from .providers.bybit import (
     BybitRESTProvider,
     BybitWSProvider,
 )
+from .providers.coinbase import (
+    CoinbaseProvider,
+    CoinbaseRESTProvider,
+    CoinbaseWSProvider,
+)
 from .providers.hyperliquid import (
     HyperliquidProvider,
     HyperliquidRESTProvider,
@@ -63,6 +68,9 @@ __all__ = [
     "BybitProvider",
     "BybitRESTProvider",
     "BybitWSProvider",
+    "CoinbaseProvider",
+    "CoinbaseRESTProvider",
+    "CoinbaseWSProvider",
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
