@@ -14,6 +14,9 @@ from ....core import MarketType
 from ....core.exceptions import DataError
 from ....io import ResponseAdapter
 from ....models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _extract_result(response: Any) -> Any:
@@ -203,20 +206,34 @@ class OrderBookResponseAdapter(ResponseAdapter):
     
     Hyperliquid format: {"coin": "BTC", "time": ms, "levels": [[bids...], [asks...]]}
     Where levels[0] = bids, levels[1] = asks
-    Each level: {"px": price, "sz": size, "n": number of orders}
+    Each level can be either:
+    - Dictionary format: {"px": price, "sz": size, "n": number of orders}
+    - Array format: [price, size]
     """
 
     def parse(self, response: Any, params: dict[str, Any]) -> OrderBook:
-        # Hyperliquid returns object directly
-        if not isinstance(response, dict):
-            raise DataError(f"Invalid order book response format: expected dict, got {type(response)}")
+        # Hyperliquid may return wrapped response or direct data
+        # First extract result if wrapped
+        result = _extract_result(response)
+        
+        if not isinstance(result, dict):
+            logger.error(f"Invalid order book response format for {params.get('symbol', 'unknown')}. Expected dict, got {type(result)}. Response: {response}")
+            raise DataError(f"Invalid order book response format: expected dict, got {type(result)}")
         
         symbol = params["symbol"].upper()
 
+        # Check for error in response
+        if "error" in result:
+            error_msg = result.get("error", "Unknown error")
+            raise DataError(f"Hyperliquid API error for {symbol}: {error_msg}")
+
         # Extract levels array: [bids_array, asks_array]
-        levels = response.get("levels", [])
+        levels = result.get("levels", [])
         if not isinstance(levels, list) or len(levels) < 2:
-            raise DataError("Invalid order book levels format")
+            # Log the actual response for debugging
+            logger.warning(f"Invalid order book levels format for {symbol}. Response keys: {list(result.keys())}, levels type: {type(levels)}, levels length: {len(levels) if isinstance(levels, list) else 'N/A'}")
+            logger.debug(f"Full response for {symbol}: {result}")
+            raise DataError(f"Invalid order book levels format for {symbol}. Expected levels array with 2 elements. Got: {type(levels)} with length {len(levels) if isinstance(levels, list) else 'N/A'}")
 
         bids_data = levels[0] if isinstance(levels[0], list) else []
         asks_data = levels[1] if isinstance(levels[1], list) else []
@@ -224,32 +241,67 @@ class OrderBookResponseAdapter(ResponseAdapter):
         bids = []
         asks = []
 
-        # Parse bids: Hyperliquid format is [[price, size], [price, size], ...]
+        # Parse bids: Hyperliquid format can be either:
+        # 1. Array format: [[price, size], [price, size], ...]
+        # 2. Dict format: [{"px": price, "sz": size, "n": orders}, ...]
         for item in bids_data:
-            if isinstance(item, list) and len(item) >= 2:
-                try:
+            try:
+                if isinstance(item, dict):
+                    # Dictionary format: {"px": price, "sz": size, "n": orders}
+                    px_str = item.get("px")
+                    sz_str = item.get("sz")
+                    if px_str is not None and sz_str is not None:
+                        price = Decimal(str(px_str))
+                        size = Decimal(str(sz_str))
+                        if price > 0 and size >= 0:
+                            bids.append((price, size))
+                elif isinstance(item, list) and len(item) >= 2:
+                    # Array format: [price, size]
                     px_str = item[0]
                     sz_str = item[1]
-                    bids.append((Decimal(str(px_str)), Decimal(str(sz_str))))
-                except (ValueError, TypeError, IndexError):
-                    continue
+                    price = Decimal(str(px_str))
+                    size = Decimal(str(sz_str))
+                    if price > 0 and size >= 0:
+                        bids.append((price, size))
+            except (ValueError, TypeError, IndexError, KeyError) as e:
+                logger.debug(f"Skipping invalid bid level: {item}, error: {e}")
+                continue
 
         # Parse asks: same format as bids
         for item in asks_data:
-            if isinstance(item, list) and len(item) >= 2:
-                try:
+            try:
+                if isinstance(item, dict):
+                    # Dictionary format: {"px": price, "sz": size, "n": orders}
+                    px_str = item.get("px")
+                    sz_str = item.get("sz")
+                    if px_str is not None and sz_str is not None:
+                        price = Decimal(str(px_str))
+                        size = Decimal(str(sz_str))
+                        if price > 0 and size >= 0:
+                            asks.append((price, size))
+                elif isinstance(item, list) and len(item) >= 2:
+                    # Array format: [price, size]
                     px_str = item[0]
                     sz_str = item[1]
-                    asks.append((Decimal(str(px_str)), Decimal(str(sz_str))))
-                except (ValueError, TypeError, IndexError):
-                    continue
+                    price = Decimal(str(px_str))
+                    size = Decimal(str(sz_str))
+                    if price > 0 and size >= 0:
+                        asks.append((price, size))
+            except (ValueError, TypeError, IndexError, KeyError) as e:
+                logger.debug(f"Skipping invalid ask level: {item}, error: {e}")
+                continue
 
         # OrderBook requires at least one level
         if not bids and not asks:
-            raise DataError("Order book must have at least one level")
+            # Log the response for debugging
+            logger.error(f"Empty order book for {symbol}. Response structure: levels={len(levels)}, bids_data type={type(bids_data)}, asks_data length={len(bids_data) if isinstance(bids_data, list) else 'N/A'}, asks_data length={len(asks_data) if isinstance(asks_data, list) else 'N/A'}")
+            logger.error(f"Sample bids_data: {bids_data[:3] if isinstance(bids_data, list) and len(bids_data) > 0 else 'empty'}")
+            logger.error(f"Sample asks_data: {asks_data[:3] if isinstance(asks_data, list) and len(asks_data) > 0 else 'empty'}")
+            logger.error(f"Full response for {symbol}: {result}")
+            raise DataError(f"Order book is empty for {symbol}. This may indicate the symbol doesn't exist or the market is inactive.")
 
         # Extract timestamp
-        timestamp_ms = response.get("time", 0)
+        timestamp_ms = result.get("time", 0)
         timestamp = (
             datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
             if timestamp_ms
