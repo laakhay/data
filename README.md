@@ -1,10 +1,10 @@
 # Laakhay Data
 
-**Professional Python library for cryptocurrency market data.**
+**Production-grade async-first cryptocurrency market data aggregation library.**
 
-Async-first market data toolkit supporting **Binance** and **Bybit** exchanges. Unified API for REST/WS providers with reusable transport and high-level OHLCV feed. Supports OHLCV, order books, trades, liquidations, open interest, and funding rates.
+Unified API for multi-exchange market data with support for **Binance**, **Bybit**, **OKX**, **Hyperliquid**, and **Kraken**. Modular provider architecture with REST/WebSocket abstraction, type-safe Pydantic models, and high-level streaming feeds.
 
-## Install
+## Installation
 
 ```bash
 pip install -e .
@@ -14,148 +14,198 @@ pip install -e .
 
 ```python
 import asyncio
-from laakhay.data import BinanceProvider, BybitProvider, MarketType, Timeframe
-
+from laakhay.data import BinanceProvider, MarketType, Timeframe
 
 async def main():
-    # Use Binance or Bybit - same API!
     async with BinanceProvider(market_type=MarketType.SPOT) as provider:
+        # REST API
         candles = await provider.get_candles("BTCUSDT", Timeframe.M1, limit=100)
-        print(f"{candles.meta.symbol} bars fetched: {len(candles)}")
-
         order_book = await provider.get_order_book("BTCUSDT", limit=20)
-        print(f"Spread: {order_book.spread_bps:.2f} bps")
-
-        # Streaming helpers use WebSocket under the hood
+        
+        # WebSocket streaming
         async for trade in provider.stream_trades("BTCUSDT"):
-            print(f"{trade.symbol} trade value: {trade.value}")
-            break  # exit after first update
-
+            print(f"{trade.symbol}: ${trade.value:.2f} ({trade.side})")
+            break
 
 asyncio.run(main())
 ```
 
-## Supported Data Types
-
-| Type | REST | WebSocket | Markets |
-|------|------|-----------|---------|
-| OHLCV Bars | ✅ | ✅ | Spot, Futures |
-| Symbols | ✅ | - | Spot, Futures |
-| Order Book | ✅ | ✅ | Spot, Futures |
-| Trades | ❌ | ✅ | Spot, Futures |
-| Liquidations | ❌ | ✅ | Futures |
-| Open Interest | ❌ | ✅ | Futures |
-| Funding Rates | ❌ | ✅ | Futures |
-| Mark Price | ❌ | ✅ | Futures |
-
-> REST coverage currently includes candles, symbol metadata, and order books.
-
-## Key Features
-
-### Order Book Analysis
-```python
-ob = await provider.get_order_book("BTCUSDT")
-print(ob.spread_bps)          # Spread in basis points
-print(ob.market_pressure)     # bullish/bearish/neutral
-print(ob.imbalance)           # -1.0 to 1.0
-print(ob.is_tight_spread)     # < 10 bps
-```
-
-### Trade Flow
-```python
-async for trade in provider.stream_trades("BTCUSDT"):
-    print(f"{trade.side}: ${trade.value:.2f} ({trade.size_category})")
-    break
-```
-
-### Liquidations (Futures)
-```python
-# Works with both BinanceProvider and BybitProvider
-async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
-    async for liq in provider.stream_liquidations():
-        if liq.is_large:
-            print(f"{liq.symbol}: ${liq.value_usdt:.2f} {liq.side}")
-        break
-```
-
-### Open Interest (Futures)
-```python
-async with BybitProvider(market_type=MarketType.FUTURES) as provider:
-    async for oi in provider.stream_open_interest(["BTCUSDT"], period="5m"):
-        print(f"OI: {oi.open_interest}")
-        break
-```
-
-### Funding Rates (Futures)
-```python
-async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
-    async for rate in provider.stream_funding_rate(["BTCUSDT"]):
-        print(f"Funding: {rate.funding_rate_percentage:.4f}%")
-        break
-```
-
-
 ## Supported Exchanges
 
-- **Binance** - Spot and Futures markets
-- **Bybit** - Spot and Futures markets
+| Exchange | Spot | Futures | REST | WebSocket |
+|----------|------|---------|------|-----------|
+| **Binance** | ✅ | ✅ | ✅ | ✅ |
+| **Bybit** | ✅ | ✅ | ✅ | ✅ |
+| **OKX** | ✅ | ✅ | ✅ | ✅ |
+| **Hyperliquid** | ❌ | ✅ | ✅ | ✅ |
+| **Kraken** | ✅ | ✅ | ✅ | ✅ |
 
-Both exchanges share the same unified API - switch providers without changing your code.
+All providers implement the unified `BaseProvider` interface—switch exchanges without code changes.
+
+## Data Types & Coverage
+
+| Type | REST | WebSocket | Markets | Notes |
+|------|------|-----------|---------|-------|
+| **OHLCV Bars** | ✅ | ✅ | Spot, Futures | Multi-symbol streaming supported |
+| **Order Book** | ✅ | ✅ | Spot, Futures | Snapshot + incremental updates |
+| **Trades** | ✅ | ✅ | Spot, Futures | Real-time trade flow |
+| **Liquidations** | ❌ | ✅ | Futures | Large liquidation filtering |
+| **Open Interest** | ✅ | ✅ | Futures | Historical + real-time |
+| **Funding Rates** | ✅ | ✅ | Futures | Perpetual funding |
+| **Mark Price** | ❌ | ✅ | Futures | Mark/index prices |
+| **Symbol Metadata** | ✅ | ❌ | Spot, Futures | Exchange info |
 
 ## Architecture
 
 ```
 laakhay/data/
-├── core/           # Base classes, enums, exceptions
-├── models/         # Pydantic models (Bar, OHLCV, OrderBook, Trade, etc.)
-├── providers/      # Exchange implementations
-│   ├── binance/    # Binance provider
-│   └── bybit/      # Bybit provider
-├── clients/        # High-level clients
-└── io/             # REST/WS providers, transports, and clients
-
-## Examples
-
-Run examples from `data/examples/`:
-
-```bash
-# REST
-python data/examples/binance_rest_ohlcv.py BTCUSDT M1 10 SPOT
-python data/examples/binance_rest_order_book.py BTCUSDT 50 SPOT
-python data/examples/binance_rest_open_interest.py BTCUSDT current
-python data/examples/binance_rest_open_interest.py BTCUSDT hist 5m 100
-python data/examples/binance_rest_recent_trades.py BTCUSDT 50 SPOT
-python data/examples/binance_rest_funding_rate.py BTCUSDT 50
-
-# WebSocket
-python data/examples/binance_ws_ohlcv_multi.py BTCUSDT ETHUSDT M1 SPOT
-python data/examples/binance_ws_trades.py BTCUSDT SPOT
-
-# High-level OHLCV Feed
-python data/examples/ohlcv_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
+├── core/              # BaseProvider, enums, exceptions
+├── models/            # Pydantic models (Bar, OHLCV, OrderBook, Trade, etc.)
+├── providers/         # Exchange implementations
+│   ├── binance/       # Binance REST + WS
+│   ├── bybit/         # Bybit REST + WS
+│   ├── okx/           # OKX REST + WS
+│   ├── hyperliquid/   # Hyperliquid REST + WS (Futures only)
+│   └── kraken/        # Kraken REST + WS
+├── io/                # REST/WS abstraction layer
+│   ├── rest/          # RESTProvider, HTTP transport, adapters
+│   └── ws/            # WSProvider, WebSocket transport, message adapters
+└── clients/           # High-level streaming feeds
+    ├── ohlcv_feed.py
+    ├── liquidation_feed.py
+    └── open_interest_feed.py
 ```
 
-**Principles:**
-- Async-first (aiohttp, asyncio)
-- Type-safe (Pydantic models)
-- Explicit APIs
-- Comprehensive testing
+### Provider Architecture
 
-## Models
+Each provider implements:
+- **RESTProvider**: HTTP-based REST API client with response adapters
+- **WSProvider**: WebSocket streaming with message adapters and reconnection
+- **Unified Provider**: High-level `Provider` class combining REST + WS
 
-All models are immutable Pydantic models with validation:
+Providers use modular components:
+- **Endpoint Specs**: URL builders, parameter mapping, rate limits
+- **Response/Message Adapters**: Exchange-specific data normalization
+- **Transports**: HTTP client (aiohttp) and WebSocket client (websockets)
+
+## Core Features
+
+### Multi-Exchange Support
+
+```python
+from laakhay.data import BinanceProvider, BybitProvider, OKXProvider, HyperliquidProvider, KrakenProvider
+
+# Same API across all exchanges
+providers = [
+    BinanceProvider(market_type=MarketType.FUTURES),
+    BybitProvider(market_type=MarketType.FUTURES),
+    OKXProvider(market_type=MarketType.FUTURES),
+    HyperliquidProvider(market_type=MarketType.FUTURES),
+    KrakenProvider(market_type=MarketType.FUTURES),
+]
+
+for provider in providers:
+    async with provider:
+        oi = await provider.get_open_interest("BTCUSDT", historical=False)
+        print(f"{provider.name}: {oi[0].open_interest}")
+```
+
+### Order Book Analysis
+
+```python
+ob = await provider.get_order_book("BTCUSDT", limit=100)
+print(f"Spread: {ob.spread_bps:.2f} bps")
+print(f"Market Pressure: {ob.market_pressure}")  # bullish/bearish/neutral
+print(f"Imbalance: {ob.imbalance:.2f}")  # -1.0 to 1.0
+print(f"Tight Spread: {ob.is_tight_spread}")  # < 10 bps
+```
+
+### Multi-Symbol Streaming
+
+```python
+# Stream OHLCV for multiple symbols
+async for bar in provider.stream_ohlcv_multi(["BTCUSDT", "ETHUSDT"], Timeframe.M1):
+    print(f"{bar.symbol}: {bar.close}")
+
+# Stream trades for multiple symbols
+async for trade in provider.stream_trades_multi(["BTCUSDT", "ETHUSDT"]):
+    print(f"{trade.symbol}: {trade.value}")
+```
+
+### High-Level Feeds
+
+```python
+from laakhay.data import OHLCVFeed
+
+feed = OHLCVFeed(
+    provider=BinanceProvider(market_type=MarketType.SPOT),
+    symbols=["BTCUSDT", "ETHUSDT"],
+    timeframe=Timeframe.M1,
+)
+
+async for event in feed:
+    if event.type == DataEventType.BAR:
+        print(f"New bar: {event.data.symbol} @ {event.data.close}")
+    elif event.type == DataEventType.CONNECTION:
+        print(f"Connection: {event.data.status}")
+```
+
+### Liquidations (Futures)
+
+```python
+async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
+    async for liq in provider.stream_liquidations():
+        if liq.is_large:  # Filters large liquidations
+            print(f"{liq.symbol}: ${liq.value_usdt:.2f} {liq.side}")
+            print(f"Long: {liq.is_long_liquidation}")
+```
+
+### Open Interest (Futures)
+
+```python
+# Historical
+oi_history = await provider.get_open_interest(
+    "BTCUSDT", 
+    historical=True, 
+    period="5m", 
+    limit=100
+)
+
+# Real-time streaming
+async for oi in provider.stream_open_interest(["BTCUSDT"], period="5m"):
+    print(f"OI: {oi.open_interest} ({oi.open_interest_value} USD)")
+```
+
+### Funding Rates (Futures)
+
+```python
+# Historical
+rates = await provider.get_funding_rate("BTCUSDT", limit=50)
+
+# Real-time streaming
+async for rate in provider.stream_funding_rate(["BTCUSDT"]):
+    print(f"Funding: {rate.funding_rate_percentage:.4f}%")
+    print(f"Mark Price: {rate.mark_price}")
+```
+
+## Data Models
+
+All models are immutable Pydantic v2 models with validation:
 
 ```python
 from laakhay.data.models import (
-    Bar,           # Individual OHLCV bar
-    OHLCV,         # OHLCV series with metadata
-    Symbol,        # Trading pairs
-    OrderBook,     # Market depth (25+ properties)
-    Trade,         # Individual trades
-    Liquidation,   # Forced closures
-    OpenInterest,  # Outstanding contracts
-    FundingRate,   # Perpetual funding
-    MarkPrice,     # Mark/index prices
+    Bar,              # Individual OHLCV bar
+    OHLCV,            # OHLCV series with SeriesMeta
+    StreamingBar,      # Real-time bar updates
+    Symbol,            # Trading pair metadata
+    OrderBook,         # Market depth (25+ computed properties)
+    Trade,             # Individual trades with size categorization
+    Liquidation,       # Forced closures with large liquidation detection
+    OpenInterest,      # Outstanding contracts
+    FundingRate,       # Perpetual funding rates
+    MarkPrice,         # Mark/index prices
+    ConnectionEvent,   # WebSocket connection events
+    DataEvent,         # Typed data events for feeds
 )
 ```
 
@@ -163,36 +213,85 @@ from laakhay.data.models import (
 
 ```python
 from laakhay.data.core import (
-    LaakhayDataError,      # Base exception
-    ProviderError,         # API errors
-    InvalidSymbolError,    # Symbol not found
-    InvalidIntervalError,  # Invalid interval
+    DataError,           # Base exception
+    ProviderError,       # API errors
+    RateLimitError,      # Rate limit exceeded
+    InvalidSymbolError,  # Symbol not found
+    InvalidIntervalError,# Invalid timeframe
+    ValidationError,     # Data validation errors
 )
 
 try:
     ohlcv = await provider.get_candles("INVALID", Timeframe.M1)
 except InvalidSymbolError:
     print("Symbol not found")
+except RateLimitError as e:
+    print(f"Rate limit: {e.retry_after}")
 except ProviderError as e:
     print(f"API error: {e}")
 ```
 
-## Integration Tests
+## Symbol Normalization
 
-Integration tests hit live exchange APIs (Binance and Bybit) and are skipped by default. Enable them explicitly when you have network access:
+Providers handle exchange-specific symbol formats automatically:
+
+- **Binance/Bybit/OKX**: `BTCUSDT` (standard format)
+- **Hyperliquid**: `BTC` → normalized to `BTCUSDT`
+- **Kraken Spot**: `XBT/USD` → normalized to `BTCUSD`
+- **Kraken Futures**: `PI_XBTUSD` → normalized to `BTCUSD`
+
+## Testing
+
+### Unit Tests
+
+```bash
+pytest tests/unit
+```
+
+### Integration Tests
+
+Integration tests hit live exchange APIs and are skipped by default:
 
 ```bash
 RUN_LAAKHAY_NETWORK_TESTS=1 pytest tests/integration
 ```
 
+## Examples
+
+```bash
+# REST API examples
+python examples/binance_rest_ohlcv.py BTCUSDT M1 100 SPOT
+python examples/binance_rest_order_book.py BTCUSDT 50 SPOT
+python examples/binance_rest_open_interest.py BTCUSDT current
+python examples/binance_rest_funding_rate.py BTCUSDT 50
+
+# WebSocket streaming examples
+python examples/binance_ws_ohlcv_multi.py BTCUSDT ETHUSDT M1 SPOT
+python examples/binance_ws_trades.py BTCUSDT SPOT
+python examples/binance_ws_order_book.py BTCUSDT SPOT
+
+# High-level feed examples
+python examples/ohlcv_feed_quickstart.py BTCUSDT ETHUSDT M1 SPOT 30
+```
+
+## Design Principles
+
+- **Async-first**: Built on `asyncio`, `aiohttp`, and `websockets`
+- **Type-safe**: Full Pydantic v2 validation with type hints
+- **Modular**: Provider-agnostic architecture with pluggable transports
+- **DRY**: Shared REST/WS infrastructure across providers
+- **Production-ready**: Comprehensive error handling, reconnection logic, rate limiting
+
+## Requirements
+
+- Python 3.10+
+- `pydantic>=2.0`
+- `aiohttp>=3.8`
+- `websockets>=10`
+
 ## License
 
 MIT License - see [LICENSE](LICENSE)
-
-## Contact
-
-- Issues: [GitHub Issues](https://github.com/laakhay/data/issues)
-- Email: laakhay.corp@gmail.com
 
 ---
 
