@@ -1,8 +1,8 @@
 """Binance providers (REST-only, WS-only, and unified facade)."""
 
 from .provider import BinanceProvider
-from .rest_provider import BinanceRESTProvider
-from .ws_provider import BinanceWSProvider
+from .rest.provider import BinanceRESTProvider
+from .ws.provider import BinanceWSProvider
 
 __all__ = [
     "BinanceProvider",

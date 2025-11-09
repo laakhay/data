@@ -17,8 +17,8 @@ from ...models import (
     Symbol,
     Trade,
 )
-from .rest_provider import BinanceRESTProvider
-from .ws_provider import BinanceWSProvider
+from .rest.provider import BinanceRESTProvider
+from .ws.provider import BinanceWSProvider
 
 
 class BinanceProvider(BaseProvider):
@@ -42,6 +42,11 @@ class BinanceProvider(BaseProvider):
         self._owns_rest = rest_provider is None
         self._owns_ws = ws_provider is None
         self._closed = False
+
+    def get_timeframes(self) -> list[str]:
+        from .constants import INTERVAL_MAP
+
+        return list(INTERVAL_MAP.keys())
 
     # --- REST delegations -------------------------------------------------
     async def get_candles(
@@ -67,6 +72,9 @@ class BinanceProvider(BaseProvider):
 
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
         return await self._rest.get_order_book(symbol=symbol, limit=limit)
+
+    async def get_exchange_info(self) -> dict:
+        return await self._rest.get_exchange_info()
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
