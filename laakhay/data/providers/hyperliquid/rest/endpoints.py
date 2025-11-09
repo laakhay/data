@@ -28,7 +28,7 @@ def candles_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         """Build POST body for candle snapshot.
 
         API format: {"type": "candleSnapshot", "req": {"coin": "BTC", "interval": "15m", ...}}
@@ -74,7 +74,7 @@ def exchange_info_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         return {
             "type": "meta",
         }
@@ -97,7 +97,7 @@ def exchange_info_raw_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         return {
             "type": "meta",
         }
@@ -124,7 +124,7 @@ def order_book_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         body: dict[str, Any] = {
             "type": "l2Book",
             "coin": params["symbol"].upper(),
@@ -157,11 +157,11 @@ def recent_trades_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         # Hyperliquid doesn't have public recent trades REST endpoint
         # Trades are streamed via WebSocket
         # Return empty body - adapter should handle this gracefully
-        return None
+        return {}
 
     return RestEndpointSpec(
         id="recent_trades",
@@ -189,11 +189,11 @@ def funding_rate_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         # Hyperliquid doesn't have public funding rate history REST endpoint
         # Funding rates are in activeAssetCtx or streamed via WebSocket
         # Return empty body - adapter should handle this gracefully
-        return None
+        return {}
 
     return RestEndpointSpec(
         id="funding_rate",
@@ -221,11 +221,11 @@ def open_interest_current_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         # Hyperliquid doesn't have public open interest REST endpoint
         # Open interest is in activeAssetCtx or streamed via WebSocket
         # Return empty body - adapter should handle this gracefully
-        return None
+        return {}
 
     return RestEndpointSpec(
         id="open_interest_current",
@@ -253,10 +253,10 @@ def open_interest_hist_spec() -> RestEndpointSpec:
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
         return {}
 
-    def build_body(params: dict[str, Any]) -> dict[str, Any] | None:
+    def build_body(params: dict[str, Any]) -> dict[str, Any]:
         # Hyperliquid doesn't have public open interest history REST endpoint
         # Return empty body - adapter should handle this gracefully
-        return None
+        return {}
 
     return RestEndpointSpec(
         id="open_interest_hist",

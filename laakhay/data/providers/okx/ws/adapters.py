@@ -22,7 +22,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel.startswith("candles.")
+        return bool(isinstance(channel, str) and channel.startswith("candles."))
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -90,7 +90,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "trades"
+        return bool(channel == "trades")
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -157,7 +157,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel.startswith("books.")
+        return bool(isinstance(channel, str) and channel.startswith("books."))
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -236,7 +236,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "open-interest"
+        return bool(channel == "open-interest")
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -296,7 +296,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "funding-rate"
+        return bool(channel == "funding-rate")
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -357,7 +357,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "mark-price"
+        return bool(channel == "mark-price")
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -420,7 +420,7 @@ class LiquidationsAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "liquidation"
+        return bool(channel == "liquidation")
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []

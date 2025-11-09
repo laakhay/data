@@ -29,7 +29,7 @@ class LiquidationFeed(BaseStreamFeed[Liquidation]):
     async def start(self) -> None:  # type: ignore[override]
         await super().start()
 
-    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:
+    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:  # type: ignore[override]
         symbol_keys = None
         if symbols is not None:
             symbol_keys = {s.upper() for s in symbols}

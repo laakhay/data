@@ -74,7 +74,7 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
         self._only_closed: bool = True
         self._pending_warm_up: int = 0
 
-        self._latest: dict[tuple[str, Timeframe], StreamingBar] = {}
+        self._latest: dict[tuple[str, Timeframe], StreamingBar] = {}  # type: ignore[assignment]
         self._prev_closed: dict[tuple[str, Timeframe], StreamingBar] = {}
         self._bar_history: dict[tuple[str, Timeframe], list[StreamingBar]] = {}
 
@@ -86,7 +86,7 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
         self._symbol_chunk_id: dict[str, int] = {}
         self._connection_status: dict[int, ConnectionStatus] = {}
 
-    async def start(
+    async def start(  # type: ignore[override]
         self,
         *,
         symbols: Iterable[str],
@@ -118,7 +118,7 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
     # ------------------------------------------------------------------
     # Subscriptions
     # ------------------------------------------------------------------
-    def subscribe(
+    def subscribe(  # type: ignore[override]
         self,
         callback: Callback,
         *,

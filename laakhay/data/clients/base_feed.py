@@ -243,7 +243,7 @@ class SymbolStreamFeed(BaseStreamFeed[T]):
         self._requested_symbols: set[str] = set()
         self._symbols: list[str] = []
 
-    async def start(self, *, symbols: Iterable[str], **stream_args: Any) -> None:
+    async def start(self, *, symbols: Iterable[str], **stream_args: Any) -> None:  # type: ignore[override]
         self._requested_symbols = self._normalize_symbols(symbols)
         await super().start(**stream_args)
 

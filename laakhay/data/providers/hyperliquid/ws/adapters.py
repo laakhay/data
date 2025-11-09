@@ -27,7 +27,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "candle"
+        return bool(channel == "candle")
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -90,7 +90,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "trades"
+        return bool(channel == "trades")
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -155,7 +155,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "l2Book"
+        return bool(channel == "l2Book")
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -266,7 +266,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -319,7 +319,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -373,7 +373,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -429,7 +429,7 @@ class LiquidationsAdapter(MessageAdapter):
             return False
         # Check if data contains liquidation event
         data = payload.get("data", {})
-        return isinstance(data, dict) and "liquidation" in data
+        return bool(isinstance(data, dict) and "liquidation" in data)
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []

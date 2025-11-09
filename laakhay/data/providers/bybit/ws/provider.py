@@ -59,7 +59,7 @@ class BybitWSProvider(WSProvider):
             "liquidations": (liquidations_spec, LiquidationsAdapter),
         }
 
-    async def stream_ohlcv(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
         interval: Timeframe,
@@ -78,7 +78,7 @@ class BybitWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_ohlcv_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -126,6 +126,8 @@ class BybitWSProvider(WSProvider):
             last_emit: dict[str, float] = {}
             last_close: dict[tuple[str, int], str] = {}
 
+            if self._ws_url is None:
+                raise RuntimeError("WebSocket URL not configured")
             transport = BybitWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(topic_chunks[0]):
                 if not adapter.is_relevant(payload):
@@ -154,6 +156,8 @@ class BybitWSProvider(WSProvider):
         queue: asyncio.Queue = asyncio.Queue()
 
         async def pump(topics_chunk: list[str]):
+            if self._ws_url is None:
+                raise RuntimeError("WebSocket URL not configured")
             transport = BybitWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(topics_chunk):
                 if adapter.is_relevant(payload):

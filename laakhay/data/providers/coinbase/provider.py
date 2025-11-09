@@ -67,7 +67,7 @@ class CoinbaseProvider(BaseProvider):
             limit=limit,
         )
 
-    async def get_symbols(
+    async def get_symbols(  # type: ignore[override]
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         """List trading symbols."""

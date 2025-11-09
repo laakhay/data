@@ -46,7 +46,7 @@ class OpenInterestFeed(SymbolStreamFeed[OpenInterest]):
         self._period = period
         await self.update_stream(period=period)
 
-    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:
+    def subscribe(self, callback: Callback, *, symbols: Iterable[str] | None = None) -> str:  # type: ignore[override]
         symbol_keys = None
         if symbols is not None:
             symbol_keys = {s.upper() for s in symbols}

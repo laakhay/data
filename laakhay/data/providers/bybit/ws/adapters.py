@@ -18,7 +18,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("kline.")
+        return bool(isinstance(topic, str) and topic.startswith("kline."))
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -82,7 +82,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("publicTrade.")
+        return bool(isinstance(topic, str) and topic.startswith("publicTrade."))
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -149,7 +149,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("orderbook.")
+        return bool(isinstance(topic, str) and topic.startswith("orderbook."))
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -223,7 +223,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("openInterest.")
+        return bool(isinstance(topic, str) and topic.startswith("openInterest."))
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -279,7 +279,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("funding.")
+        return bool(isinstance(topic, str) and topic.startswith("funding."))
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -328,7 +328,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("markPrice.")
+        return bool(isinstance(topic, str) and topic.startswith("markPrice."))
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -392,7 +392,7 @@ class LiquidationsAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("liquidation.")
+        return bool(isinstance(topic, str) and topic.startswith("liquidation."))
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []

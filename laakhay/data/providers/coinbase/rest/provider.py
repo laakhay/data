@@ -97,8 +97,11 @@ class CoinbaseRESTProvider(RESTProvider):
         from ..constants import INTERVAL_MAP as COINBASE_INTERVAL_MAP
 
         if isinstance(timeframe, str):
-            timeframe = Timeframe.from_str(timeframe)
-        if timeframe is None or timeframe not in COINBASE_INTERVAL_MAP:
+            parsed_timeframe = Timeframe.from_str(timeframe)
+            if parsed_timeframe is None:
+                raise ValueError(f"Invalid timeframe: {timeframe}")
+            timeframe = parsed_timeframe
+        if not isinstance(timeframe, Timeframe) or timeframe not in COINBASE_INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 
         if max_chunks is not None and max_chunks <= 0:
@@ -113,6 +116,8 @@ class CoinbaseRESTProvider(RESTProvider):
             chunk_end: datetime | None,
             chunk_limit: int | None,
         ) -> OHLCV:
+            if not isinstance(timeframe, Timeframe):
+                raise ValueError(f"Invalid timeframe: {timeframe}")
             params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
@@ -122,7 +127,8 @@ class CoinbaseRESTProvider(RESTProvider):
                 "end_time": chunk_end,
                 "limit": chunk_limit,
             }
-            return await self.fetch("ohlcv", params)
+            result: OHLCV = await self.fetch("ohlcv", params)
+            return result
 
         # Fast path: single request is enough.
         if (limit is None or limit <= self._MAX_CANDLES_PER_REQUEST) and chunk_cap == 1:
@@ -182,6 +188,8 @@ class CoinbaseRESTProvider(RESTProvider):
         if not aggregated and meta is None:
             return await _fetch_chunk(chunk_start=start_time, chunk_end=end_time, chunk_limit=limit)
 
+        if meta is None:
+            raise ValueError("meta cannot be None when aggregated is provided")
         return OHLCV(meta=meta, bars=aggregated)
 
     async def get_symbols(
@@ -204,12 +212,14 @@ class CoinbaseRESTProvider(RESTProvider):
                 return response
 
         adapter = _Passthrough()
-        return await self._runner.run(spec=spec, adapter=adapter, params=params)
+        result: dict[Any, Any] = await self._runner.run(spec=spec, adapter=adapter, params=params)
+        return result
 
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
         """Fetch current order book."""
         params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
-        return await self.fetch("order_book", params)
+        result: OrderBook = await self.fetch("order_book", params)
+        return result
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         """Fetch recent trades."""
