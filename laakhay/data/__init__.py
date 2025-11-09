@@ -38,6 +38,11 @@ from .providers.hyperliquid import (
     HyperliquidRESTProvider,
     HyperliquidWSProvider,
 )
+from .providers.kraken import (
+    KrakenProvider,
+    KrakenRESTProvider,
+    KrakenWSProvider,
+)
 from .providers.okx import (
     OKXProvider,
     OKXRESTProvider,
@@ -61,6 +66,9 @@ __all__ = [
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
+    "KrakenProvider",
+    "KrakenRESTProvider",
+    "KrakenWSProvider",
     "OKXProvider",
     "OKXRESTProvider",
     "OKXWSProvider",
