@@ -52,20 +52,20 @@ coverage:
 	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term
 
 lint:
-	@command -v ruff >/dev/null 2>&1 && ruff check . || echo "ruff not installed; skipping lint"
+	@$(PY) -m ruff check . 2>&1 || (echo "ruff check failed or not installed" && exit 1)
 
 format:
-	@command -v ruff >/dev/null 2>&1 && ruff format . || echo "ruff not installed; skipping format"
+	@$(PY) -m ruff format . 2>&1 || (echo "ruff format failed or not installed" && exit 1)
 
 format-check:
-	@command -v ruff >/dev/null 2>&1 && ruff format --check . || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
+	@$(PY) -m ruff format --check . 2>&1 || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
 
 type-check:
 	@$(PY) -m mypy laakhay/data 2>&1 || (echo "mypy check failed or not installed" && exit 1)
 
 fix:
-	@command -v ruff >/dev/null 2>&1 && ruff check --fix . || echo "ruff not installed; skipping ruff fix"
-	@command -v ruff >/dev/null 2>&1 && ruff format . || echo "ruff not installed; skipping format"
+	@$(PY) -m ruff check --fix . 2>&1 || (echo "ruff check --fix failed or not installed" && exit 1)
+	@$(PY) -m ruff format . 2>&1 || (echo "ruff format failed or not installed" && exit 1)
 
 clean:
 	@find . -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
