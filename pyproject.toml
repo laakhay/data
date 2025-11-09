@@ -109,4 +109,7 @@ addopts = [
     "--strict-markers",
     "--tb=short",
 ]
+markers = [
+    "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",
+]
 
