@@ -33,6 +33,11 @@ from .providers.bybit import (
     BybitRESTProvider,
     BybitWSProvider,
 )
+from .providers.hyperliquid import (
+    HyperliquidProvider,
+    HyperliquidRESTProvider,
+    HyperliquidWSProvider,
+)
 from .providers.okx import (
     OKXProvider,
     OKXRESTProvider,
@@ -53,6 +58,9 @@ __all__ = [
     "BybitProvider",
     "BybitRESTProvider",
     "BybitWSProvider",
+    "HyperliquidProvider",
+    "HyperliquidRESTProvider",
+    "HyperliquidWSProvider",
     "OKXProvider",
     "OKXRESTProvider",
     "OKXWSProvider",
