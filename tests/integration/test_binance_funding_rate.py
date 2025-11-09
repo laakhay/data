@@ -86,7 +86,7 @@ class TestBinanceFundingRateIntegration:
     async def test_get_funding_rate_multiple_symbols(self):
         """Test fetching funding rates for multiple symbols."""
         async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
-            symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT"]
+            symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 
             for symbol in symbols:
                 fr_list = await provider.get_funding_rate(symbol, limit=1)
