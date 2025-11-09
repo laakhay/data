@@ -1,6 +1,6 @@
-"""Bybit WebSocket-only provider.
+"""OKX WebSocket-only provider.
 
-Implements the WSProvider interface using Bybit-specific transport with subscription support.
+Implements the WSProvider interface using OKX-specific transport with subscription support.
 """
 
 from __future__ import annotations
@@ -31,14 +31,14 @@ from .endpoints import (
     order_book_spec,
     trades_spec,
 )
-from .transport import BybitWebSocketTransport
+from .transport import OKXWebSocketTransport
 
 if TYPE_CHECKING:
     from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 
 
-class BybitWSProvider(WSProvider):
-    """Streaming-only provider for Bybit Spot or Futures."""
+class OKXWSProvider(WSProvider):
+    """Streaming-only provider for OKX Spot or Futures."""
 
     def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
         self.market_type = market_type
@@ -112,12 +112,12 @@ class BybitWSProvider(WSProvider):
         throttle_ms: int | None = None,
         dedupe_key: Any | None = None,
     ) -> AsyncIterator[Any]:
-        """Custom stream implementation for Bybit that handles subscriptions."""
+        """Custom stream implementation for OKX that handles subscriptions."""
 
         # Build topic names for all symbols
         topics = [spec.build_stream_name(s, params) for s in symbols]
 
-        # Chunk topics if needed (Bybit supports up to spec.max_streams_per_connection)
+        # Chunk topics if needed (OKX supports up to spec.max_streams_per_connection)
         cap = max(1, spec.max_streams_per_connection)
         topic_chunks = [topics[i : i + cap] for i in range(0, len(topics), cap)]
 
@@ -126,7 +126,7 @@ class BybitWSProvider(WSProvider):
             last_emit: dict[str, float] = {}
             last_close: dict[tuple[str, int], str] = {}
 
-            transport = BybitWebSocketTransport(url=self._ws_url)
+            transport = OKXWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(topic_chunks[0]):
                 if not adapter.is_relevant(payload):
                     continue
@@ -154,7 +154,7 @@ class BybitWSProvider(WSProvider):
         queue: asyncio.Queue = asyncio.Queue()
 
         async def pump(topics_chunk: list[str]):
-            transport = BybitWebSocketTransport(url=self._ws_url)
+            transport = OKXWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(topics_chunk):
                 if adapter.is_relevant(payload):
                     await queue.put(payload)
@@ -262,9 +262,9 @@ class BybitWSProvider(WSProvider):
 
     # --- Liquidations (Futures) ---
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
-        # Bybit liquidations require subscribing to specific symbols
-        # Subscribe to major symbols for liquidations
-        symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AVAXUSDT', 'ADAUSDT']
+        # OKX liquidations require subscribing to specific symbols
+        # Subscribe to major symbols for liquidations (available on all exchanges)
+        symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT"]
         async for obj in self.stream("liquidations", symbols, {}):
             yield obj
 
