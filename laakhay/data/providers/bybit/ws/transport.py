@@ -72,7 +72,11 @@ class BybitWebSocketTransport:
                                 continue
                             yield data
                         except json.JSONDecodeError:
-                            msg_str = message.decode("utf-8", errors="replace") if isinstance(message, bytes) else str(message)
+                            msg_str = (
+                                message.decode("utf-8", errors="replace")
+                                if isinstance(message, bytes)
+                                else str(message)
+                            )
                             logger.warning(f"Failed to parse message: {msg_str}")
                             continue
 

@@ -20,3 +20,6 @@ dist/
 build/
 
 .coverage
+architecture-comparison.md
+centralizer.md
+proposed-architecture-v2.md
