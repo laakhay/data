@@ -48,6 +48,20 @@ def exchange_info_spec() -> RestEndpointSpec:
     )
 
 
+def exchange_info_raw_spec() -> RestEndpointSpec:
+    # Same as exchange_info_spec but kept separate to emphasize raw passthrough
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        return "/fapi/v1/exchangeInfo" if market == MarketType.FUTURES else "/api/v3/exchangeInfo"
+
+    return RestEndpointSpec(
+        id="exchange_info_raw",
+        method="GET",
+        build_path=build_path,
+        build_query=lambda _: {},
+    )
+
+
 def order_book_spec() -> RestEndpointSpec:
     def build_path(params: dict[str, Any]) -> str:
         market: MarketType = params["market_type"]
