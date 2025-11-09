@@ -31,9 +31,9 @@ class CoinbaseWSProvider(WSProvider):
                 "Coinbase Advanced Trade API only supports Spot markets. "
                 f"Got market_type={market_type}"
             )
-        
+
         self.market_type = MarketType.SPOT  # Force to SPOT
-        
+
         # Endpoint registry: key -> (spec_builder, adapter_class)
         self._ENDPOINTS: dict[str, tuple[Callable[[MarketType], Any], type[MessageAdapter]]] = {
             "ohlcv": (ohlcv_spec, OhlcvAdapter),
@@ -46,7 +46,7 @@ class CoinbaseWSProvider(WSProvider):
             # - liquidations
         }
 
-    async def stream_ohlcv(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
         interval: Timeframe,
@@ -67,7 +67,7 @@ class CoinbaseWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_ohlcv_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -104,25 +104,24 @@ class CoinbaseWSProvider(WSProvider):
         dedupe_key: Any | None = None,
     ) -> AsyncIterator[Any]:
         """Internal streaming method using Coinbase-specific transport."""
-        import asyncio
         import time
-        
+
         # Get WebSocket URL
         ws_url = WS_PUBLIC_URLS.get(self.market_type)
         if not ws_url:
             raise ValueError(f"WebSocket not supported for market type: {self.market_type}")
-        
+
         # Build stream names (topics) for Coinbase transport
         # build_stream_name normalizes symbols internally
         topics = [spec.build_stream_name(s, params) for s in symbols]
-        
+
         # Create Coinbase-specific transport
         transport = CoinbaseWebSocketTransport(ws_url)
-        
+
         # Track last emit times for throttling
         last_emit: dict[str, float] = {}
         last_close: dict[tuple[str, int], str] = {}
-        
+
         # Stream messages from Coinbase WebSocket
         async for payload in transport.stream(topics):
             # Parse messages through adapter
@@ -130,7 +129,7 @@ class CoinbaseWSProvider(WSProvider):
                 # Filter closed candles if requested
                 if only_closed and getattr(obj, "is_closed", False) is False:
                     continue
-                
+
                 # Apply throttling
                 if throttle_ms:
                     now = time.time()
@@ -139,7 +138,7 @@ class CoinbaseWSProvider(WSProvider):
                     if last is not None and (now - last) < (throttle_ms / 1000.0):
                         continue
                     last_emit[sym] = now
-                
+
                 # Apply deduplication
                 if dedupe_key and not only_closed:
                     sym, ts, close_str = dedupe_key(obj)
@@ -147,7 +146,7 @@ class CoinbaseWSProvider(WSProvider):
                     if last_close.get(key) == close_str:
                         continue
                     last_close[key] = close_str
-                
+
                 yield obj
 
     async def stream(
@@ -166,7 +165,7 @@ class CoinbaseWSProvider(WSProvider):
         spec_fn, adapter_cls = self._ENDPOINTS[endpoint]
         spec = spec_fn(self.market_type)
         adapter = adapter_cls()
-        
+
         # Apply endpoint-specific defaults
         if endpoint == "ohlcv" and not only_closed and dedupe_key is None:
 
@@ -174,7 +173,7 @@ class CoinbaseWSProvider(WSProvider):
                 return (obj.symbol, int(obj.timestamp.timestamp() * 1000), str(obj.close))
 
             dedupe_key = _ohlcv_key
-        
+
         async for obj in self._stream(
             spec,
             adapter,
@@ -202,7 +201,7 @@ class CoinbaseWSProvider(WSProvider):
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
         """Stream order book updates for a symbol.
-        
+
         Note: Coinbase Exchange API requires authentication for level2 WebSocket.
         This method will raise NotImplementedError. Use REST API for order book snapshots instead.
         """
@@ -212,9 +211,7 @@ class CoinbaseWSProvider(WSProvider):
         )
 
     # --- Futures features (NOT SUPPORTED) ---
-    async def stream_open_interest(
-        self, symbols: list[str], period: str = "5m"
-    ) -> AsyncIterator:
+    async def stream_open_interest(self, symbols: list[str], period: str = "5m") -> AsyncIterator:
         """Stream open interest - NOT SUPPORTED by Coinbase Advanced Trade API."""
         raise NotImplementedError(
             "Coinbase Advanced Trade API does not support open interest "
@@ -245,4 +242,3 @@ class CoinbaseWSProvider(WSProvider):
             "Coinbase Advanced Trade API does not support liquidations "
             "(Futures feature, not available on Spot markets)"
         )
-

@@ -1,6 +1,6 @@
 """Unit tests for OHLCV model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -25,7 +25,7 @@ def test_ohlcv_with_bars():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -34,7 +34,7 @@ def test_ohlcv_with_bars():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -55,7 +55,7 @@ def test_ohlcv_access_methods():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -64,7 +64,7 @@ def test_ohlcv_access_methods():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -88,7 +88,7 @@ def test_ohlcv_time_range():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -97,7 +97,7 @@ def test_ohlcv_time_range():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -116,7 +116,7 @@ def test_ohlcv_price_statistics():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -125,7 +125,7 @@ def test_ohlcv_price_statistics():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -145,7 +145,7 @@ def test_ohlcv_filtering():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -155,7 +155,7 @@ def test_ohlcv_filtering():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -187,7 +187,7 @@ def test_ohlcv_validation():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar1 = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -196,7 +196,7 @@ def test_ohlcv_validation():
     )
 
     bar2 = Bar(
-        timestamp=datetime(2024, 1, 1, 11, 59, tzinfo=timezone.utc),  # Earlier timestamp
+        timestamp=datetime(2024, 1, 1, 11, 59, tzinfo=UTC),  # Earlier timestamp
         open=Decimal("50500"),
         high=Decimal("52000"),
         low=Decimal("50000"),
@@ -214,7 +214,7 @@ def test_ohlcv_conversion():
     meta = SeriesMeta(symbol="BTCUSDT", timeframe="1m")
 
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),

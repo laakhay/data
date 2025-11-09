@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -28,7 +28,6 @@ class OhlcvAdapter(MessageAdapter):
             return out
 
         # Kraken format: {channel: "ohlc", symbol: "PI_XBTUSD", data: [{time, open, high, low, close, volume}, ...]}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data_list = payload.get("data", [])
 
@@ -64,7 +63,7 @@ class OhlcvAdapter(MessageAdapter):
                 out.append(
                     StreamingBar(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC),
                         open=Decimal(str(open_price)),
                         high=Decimal(str(high_price)),
                         low=Decimal(str(low_price)),
@@ -94,7 +93,6 @@ class TradesAdapter(MessageAdapter):
             return out
 
         # Kraken format: {channel: "trade", symbol: "PI_XBTUSD", data: [{time, price, size, side}, ...]}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data_list = payload.get("data", [])
 
@@ -132,11 +130,15 @@ class TradesAdapter(MessageAdapter):
                 out.append(
                     Trade(
                         symbol=symbol,
-                        trade_id=int(trade_id) if trade_id and str(trade_id).isdigit() else int(hash(str(trade_id))),
+                        trade_id=int(trade_id)
+                        if trade_id and str(trade_id).isdigit()
+                        else int(hash(str(trade_id))),
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc) if time_ms else datetime.now(timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC)
+                        if time_ms
+                        else datetime.now(UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -162,7 +164,6 @@ class OrderBookAdapter(MessageAdapter):
             return out
 
         # Kraken format: {channel: "book", symbol: "PI_XBTUSD", data: {bids: [[price, qty], ...], asks: [[price, qty], ...]}}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data = payload.get("data", {})
         ts_ms = payload.get("time", 0)
@@ -201,13 +202,10 @@ class OrderBookAdapter(MessageAdapter):
                 ]
 
             # Handle both snapshot and delta types
-            last_update_id = data.get("sequenceNumber", data.get("seq", 0))
+            last_update_id_raw = data.get("sequenceNumber") or data.get("seq") or 0
+            last_update_id = int(last_update_id_raw) if last_update_id_raw is not None else 0
 
-            timestamp = (
-                datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
-                if ts_ms
-                else datetime.now(timezone.utc)
-            )
+            timestamp = datetime.fromtimestamp(ts_ms / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
 
             out.append(
                 OrderBook(
@@ -231,7 +229,9 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel.startswith("open_interest") or "open_interest" in str(payload.get("event", ""))
+        return channel.startswith("open_interest") or "open_interest" in str(
+            payload.get("event", "")
+        )
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -239,7 +239,6 @@ class OpenInterestAdapter(MessageAdapter):
             return out
 
         # Kraken Futures format: {channel: "open_interest", symbol: "PI_XBTUSD", data: {openInterest, openInterestValue, time}}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data = payload.get("data", {})
         ts_ms = payload.get("time", 0)
@@ -261,9 +260,9 @@ class OpenInterestAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                 if timestamp_ms
-                else datetime.now(timezone.utc)
+                else datetime.now(UTC)
             )
 
             out.append(
@@ -295,7 +294,6 @@ class FundingRateAdapter(MessageAdapter):
             return out
 
         # Kraken Futures format: {channel: "funding_rate", symbol: "PI_XBTUSD", data: {fundingRate, markPrice, time}}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data = payload.get("data", {})
 
@@ -318,7 +316,7 @@ class FundingRateAdapter(MessageAdapter):
             out.append(
                 FundingRate(
                     symbol=symbol,
-                    funding_time=datetime.fromtimestamp(int(ts_ms) / 1000, tz=timezone.utc),
+                    funding_time=datetime.fromtimestamp(int(ts_ms) / 1000, tz=UTC),
                     funding_rate=Decimal(str(fr_str)),
                     mark_price=Decimal(str(mark_price_str)) if mark_price_str else None,
                 )
@@ -344,7 +342,6 @@ class MarkPriceAdapter(MessageAdapter):
             return out
 
         # Kraken Futures format: {channel: "ticker", symbol: "PI_XBTUSD", data: {markPrice, indexPrice, fundingRate, nextFundingTime}}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data = payload.get("data", {})
         ts_ms = payload.get("time", 0)
@@ -367,13 +364,11 @@ class MarkPriceAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(ts_ms) / 1000, tz=timezone.utc)
-                if ts_ms
-                else datetime.now(timezone.utc)
+                datetime.fromtimestamp(int(ts_ms) / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
             )
 
             next_funding_time = (
-                datetime.fromtimestamp(int(next_funding_time_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(next_funding_time_ms) / 1000, tz=UTC)
                 if next_funding_time_ms
                 else None
             )
@@ -410,7 +405,6 @@ class LiquidationsAdapter(MessageAdapter):
             return out
 
         # Kraken Futures format: {channel: "liquidation", symbol: "PI_XBTUSD", data: {side, size, price, time}}
-        channel = payload.get("channel", "")
         symbol_raw = payload.get("symbol", "")
         data = payload.get("data", {})
         ts_ms = payload.get("time", 0)
@@ -447,9 +441,9 @@ class LiquidationsAdapter(MessageAdapter):
                     continue
 
                 timestamp = (
-                    datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc)
+                    datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC)
                     if time_ms
-                    else datetime.now(timezone.utc)
+                    else datetime.now(UTC)
                 )
 
                 out.append(
@@ -474,4 +468,3 @@ class LiquidationsAdapter(MessageAdapter):
                 continue
 
         return out
-

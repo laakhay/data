@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class KrakenWebSocketTransport:
     """WebSocket transport for Kraken that handles subscription messages.
-    
+
     Kraken WebSocket API v2 uses a subscription-based model:
     - Subscribe: {"method": "subscribe", "params": {"channel": "channel_name", "symbol": "symbol"}}
     - Messages: {"channel": "channel_name", "data": {...}}
@@ -36,7 +36,7 @@ class KrakenWebSocketTransport:
 
     async def stream(self, channels: list[str]) -> AsyncIterator[Any]:
         """Stream messages from Kraken WebSocket with auto-reconnect.
-        
+
         Args:
             channels: List of channel names to subscribe to (e.g., ["ohlc-PI_XBTUSD-1", "trade-PI_XBTUSD"])
         """
@@ -58,22 +58,24 @@ class KrakenWebSocketTransport:
                         if len(parts) < 2:
                             logger.warning(f"Invalid channel format: {channel}")
                             continue
-                        
+
                         channel_type = parts[0]  # e.g., "ohlc", "trade", "book"
                         symbol = "-".join(parts[1:])  # Rest is symbol (may contain dashes)
-                        
-                        subscribe_msg = {
+
+                        subscribe_msg: dict[str, Any] = {
                             "method": "subscribe",
                             "params": {
                                 "channel": channel_type,
                                 "symbol": symbol,
-                            }
+                            },
                         }
-                        
+
                         # Add interval for OHLC channels
                         if channel_type == "ohlc" and len(parts) > 2:
-                            subscribe_msg["params"]["interval"] = parts[-1]
-                        
+                            params = subscribe_msg["params"]
+                            if isinstance(params, dict):
+                                params["interval"] = parts[-1]
+
                         await websocket.send(json.dumps(subscribe_msg))
                         logger.debug(f"Subscribed to channel: {channel}")
 
@@ -86,7 +88,7 @@ class KrakenWebSocketTransport:
                                 logger.error(f"Subscription failed: {confirm_data}")
                             else:
                                 logger.debug(f"Subscription confirmed: {confirm_data}")
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning("No subscription confirmation received")
 
                     # Stream messages
@@ -96,14 +98,22 @@ class KrakenWebSocketTransport:
                             # Skip subscription confirmations and pings
                             if isinstance(data, dict):
                                 # Skip subscription responses
-                                if data.get("method") == "subscribe" or data.get("event") == "subscriptionStatus":
+                                if (
+                                    data.get("method") == "subscribe"
+                                    or data.get("event") == "subscriptionStatus"
+                                ):
                                     continue
                                 # Skip pings
                                 if data.get("event") == "ping" or data.get("event") == "pong":
                                     continue
                             yield data
                         except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse message: {message}")
+                            msg_str = (
+                                message.decode("utf-8", errors="replace")
+                                if isinstance(message, bytes)
+                                else str(message)
+                            )
+                            logger.warning(f"Failed to parse message: {msg_str}")
                             continue
 
             except asyncio.CancelledError:
@@ -116,4 +126,3 @@ class KrakenWebSocketTransport:
                 logger.error(f"WebSocket error: {e}")
                 await asyncio.sleep(self._reconnect_delay)
                 self._reconnect_delay = min(self._reconnect_delay * 2, self.max_reconnect_delay)
-

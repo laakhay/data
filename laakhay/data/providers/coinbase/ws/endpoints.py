@@ -18,14 +18,14 @@ def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
 
     if market_type != MarketType.SPOT:
         raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-    
+
     ws_url = WS_PUBLIC_URLS.get(market_type)
     if not ws_url:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
         """Build channel name for OHLCV subscription.
-        
+
         Coinbase format: candles channel with product_id
         Note: Actual subscription uses JSON message, this is for identification
         """
@@ -37,7 +37,7 @@ def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
 
     def build_combined_url(names: list[str]) -> str:
         """Build WebSocket URL for combined subscriptions.
-        
+
         Coinbase uses single URL, subscriptions sent via JSON messages.
         """
         return ws_url
@@ -64,7 +64,7 @@ def trades_spec(market_type: MarketType) -> WSEndpointSpec:
 
     if market_type != MarketType.SPOT:
         raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-    
+
     ws_url = WS_PUBLIC_URLS.get(market_type)
     if not ws_url:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
@@ -97,7 +97,7 @@ def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
 
     if market_type != MarketType.SPOT:
         raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-    
+
     ws_url = WS_PUBLIC_URLS.get(market_type)
     if not ws_url:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
@@ -131,4 +131,3 @@ def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
 # - Mark Price (Futures feature)
 # - Liquidations (Futures feature)
 # These endpoints are intentionally omitted
-

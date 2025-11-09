@@ -7,7 +7,6 @@ API documentation: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developer
 
 from __future__ import annotations
 
-import asyncio
 import time
 from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
@@ -63,7 +62,7 @@ class HyperliquidWSProvider(WSProvider):
             "liquidations": (liquidations_spec, LiquidationsAdapter),
         }
 
-    async def stream_ohlcv(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
         interval: Timeframe,
@@ -82,7 +81,7 @@ class HyperliquidWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_ohlcv_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -215,6 +214,8 @@ class HyperliquidWSProvider(WSProvider):
             last_emit: dict[str, float] = {}
             last_close: dict[tuple[str, int], str] = {}
 
+            if self._ws_url is None:
+                raise RuntimeError("WebSocket URL not configured")
             transport = HyperliquidWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(topic_chunks[0]):
                 if not adapter.is_relevant(payload):
@@ -242,7 +243,11 @@ class HyperliquidWSProvider(WSProvider):
         else:
             tasks = []
             for chunk in topic_chunks:
-                tasks.append(self._stream_chunk(spec, adapter, chunk, params, only_closed, throttle_ms, dedupe_key))
+                tasks.append(
+                    self._stream_chunk(
+                        spec, adapter, chunk, params, only_closed, throttle_ms, dedupe_key
+                    )
+                )
 
             # Merge streams
             async for obj in self._merge_streams(tasks):
@@ -262,6 +267,8 @@ class HyperliquidWSProvider(WSProvider):
         last_emit: dict[str, float] = {}
         last_close: dict[tuple[str, int], str] = {}
 
+        if self._ws_url is None:
+            raise RuntimeError("WebSocket URL not configured")
         transport = HyperliquidWebSocketTransport(url=self._ws_url)
         async for payload in transport.stream(topics):
             if not adapter.is_relevant(payload):
@@ -302,7 +309,7 @@ class HyperliquidWSProvider(WSProvider):
                 except Exception as e:
                     # Log error and remove iterator
                     import logging
+
                     logger = logging.getLogger(__name__)
                     logger.error(f"Error in stream {i}: {e}")
                     active.remove(i)
-

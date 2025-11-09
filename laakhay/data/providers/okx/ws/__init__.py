@@ -1,2 +1,1 @@
 """OKX WebSocket provider implementation."""
-

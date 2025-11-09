@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -22,7 +22,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel.startswith("candles.")
+        return bool(isinstance(channel, str) and channel.startswith("candles."))
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -65,7 +65,7 @@ class OhlcvAdapter(MessageAdapter):
                 out.append(
                     StreamingBar(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open=Decimal(str(open_price)),
                         high=Decimal(str(high_price)),
                         low=Decimal(str(low_price)),
@@ -90,7 +90,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "trades"
+        return bool(channel == "trades")
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -136,7 +136,7 @@ class TradesAdapter(MessageAdapter):
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -157,7 +157,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel.startswith("books.")
+        return bool(isinstance(channel, str) and channel.startswith("books."))
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -166,7 +166,6 @@ class OrderBookAdapter(MessageAdapter):
 
         arg = payload.get("arg", {})
         data_list = payload.get("data", [])
-        action = payload.get("action", "update")  # "snapshot" or "update"
 
         if not isinstance(arg, dict) or not isinstance(data_list, list) or len(data_list) == 0:
             return out
@@ -207,9 +206,9 @@ class OrderBookAdapter(MessageAdapter):
             timestamp_ms = ob_data.get("ts", 0)
 
             timestamp = (
-                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                 if timestamp_ms
-                else datetime.now(timezone.utc)
+                else datetime.now(UTC)
             )
 
             out.append(
@@ -237,7 +236,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "open-interest"
+        return bool(channel == "open-interest")
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -268,9 +267,9 @@ class OpenInterestAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                 if timestamp_ms
-                else datetime.now(timezone.utc)
+                else datetime.now(UTC)
             )
 
             out.append(
@@ -297,7 +296,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "funding-rate"
+        return bool(channel == "funding-rate")
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -337,7 +336,7 @@ class FundingRateAdapter(MessageAdapter):
             out.append(
                 FundingRate(
                     symbol=symbol,
-                    funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                    funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                     funding_rate=Decimal(str(fr_str)),
                     mark_price=Decimal(str(mark_price_str)) if mark_price_str else None,
                 )
@@ -358,7 +357,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "mark-price"
+        return bool(channel == "mark-price")
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -389,9 +388,9 @@ class MarkPriceAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                 if timestamp_ms
-                else datetime.now(timezone.utc)
+                else datetime.now(UTC)
             )
 
             out.append(
@@ -421,7 +420,7 @@ class LiquidationsAdapter(MessageAdapter):
         if not isinstance(arg, dict):
             return False
         channel = arg.get("channel", "")
-        return channel == "liquidation"
+        return bool(channel == "liquidation")
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []
@@ -457,9 +456,9 @@ class LiquidationsAdapter(MessageAdapter):
                     continue
 
                 timestamp = (
-                    datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc)
+                    datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC)
                     if time_ms
-                    else datetime.now(timezone.utc)
+                    else datetime.now(UTC)
                 )
 
                 out.append(
@@ -484,4 +483,3 @@ class LiquidationsAdapter(MessageAdapter):
                 continue
 
         return out
-

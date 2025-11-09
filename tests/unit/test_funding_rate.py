@@ -1,6 +1,6 @@
 """Unit tests for FundingRate model."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -12,7 +12,7 @@ def test_funding_rate_valid():
     """Test valid FundingRate creation."""
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),
         mark_price=Decimal("50000.00"),
     )
@@ -26,7 +26,7 @@ def test_funding_rate_without_mark_price():
     """Test FundingRate creation without mark price."""
     fr = FundingRate(
         symbol="ETHUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.00015"),
     )
 
@@ -39,7 +39,7 @@ def test_funding_rate_percentage_conversion():
     """Test funding rate to percentage conversion."""
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),  # 0.01%
     )
 
@@ -50,7 +50,7 @@ def test_annual_rate_calculation():
     """Test annual rate calculation (3 funding per day × 365 days)."""
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),  # 0.01% per funding
     )
 
@@ -64,7 +64,7 @@ def test_positive_negative_funding():
     # Positive funding (longs pay shorts)
     positive_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),
     )
 
@@ -74,7 +74,7 @@ def test_positive_negative_funding():
     # Negative funding (shorts pay longs)
     negative_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("-0.0001"),
     )
 
@@ -84,7 +84,7 @@ def test_positive_negative_funding():
     # Zero funding
     zero_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0"),
     )
 
@@ -97,7 +97,7 @@ def test_high_funding_rate_detection():
     # High funding rate
     high_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0002"),  # 0.02%
     )
 
@@ -106,7 +106,7 @@ def test_high_funding_rate_detection():
     # Normal funding rate
     normal_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.00005"),  # 0.005%
     )
 
@@ -115,7 +115,7 @@ def test_high_funding_rate_detection():
     # High negative funding rate
     high_negative_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("-0.00015"),  # -0.015%
     )
 
@@ -124,7 +124,7 @@ def test_high_funding_rate_detection():
 
 def test_funding_time_ms():
     """Test funding_time_ms property."""
-    funding_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    funding_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     fr = FundingRate(
         symbol="BTCUSDT",
         funding_time=funding_time,
@@ -138,7 +138,7 @@ def test_funding_time_ms():
 def test_get_age_seconds():
     """Test age calculation."""
     # Recent funding
-    recent_time = datetime.now(timezone.utc) - timedelta(minutes=1)
+    recent_time = datetime.now(UTC) - timedelta(minutes=1)
     recent_fr = FundingRate(
         symbol="BTCUSDT",
         funding_time=recent_time,
@@ -149,7 +149,7 @@ def test_get_age_seconds():
     assert 55 < age < 65  # ~60 seconds, with some tolerance
 
     # Old funding
-    old_time = datetime.now(timezone.utc) - timedelta(hours=1)
+    old_time = datetime.now(UTC) - timedelta(hours=1)
     old_fr = FundingRate(
         symbol="BTCUSDT",
         funding_time=old_time,
@@ -163,7 +163,7 @@ def test_get_age_seconds():
 def test_is_fresh():
     """Test freshness check."""
     # Fresh funding
-    fresh_time = datetime.now(timezone.utc) - timedelta(seconds=30)
+    fresh_time = datetime.now(UTC) - timedelta(seconds=30)
     fresh_fr = FundingRate(
         symbol="BTCUSDT",
         funding_time=fresh_time,
@@ -173,7 +173,7 @@ def test_is_fresh():
     assert fresh_fr.is_fresh(max_age_seconds=300) is True
 
     # Stale funding
-    stale_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+    stale_time = datetime.now(UTC) - timedelta(minutes=10)
     stale_fr = FundingRate(
         symbol="BTCUSDT",
         funding_time=stale_time,
@@ -187,7 +187,7 @@ def test_to_dict():
     """Test to_dict conversion."""
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),
         mark_price=Decimal("50000.00"),
     )
@@ -207,7 +207,7 @@ def test_funding_rate_frozen():
     """Test that FundingRate is immutable."""
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),
     )
 
@@ -224,7 +224,7 @@ def test_funding_rate_edge_cases():
     # Very small funding rate
     small_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.00000001"),
     )
 
@@ -234,7 +234,7 @@ def test_funding_rate_edge_cases():
     # Very large funding rate (extreme market conditions)
     large_fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.01"),  # 1%
     )
 
@@ -248,7 +248,7 @@ def test_funding_rate_validation():
     # Valid funding rate
     fr = FundingRate(
         symbol="BTCUSDT",
-        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         funding_rate=Decimal("0.0001"),
     )
     assert fr.symbol == "BTCUSDT"
@@ -257,6 +257,6 @@ def test_funding_rate_validation():
     with pytest.raises(Exception):  # Pydantic validation error
         FundingRate(
             symbol="",
-            funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+            funding_time=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
             funding_rate=Decimal("0.0001"),
         )

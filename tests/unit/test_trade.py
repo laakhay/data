@@ -1,6 +1,6 @@
 """Unit tests for Trade model."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -15,7 +15,7 @@ def test_trade_valid():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         is_buyer_maker=False,
     )
 
@@ -32,7 +32,7 @@ def test_trade_value():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
 
@@ -48,7 +48,7 @@ def test_trade_with_quote_quantity():
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
         quote_quantity=Decimal("5001"),  # Slightly different due to rounding
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
 
@@ -64,7 +64,7 @@ def test_trade_side():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,  # Buyer NOT maker = buy market order
     )
 
@@ -78,7 +78,7 @@ def test_trade_side():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=True,  # Buyer IS maker = sell market order
     )
 
@@ -95,7 +95,7 @@ def test_trade_size_classification():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.01"),  # $500
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert small_trade.size_category == "small"
@@ -108,7 +108,7 @@ def test_trade_size_classification():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),  # $5k
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert medium_trade.size_category == "medium"
@@ -119,7 +119,7 @@ def test_trade_size_classification():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("1.1"),  # $55k (> $50k threshold)
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert large_trade.size_category == "large"
@@ -131,7 +131,7 @@ def test_trade_size_classification():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("100"),  # $5M
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert whale_trade.size_category == "whale"
@@ -146,13 +146,13 @@ def test_trade_freshness():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert fresh_trade.is_fresh(max_age_seconds=60) is True
 
     # Stale trade
-    stale_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+    stale_time = datetime.now(UTC) - timedelta(minutes=5)
     stale_trade = Trade(
         symbol="BTCUSDT",
         trade_id=12345,
@@ -166,7 +166,7 @@ def test_trade_freshness():
 
 def test_trade_get_age_seconds():
     """Test age calculation."""
-    old_time = datetime.now(timezone.utc) - timedelta(seconds=30)
+    old_time = datetime.now(UTC) - timedelta(seconds=30)
     trade = Trade(
         symbol="BTCUSDT",
         trade_id=12345,
@@ -187,7 +187,7 @@ def test_trade_to_dict():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         is_buyer_maker=False,
         is_best_match=True,
     )
@@ -206,7 +206,7 @@ def test_trade_to_dict():
 
 def test_trade_timestamp_ms():
     """Test timestamp milliseconds conversion."""
-    timestamp = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 0, 0, tzinfo=UTC)
     trade = Trade(
         symbol="BTCUSDT",
         trade_id=12345,
@@ -227,7 +227,7 @@ def test_trade_frozen():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
 
@@ -246,7 +246,7 @@ def test_trade_validation():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert trade.symbol == "BTCUSDT"
@@ -258,7 +258,7 @@ def test_trade_validation():
             trade_id=12345,
             price=Decimal("50000"),
             quantity=Decimal("0.1"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_buyer_maker=False,
         )
 
@@ -269,7 +269,7 @@ def test_trade_validation():
             trade_id=12345,
             price=Decimal("0"),
             quantity=Decimal("0.1"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_buyer_maker=False,
         )
 
@@ -280,7 +280,7 @@ def test_trade_validation():
             trade_id=12345,
             price=Decimal("50000"),
             quantity=Decimal("0"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             is_buyer_maker=False,
         )
 
@@ -293,7 +293,7 @@ def test_trade_optional_fields():
         trade_id=12345,
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
     )
     assert minimal_trade.is_best_match is None
@@ -306,7 +306,7 @@ def test_trade_optional_fields():
         price=Decimal("50000"),
         quantity=Decimal("0.1"),
         quote_quantity=Decimal("5000"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         is_buyer_maker=False,
         is_best_match=True,
     )

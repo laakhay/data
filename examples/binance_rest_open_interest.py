@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from laakhay.data.core import MarketType
 from laakhay.data.providers.binance import BinanceRESTProvider
@@ -30,7 +30,7 @@ async def main() -> None:
         for oi in data:
             print(f"{oi.timestamp.isoformat()} | {oi.symbol} | OI={oi.open_interest}")
     else:
-        end = datetime.now(timezone.utc)
+        end = datetime.now(UTC)
         start = end - timedelta(days=1)
         data = await rest.get_open_interest(
             args.symbol,

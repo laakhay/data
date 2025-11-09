@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from laakhay.data.core import MarketType
 from laakhay.data.providers.binance import BinanceRESTProvider
@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
 async def main() -> None:
     args = parse_args()
     rest = BinanceRESTProvider(market_type=MarketType.FUTURES)
-    end = datetime.now(timezone.utc)
+    end = datetime.now(UTC)
     start = end - timedelta(days=2)
     try:
         rates = await rest.get_funding_rate(

@@ -1,2 +1,1 @@
 """Hyperliquid WebSocket provider package."""
-

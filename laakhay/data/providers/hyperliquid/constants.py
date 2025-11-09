@@ -65,4 +65,3 @@ OI_PERIOD_MAP = {
 # Order book depth options
 # Hyperliquid l2Book returns at most 20 levels per side
 ORDER_BOOK_DEPTHS = [10, 20]
-

@@ -58,7 +58,7 @@ class BybitWebSocketTransport:
                         confirm_data = json.loads(confirm)
                         if confirm_data.get("success") is False:
                             logger.error(f"Subscription failed: {confirm_data}")
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning("No subscription confirmation received")
 
                     # Stream messages
@@ -66,12 +66,18 @@ class BybitWebSocketTransport:
                         try:
                             data = json.loads(message)
                             # Skip subscription confirmations and pings
-                            if isinstance(data, dict):
-                                if data.get("op") == "subscribe" or data.get("topic") == "":
-                                    continue
+                            if isinstance(data, dict) and (
+                                data.get("op") == "subscribe" or data.get("topic") == ""
+                            ):
+                                continue
                             yield data
                         except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse message: {message}")
+                            msg_str = (
+                                message.decode("utf-8", errors="replace")
+                                if isinstance(message, bytes)
+                                else str(message)
+                            )
+                            logger.warning(f"Failed to parse message: {msg_str}")
                             continue
 
             except asyncio.CancelledError:
@@ -84,4 +90,3 @@ class BybitWebSocketTransport:
                 logger.error(f"WebSocket error: {e}")
                 await asyncio.sleep(self._reconnect_delay)
                 self._reconnect_delay = min(self._reconnect_delay * 2, self.max_reconnect_delay)
-

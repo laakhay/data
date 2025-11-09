@@ -70,7 +70,7 @@ ORDER_BOOK_DEPTHS = [1, 5, 10, 20, 50, 100, 200, 400]
 
 def to_okx_symbol(symbol: str) -> str:
     """Convert symbol from BTCUSDT format to BTC-USDT format for OKX API.
-    
+
     OKX uses hyphenated format (BTC-USDT) while most exchanges use concatenated (BTCUSDT).
     This function handles the conversion.
     """
@@ -78,23 +78,22 @@ def to_okx_symbol(symbol: str) -> str:
     # If already hyphenated, return as-is
     if "-" in symbol:
         return symbol
-    
+
     # Common quote assets to detect
     quote_assets = ["USDT", "USDC", "BUSD", "BTC", "ETH", "BNB", "DAI", "TUSD", "USDP"]
-    
+
     for quote in quote_assets:
         if symbol.endswith(quote):
-            base = symbol[:-len(quote)]
+            base = symbol[: -len(quote)]
             return f"{base}-{quote}"
-    
+
     # If no match, return as-is (might be a non-standard symbol)
     return symbol
 
 
 def from_okx_symbol(symbol: str) -> str:
     """Convert symbol from BTC-USDT format to BTCUSDT format.
-    
+
     Reverse of to_okx_symbol - removes hyphens to normalize to standard format.
     """
     return symbol.replace("-", "").upper()
-

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import contextlib
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -58,7 +59,7 @@ class CandlesResponseAdapter(ResponseAdapter):
                 ts_ms = int(row[0])
                 bars.append(
                     Bar(
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open=Decimal(str(row[1])),
                         high=Decimal(str(row[2])),
                         low=Decimal(str(row[3])),
@@ -67,7 +68,7 @@ class CandlesResponseAdapter(ResponseAdapter):
                         is_closed=True,  # Historical data is always closed
                     )
                 )
-            except (ValueError, IndexError, TypeError) as e:
+            except (ValueError, IndexError, TypeError):
                 # Skip invalid rows
                 continue
 
@@ -121,30 +122,24 @@ class ExchangeInfoSymbolsAdapter(ResponseAdapter):
             if isinstance(price_filter, dict):
                 tick_size_str = price_filter.get("tickSize")
                 if tick_size_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         tick_size = Decimal(str(tick_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
             # Lot size filter
             lot_size_filter = inst.get("lotSizeFilter", {})
             if isinstance(lot_size_filter, dict):
                 step_size_str = lot_size_filter.get("qtyStep")
                 if step_size_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         step_size = Decimal(str(step_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
             # Min notional filter
             min_notional_filter = inst.get("minNotionalFilter", {})
             if isinstance(min_notional_filter, dict):
                 min_notional_str = min_notional_filter.get("notional")
                 if min_notional_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         min_notional = Decimal(str(min_notional_str))
-                    except (ValueError, TypeError):
-                        pass
 
             symbol_str = inst.get("symbol", "")
             base_asset = inst.get("baseCoin", "")
@@ -198,9 +193,9 @@ class OrderBookResponseAdapter(ResponseAdapter):
         last_update_id = result.get("u", 0)
 
         timestamp = (
-            datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
             if timestamp_ms
-            else datetime.now(timezone.utc)
+            else datetime.now(UTC)
         )
 
         return OrderBook(
@@ -230,9 +225,9 @@ class OpenInterestCurrentAdapter(ResponseAdapter):
             return [
                 OpenInterest(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
                     if timestamp_ms
-                    else datetime.now(timezone.utc),
+                    else datetime.now(UTC),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=None,
                 )
@@ -269,7 +264,7 @@ class OpenInterestHistAdapter(ResponseAdapter):
                 out.append(
                     OpenInterest(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open_interest=Decimal(str(oi_str)),
                         open_interest_value=None,
                     )
@@ -322,9 +317,9 @@ class RecentTradesAdapter(ResponseAdapter):
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                        timestamp=datetime.fromtimestamp(time_ms / 1000, tz=UTC)
                         if time_ms
-                        else datetime.now(timezone.utc),
+                        else datetime.now(UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -367,7 +362,7 @@ class FundingRateAdapter(ResponseAdapter):
                 out.append(
                     FundingRate(
                         symbol=symbol,
-                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         funding_rate=funding_rate,
                         mark_price=mark_price,
                     )
@@ -376,4 +371,3 @@ class FundingRateAdapter(ResponseAdapter):
                 continue
 
         return out
-

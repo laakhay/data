@@ -17,7 +17,7 @@ from ..constants import INTERVAL_MAP, WS_PUBLIC_URLS
 
 def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
     """OHLCV/Kline WebSocket endpoint spec.
-    
+
     Subscription: {"method": "subscribe", "subscription": {"type": "candle", "coin": "BTC", "interval": "15m"}}
     """
 
@@ -52,7 +52,7 @@ def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def trades_spec(market_type: MarketType) -> WSEndpointSpec:
     """Trade WebSocket endpoint spec.
-    
+
     Subscription: {"method": "subscribe", "subscription": {"type": "trades", "coin": "BTC"}}
     """
 
@@ -82,7 +82,7 @@ def trades_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
     """Order book WebSocket endpoint spec.
-    
+
     Subscription: {"method": "subscribe", "subscription": {"type": "l2Book", "coin": "BTC"}}
     """
 
@@ -112,7 +112,7 @@ def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def open_interest_spec(market_type: MarketType) -> WSEndpointSpec:
     """Open interest WebSocket endpoint spec (Futures only).
-    
+
     Note: Hyperliquid doesn't have direct OI subscription.
     OI is available via activeAssetCtx subscription.
     """
@@ -147,7 +147,7 @@ def open_interest_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def funding_rate_spec(market_type: MarketType) -> WSEndpointSpec:
     """Funding rate WebSocket endpoint spec (Futures only).
-    
+
     Note: Hyperliquid doesn't have direct funding rate subscription.
     Funding rates are in activeAssetCtx or userFundings (requires user address).
     """
@@ -182,7 +182,7 @@ def funding_rate_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def mark_price_spec(market_type: MarketType) -> WSEndpointSpec:
     """Mark price WebSocket endpoint spec (Futures only).
-    
+
     Note: Hyperliquid doesn't have direct mark price subscription.
     Mark price is available via activeAssetCtx subscription.
     """
@@ -217,7 +217,7 @@ def mark_price_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def liquidations_spec(market_type: MarketType) -> WSEndpointSpec:
     """Liquidations WebSocket endpoint spec (Futures only).
-    
+
     Note: Hyperliquid doesn't have public liquidation subscription.
     Liquidations are available via userEvents subscription (requires user address).
     For public liquidations, may need to monitor userEvents for multiple addresses.
@@ -250,4 +250,3 @@ def liquidations_spec(market_type: MarketType) -> WSEndpointSpec:
         build_combined_url=build_combined_url,
         build_single_url=build_single_url,
     )
-

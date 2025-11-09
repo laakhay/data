@@ -5,7 +5,6 @@ import argparse
 import asyncio
 
 from laakhay.data.clients.data_feed import DataFeed
-
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.providers.binance import BinanceProvider, BinanceRESTProvider
 

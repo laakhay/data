@@ -1,2 +1,1 @@
 """Bybit REST provider implementation."""
-

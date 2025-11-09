@@ -116,7 +116,8 @@ class HTTPClient:
                     continue
 
                 response.raise_for_status()
-                return await response.json()
+                json_result: dict[str, Any] = await response.json()
+                return json_result
 
     async def post(
         self,
@@ -165,7 +166,8 @@ class HTTPClient:
                     continue
 
                 response.raise_for_status()
-                return await response.json()
+                json_result: dict[str, Any] = await response.json()
+                return json_result
 
     async def close(self) -> None:
         """Close session."""

@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -58,7 +58,7 @@ async def test_ohlcv_feed_cache_and_subscribe_dynamic_symbols():
 
     # Prepare bars for BTC and ETH
     btc_bar = Bar(
-        timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 1, 1, tzinfo=UTC),
         open=Decimal("1"),
         high=Decimal("2"),
         low=Decimal("1"),
@@ -66,7 +66,7 @@ async def test_ohlcv_feed_cache_and_subscribe_dynamic_symbols():
         volume=Decimal("10"),
     )
     eth_bar = Bar(
-        timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 1, 1, tzinfo=UTC),
         open=Decimal("1"),
         high=Decimal("2"),
         low=Decimal("1"),

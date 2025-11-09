@@ -64,4 +64,3 @@ OI_PERIOD_MAP = {
 # Order book depth options
 # Bybit supports: 1, 25, 50, 100, 200
 ORDER_BOOK_DEPTHS = [1, 25, 50, 100, 200]
-

@@ -1,2 +1,1 @@
 """Hyperliquid REST provider package."""
-

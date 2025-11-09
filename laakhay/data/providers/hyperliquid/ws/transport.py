@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class HyperliquidWebSocketTransport:
     """WebSocket transport for Hyperliquid that handles subscription messages.
-    
+
     Hyperliquid likely uses subscription messages similar to Bybit.
     Format to be verified.
     """
@@ -60,12 +60,14 @@ class HyperliquidWebSocketTransport:
                         # Or "activeAssetCtx.BTC" -> {"type": "activeAssetCtx", "coin": "BTC"}
                         parts = topic.split(".")
                         if len(parts) >= 2:
-                            sub_type = parts[0]  # "candle", "trades", "l2Book", "activeAssetCtx", etc.
+                            sub_type = parts[
+                                0
+                            ]  # "candle", "trades", "l2Book", "activeAssetCtx", etc.
                             coin = parts[1]  # Symbol
                             subscription: dict[str, Any] = {"type": sub_type, "coin": coin}
                             if sub_type == "candle" and len(parts) >= 3:
                                 subscription["interval"] = parts[2]
-                            
+
                             subscribe_msg = {
                                 "method": "subscribe",
                                 "subscription": subscription,
@@ -95,7 +97,12 @@ class HyperliquidWebSocketTransport:
                             # Yield actual data messages
                             yield data
                         except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to parse message: {message[:100]}... Error: {e}")
+                            msg_str = (
+                                message.decode("utf-8", errors="replace")[:100]
+                                if isinstance(message, bytes)
+                                else str(message)[:100]
+                            )
+                            logger.warning(f"Failed to parse message: {msg_str}... Error: {e}")
                             continue
                         except Exception as e:
                             logger.error(f"Error processing message: {e}")
@@ -111,4 +118,3 @@ class HyperliquidWebSocketTransport:
                 logger.error(f"WebSocket error: {e}")
                 await asyncio.sleep(self._reconnect_delay)
                 self._reconnect_delay = min(self._reconnect_delay * 2, self.max_reconnect_delay)
-

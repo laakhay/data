@@ -1,6 +1,6 @@
 """Unit tests for Bar model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -11,7 +11,7 @@ from laakhay.data.models import Bar
 def test_bar_valid():
     """Test valid bar creation."""
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -30,7 +30,7 @@ def test_bar_valid():
 def test_bar_frozen():
     """Test bar is immutable."""
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -46,7 +46,7 @@ def test_bar_invalid_high_low():
     """Test validation: high must be >= low."""
     with pytest.raises(Exception):  # ValidationError
         Bar(
-            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
             open=Decimal("50000"),
             high=Decimal("49000"),  # high < low
             low=Decimal("51000"),
@@ -58,7 +58,7 @@ def test_bar_invalid_high_low():
 def test_bar_zero_volume():
     """Test volume can be zero."""
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("50000"),
         low=Decimal("50000"),
@@ -70,7 +70,7 @@ def test_bar_zero_volume():
 
 def test_bar_time_utilities():
     """Test time utility methods."""
-    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     bar = Bar(
         timestamp=timestamp,
         open=Decimal("50000"),
@@ -92,7 +92,7 @@ def test_bar_time_utilities():
 def test_bar_price_calculations():
     """Test price calculation properties."""
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -119,7 +119,7 @@ def test_bar_candle_properties():
     """Test candle pattern properties."""
     # Bullish bar
     bullish_bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -131,7 +131,7 @@ def test_bar_candle_properties():
 
     # Bearish bar
     bearish_bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50500"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -145,7 +145,7 @@ def test_bar_candle_properties():
 def test_bar_shadow_calculations():
     """Test shadow size calculations."""
     bar = Bar(
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),

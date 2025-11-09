@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -31,7 +31,7 @@ class OhlcvAdapter(MessageAdapter):
             out.append(
                 StreamingBar(
                     symbol=str(k.get("s") or data.get("s")),
-                    timestamp=datetime.fromtimestamp(int(k["t"]) / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(int(k["t"]) / 1000, tz=UTC),
                     open=Decimal(str(k["o"])),
                     high=Decimal(str(k["h"])),
                     low=Decimal(str(k["l"])),
@@ -65,7 +65,7 @@ class TradesAdapter(MessageAdapter):
                     price=Decimal(str(d["p"])),
                     quantity=Decimal(str(d["q"])),
                     quote_quantity=Decimal(str(d.get("q", "0"))) * Decimal(str(d["p"])),
-                    timestamp=datetime.fromtimestamp(int(d["T"]) / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(int(d["T"]) / 1000, tz=UTC),
                     is_buyer_maker=bool(d["m"]),
                     is_best_match=d.get("M"),
                 )
@@ -98,7 +98,7 @@ class OpenInterestAdapter(MessageAdapter):
                 out.append(
                     OpenInterest(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(event_time_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(event_time_ms / 1000, tz=UTC),
                         open_interest=Decimal(str(oi_str)),
                         open_interest_value=None,
                     )
@@ -124,7 +124,7 @@ class FundingRateAdapter(MessageAdapter):
             out.append(
                 FundingRate(
                     symbol=str(d["s"]),
-                    funding_time=datetime.fromtimestamp(int(d["T"]) / 1000, tz=timezone.utc),
+                    funding_time=datetime.fromtimestamp(int(d["T"]) / 1000, tz=UTC),
                     funding_rate=Decimal(str(d["r"])),
                     mark_price=Decimal(str(d["p"])) if "p" in d else None,
                 )
@@ -155,11 +155,9 @@ class MarkPriceAdapter(MessageAdapter):
                     estimated_settle_price=Decimal(str(d["P"])) if "P" in d else None,
                     last_funding_rate=Decimal(str(d["r"])) if "r" in d else None,
                     next_funding_time=(
-                        datetime.fromtimestamp(int(d["T"]) / 1000, tz=timezone.utc)
-                        if "T" in d
-                        else None
+                        datetime.fromtimestamp(int(d["T"]) / 1000, tz=UTC) if "T" in d else None
                     ),
-                    timestamp=datetime.fromtimestamp(int(d["E"]) / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(int(d["E"]) / 1000, tz=UTC),
                 )
             )
         except Exception:
@@ -188,7 +186,7 @@ class OrderBookAdapter(MessageAdapter):
                     last_update_id=int(d["u"]),
                     bids=bids if bids else [(Decimal("0"), Decimal("0"))],
                     asks=asks if asks else [(Decimal("0"), Decimal("0"))],
-                    timestamp=datetime.fromtimestamp(int(d["E"]) / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(int(d["E"]) / 1000, tz=UTC),
                 )
             )
         except Exception:
@@ -214,7 +212,7 @@ class LiquidationsAdapter(MessageAdapter):
             out.append(
                 Liquidation(
                     symbol=str(o["s"]),
-                    timestamp=datetime.fromtimestamp(event_time_ms / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(event_time_ms / 1000, tz=UTC),
                     side=o["S"],
                     order_type=o["o"],
                     time_in_force=o["f"],

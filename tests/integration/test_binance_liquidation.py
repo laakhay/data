@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -92,7 +92,7 @@ class TestBinanceLiquidationIntegration:
                         if count >= 3:  # Get a few liquidations
                             break
 
-            except (asyncio.TimeoutError, TimeoutError):
+            except TimeoutError:
                 # Timeout is expected, test passes
                 pass
 
@@ -124,7 +124,7 @@ class TestBinanceLiquidationIntegration:
         async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
             count = 0
             async for liquidation in provider.stream_liquidations():
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 # Timestamps should not be in the future
                 assert liquidation.timestamp <= now

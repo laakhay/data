@@ -1,6 +1,6 @@
 """Funding Rate data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +21,7 @@ class FundingRate(BaseModel):
     @property
     def funding_time_ms(self) -> int:
         """Funding time in milliseconds."""
-        return int(self.funding_time.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.funding_time.replace(tzinfo=UTC).timestamp() * 1000)
 
     @property
     def funding_rate_percentage(self) -> Decimal:
@@ -51,7 +51,7 @@ class FundingRate(BaseModel):
     def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since funding time."""
         if now_ms is None:
-            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            now_ms = int(datetime.now(UTC).timestamp() * 1000)
         return max(0.0, (now_ms - self.funding_time_ms) / 1000.0)
 
     def is_fresh(self, max_age_seconds: float = 300.0) -> bool:

@@ -16,8 +16,6 @@ def candles_spec() -> RestEndpointSpec:
         return "/api/v5/market/candles"
 
     def build_query(params: dict[str, Any]) -> dict[str, Any]:
-        market_type: MarketType = params["market_type"]
-        inst_type = INST_TYPE_MAP[market_type]
         interval_str = INTERVAL_MAP[params["interval"]]
 
         q: dict[str, Any] = {
@@ -220,4 +218,3 @@ def open_interest_hist_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
     )
-

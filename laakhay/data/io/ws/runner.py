@@ -96,8 +96,8 @@ class StreamRunner:
                 await queue.put(payload)
 
         tasks = [asyncio.create_task(pump(chunk)) for chunk in chunks]
-        last_emit: dict[str, float] = {}
-        last_close: dict[tuple[str, int], str] = {}
+        last_emit: dict[str, float] = {}  # type: ignore[no-redef]
+        last_close: dict[tuple[str, int], str] = {}  # type: ignore[no-redef]
         try:
             while True:
                 payload = await queue.get()

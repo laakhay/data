@@ -58,26 +58,30 @@ SYMBOL_TO_KRAKEN_FUTURES: dict[str, str] = {
 KRAKEN_FUTURES_TO_SYMBOL: dict[str, str] = {}
 for standard_symbol, kraken_symbol in SYMBOL_TO_KRAKEN_FUTURES.items():
     # Prefer USD over USDT (e.g., PI_XBTUSD -> BTCUSD not BTCUSDT)
-    if kraken_symbol not in KRAKEN_FUTURES_TO_SYMBOL or standard_symbol.endswith("USD") and not standard_symbol.endswith("USDT"):
+    if (
+        kraken_symbol not in KRAKEN_FUTURES_TO_SYMBOL
+        or standard_symbol.endswith("USD")
+        and not standard_symbol.endswith("USDT")
+    ):
         KRAKEN_FUTURES_TO_SYMBOL[kraken_symbol] = standard_symbol
 
 
 def normalize_symbol_to_kraken(symbol: str, market_type: MarketType) -> str:
     """Convert standard symbol format (BTCUSD) to Kraken format.
-    
+
     Args:
         symbol: Standard symbol format (e.g., BTCUSD or BTCUSDT)
         market_type: Market type (SPOT or FUTURES)
-        
+
     Returns:
         Kraken-formatted symbol (e.g., XBT/USD for Spot, PI_XBTUSD for Futures)
-        
+
     Note:
         For Spot: Kraken doesn't support USDT pairs, so USDT is converted to USD
         For Futures: USDT symbols map to USD-based perpetuals
     """
     symbol_upper = symbol.upper()
-    
+
     if market_type == MarketType.SPOT:
         # Kraken Spot doesn't support USDT pairs - convert to USD
         # First try direct mapping
@@ -102,16 +106,16 @@ def normalize_symbol_to_kraken(symbol: str, market_type: MarketType) -> str:
 
 def normalize_symbol_from_kraken(kraken_symbol: str, market_type: MarketType) -> str:
     """Convert Kraken symbol format to standard format (BTCUSD).
-    
+
     Args:
         kraken_symbol: Kraken-formatted symbol (e.g., XBT/USD or PI_XBTUSD)
         market_type: Market type (SPOT or FUTURES)
-        
+
     Returns:
         Standard symbol format (e.g., BTCUSD)
     """
     symbol_upper = kraken_symbol.upper()
-    
+
     if market_type == MarketType.SPOT:
         # Try direct mapping first
         if symbol_upper in KRAKEN_SPOT_TO_SYMBOL:
@@ -161,4 +165,3 @@ INTERVAL_REVERSE_MAP = {v: k for k, v in INTERVAL_MAP.items()}
 # Order book depth options
 # Kraken supports various depth levels, typically: 10, 25, 50, 100, 500, 1000
 ORDER_BOOK_DEPTHS = [10, 25, 50, 100, 500, 1000]
-

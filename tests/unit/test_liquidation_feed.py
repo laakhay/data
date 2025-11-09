@@ -1,7 +1,7 @@
 """Unit tests for LiquidationFeed using a fake provider."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -32,7 +32,7 @@ async def test_liquidation_feed_cache_and_subscribe():
 
     liq = Liquidation(
         symbol="BTCUSDT",
-        timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 1, 1, tzinfo=UTC),
         side="SELL",
         order_type="LIQUIDATION",
         time_in_force="IOC",

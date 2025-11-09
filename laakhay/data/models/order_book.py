@@ -1,6 +1,6 @@
 """Order Book data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -124,22 +124,22 @@ class OrderBook(BaseModel):
     @property
     def total_bid_volume(self) -> Decimal:
         """Total volume on bid side."""
-        return sum(qty for _, qty in self.bids)
+        return Decimal(sum(qty for _, qty in self.bids))
 
     @property
     def total_ask_volume(self) -> Decimal:
         """Total volume on ask side."""
-        return sum(qty for _, qty in self.asks)
+        return Decimal(sum(qty for _, qty in self.asks))
 
     @property
     def total_bid_value(self) -> Decimal:
         """Total value on bid side (price * quantity)."""
-        return sum(price * qty for price, qty in self.bids)
+        return Decimal(sum(price * qty for price, qty in self.bids))
 
     @property
     def total_ask_value(self) -> Decimal:
         """Total value on ask side (price * quantity)."""
-        return sum(price * qty for price, qty in self.asks)
+        return Decimal(sum(price * qty for price, qty in self.asks))
 
     @property
     def bid_ask_volume_ratio(self) -> Decimal | None:
@@ -258,12 +258,12 @@ class OrderBook(BaseModel):
     @property
     def timestamp_ms(self) -> int:
         """Timestamp in milliseconds."""
-        return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.timestamp.replace(tzinfo=UTC).timestamp() * 1000)
 
     def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since snapshot."""
         if now_ms is None:
-            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            now_ms = int(datetime.now(UTC).timestamp() * 1000)
         return max(0.0, (now_ms - self.timestamp_ms) / 1000.0)
 
     def is_fresh(self, max_age_seconds: float = 5.0) -> bool:

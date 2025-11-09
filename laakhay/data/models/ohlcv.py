@@ -41,7 +41,7 @@ class OHLCV(BaseModel):
         """Get bar by index."""
         return self.bars[index]
 
-    def __iter__(self) -> Iterator[Bar]:
+    def __iter__(self) -> Iterator[Bar]:  # type: ignore[override]
         """Iterate over bars."""
         return iter(self.bars)
 
@@ -85,7 +85,7 @@ class OHLCV(BaseModel):
     @property
     def total_volume(self) -> Decimal | None:
         """Total volume across all bars."""
-        return sum(bar.volume for bar in self.bars) if self.bars else None
+        return Decimal(sum(bar.volume for bar in self.bars)) if self.bars else None
 
     # --- Convenience methods ---
     def get_bars_in_range(self, start: datetime, end: datetime) -> "OHLCV":

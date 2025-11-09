@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import contextlib
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -63,7 +64,7 @@ class CandlesResponseAdapter(ResponseAdapter):
 
                 bars.append(
                     Bar(
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open=Decimal(str(row[1])),
                         high=Decimal(str(row[2])),
                         low=Decimal(str(row[3])),
@@ -72,7 +73,7 @@ class CandlesResponseAdapter(ResponseAdapter):
                         is_closed=True,  # Historical data is always closed
                     )
                 )
-            except (ValueError, IndexError, TypeError) as e:
+            except (ValueError, IndexError, TypeError):
                 # Skip invalid rows
                 continue
 
@@ -121,24 +122,18 @@ class ExchangeInfoSymbolsAdapter(ResponseAdapter):
 
             tick_size_str = inst.get("tickSz")
             if tick_size_str:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     tick_size = Decimal(str(tick_size_str))
-                except (ValueError, TypeError):
-                    pass
 
             lot_size_str = inst.get("lotSz")
             if lot_size_str:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     step_size = Decimal(str(lot_size_str))
-                except (ValueError, TypeError):
-                    pass
 
             min_notional_str = inst.get("minSz")
             if min_notional_str:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     min_notional = Decimal(str(min_notional_str))
-                except (ValueError, TypeError):
-                    pass
 
             symbol_str = inst.get("instId", "")
             base_asset = inst.get("baseCcy", "")
@@ -208,9 +203,9 @@ class OrderBookResponseAdapter(ResponseAdapter):
         timestamp_ms = ob_data.get("ts", 0)
 
         timestamp = (
-            datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+            datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
             if timestamp_ms
-            else datetime.now(timezone.utc)
+            else datetime.now(UTC)
         )
 
         return OrderBook(
@@ -248,9 +243,9 @@ class OpenInterestCurrentAdapter(ResponseAdapter):
             return [
                 OpenInterest(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                     if timestamp_ms
-                    else datetime.now(timezone.utc),
+                    else datetime.now(UTC),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=Decimal(str(oi_value_str)) if oi_value_str else None,
                 )
@@ -292,7 +287,7 @@ class OpenInterestHistAdapter(ResponseAdapter):
                 out.append(
                     OpenInterest(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open_interest=Decimal(str(oi_str)),
                         open_interest_value=Decimal(str(oi_value_str)) if oi_value_str else None,
                     )
@@ -344,9 +339,9 @@ class RecentTradesAdapter(ResponseAdapter):
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc)
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC)
                         if time_ms
-                        else datetime.now(timezone.utc),
+                        else datetime.now(UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -394,7 +389,7 @@ class FundingRateAdapter(ResponseAdapter):
                 out.append(
                     FundingRate(
                         symbol=symbol,
-                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         funding_rate=funding_rate,
                         mark_price=mark_price,
                     )
@@ -403,4 +398,3 @@ class FundingRateAdapter(ResponseAdapter):
                 continue
 
         return out
-

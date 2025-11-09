@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -18,7 +18,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("kline.")
+        return bool(isinstance(topic, str) and topic.startswith("kline."))
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -54,10 +54,13 @@ class OhlcvAdapter(MessageAdapter):
                 if not all([start_ms, open_price, high_price, low_price, close_price, volume]):
                     continue
 
+                if start_ms is None:
+                    continue
+
                 out.append(
                     StreamingBar(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(int(start_ms) / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(start_ms) / 1000, tz=UTC),
                         open=Decimal(str(open_price)),
                         high=Decimal(str(high_price)),
                         low=Decimal(str(low_price)),
@@ -79,7 +82,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("publicTrade.")
+        return bool(isinstance(topic, str) and topic.startswith("publicTrade."))
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -128,7 +131,7 @@ class TradesAdapter(MessageAdapter):
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -146,7 +149,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("orderbook.")
+        return bool(isinstance(topic, str) and topic.startswith("orderbook."))
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -154,7 +157,6 @@ class OrderBookAdapter(MessageAdapter):
             return out
 
         topic = payload.get("topic", "")
-        msg_type = payload.get("type", "")
         data = payload.get("data", {})
         ts_ms = payload.get("ts", 0)
 
@@ -194,13 +196,10 @@ class OrderBookAdapter(MessageAdapter):
 
             # Handle both snapshot and delta types
             # Bybit uses "u" for update ID or "seq" for sequence number
-            last_update_id = data.get("u", data.get("seq", 0))
+            last_update_id_raw = data.get("u") or data.get("seq") or 0
+            last_update_id = int(last_update_id_raw) if last_update_id_raw is not None else 0
 
-            timestamp = (
-                datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
-                if ts_ms
-                else datetime.now(timezone.utc)
-            )
+            timestamp = datetime.fromtimestamp(ts_ms / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
 
             out.append(
                 OrderBook(
@@ -224,7 +223,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("openInterest.")
+        return bool(isinstance(topic, str) and topic.startswith("openInterest."))
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -254,9 +253,9 @@ class OpenInterestAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                 if timestamp_ms
-                else datetime.now(timezone.utc)
+                else datetime.now(UTC)
             )
 
             out.append(
@@ -280,7 +279,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("funding.")
+        return bool(isinstance(topic, str) and topic.startswith("funding."))
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -311,7 +310,7 @@ class FundingRateAdapter(MessageAdapter):
             out.append(
                 FundingRate(
                     symbol=symbol,
-                    funding_time=datetime.fromtimestamp(int(ts_ms) / 1000, tz=timezone.utc),
+                    funding_time=datetime.fromtimestamp(int(ts_ms) / 1000, tz=UTC),
                     funding_rate=Decimal(str(fr_str)),
                     mark_price=Decimal(str(mark_price_str)) if mark_price_str else None,
                 )
@@ -329,7 +328,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("markPrice.")
+        return bool(isinstance(topic, str) and topic.startswith("markPrice."))
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -360,13 +359,11 @@ class MarkPriceAdapter(MessageAdapter):
                 return []
 
             timestamp = (
-                datetime.fromtimestamp(int(ts_ms) / 1000, tz=timezone.utc)
-                if ts_ms
-                else datetime.now(timezone.utc)
+                datetime.fromtimestamp(int(ts_ms) / 1000, tz=UTC) if ts_ms else datetime.now(UTC)
             )
 
             next_funding_time = (
-                datetime.fromtimestamp(int(next_funding_time_ms) / 1000, tz=timezone.utc)
+                datetime.fromtimestamp(int(next_funding_time_ms) / 1000, tz=UTC)
                 if next_funding_time_ms
                 else None
             )
@@ -395,7 +392,7 @@ class LiquidationsAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         topic = payload.get("topic", "")
-        return topic.startswith("liquidation.")
+        return bool(isinstance(topic, str) and topic.startswith("liquidation."))
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []
@@ -440,9 +437,9 @@ class LiquidationsAdapter(MessageAdapter):
                     continue
 
                 timestamp = (
-                    datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc)
+                    datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC)
                     if time_ms
-                    else datetime.now(timezone.utc)
+                    else datetime.now(UTC)
                 )
 
                 out.append(
@@ -463,8 +460,7 @@ class LiquidationsAdapter(MessageAdapter):
                         trade_id=None,
                     )
                 )
-            except (ValueError, TypeError, KeyError) as e:
+            except (ValueError, TypeError, KeyError):
                 continue
 
         return out
-

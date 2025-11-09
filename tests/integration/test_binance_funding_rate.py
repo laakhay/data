@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -67,7 +67,7 @@ class TestBinanceFundingRateIntegration:
         """Test fetching funding rates with time range."""
         async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
             # Get funding rates from last 7 days
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             start_time = end_time - timedelta(days=7)
 
             fr_list = await provider.get_funding_rate(
@@ -218,7 +218,7 @@ class TestBinanceFundingRateIntegration:
                         count += 1
                         if count >= 5:
                             break
-            except (asyncio.TimeoutError, TimeoutError):
+            except TimeoutError:
                 pass  # Expected, test passes
 
     @pytest.mark.asyncio

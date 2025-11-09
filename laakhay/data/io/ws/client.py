@@ -1,6 +1,7 @@
 """WebSocket client for real-time data streaming."""
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Callable
 from enum import Enum
@@ -103,6 +104,8 @@ class WebSocketClient:
 
     async def _receive_loop(self) -> None:
         """Receive messages from WebSocket."""
+        if self._ws is None:
+            return
         try:
             async for message in self._ws:
                 try:
@@ -160,10 +163,8 @@ class WebSocketClient:
         # Cancel receive task
         if self._receive_task and not self._receive_task.done():
             self._receive_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._receive_task
-            except asyncio.CancelledError:
-                pass
 
         # Close WebSocket connection
         if self._ws and not self._ws.closed:
@@ -181,7 +182,7 @@ class WebSocketClient:
         Raises:
             RuntimeError: If not connected
         """
-        if not self.is_connected:
+        if not self.is_connected or self._ws is None:
             raise RuntimeError("WebSocket not connected")
 
         import json

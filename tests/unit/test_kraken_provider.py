@@ -1,26 +1,19 @@
 """Unit tests for Kraken REST/WS providers (decoupled)."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import (
-    Bar,
-    FundingRate,
-    Liquidation,
-    MarkPrice,
     OHLCV,
-    OpenInterest,
+    Bar,
     OrderBook,
     SeriesMeta,
-    Symbol,
-    Trade,
 )
 from laakhay.data.providers import (
     KrakenProvider,
@@ -47,12 +40,13 @@ from laakhay.data.providers.kraken.rest.endpoints import (
     exchange_info_spec,
     funding_rate_spec,
     open_interest_current_spec,
-    open_interest_hist_spec,
     order_book_spec,
     recent_trades_spec,
 )
 from laakhay.data.providers.kraken.ws.adapters import (
     FundingRateAdapter as WSFundingRateAdapter,
+)
+from laakhay.data.providers.kraken.ws.adapters import (
     LiquidationsAdapter,
     MarkPriceAdapter,
     OhlcvAdapter,
@@ -62,14 +56,15 @@ from laakhay.data.providers.kraken.ws.adapters import (
 )
 from laakhay.data.providers.kraken.ws.endpoints import (
     funding_rate_spec as ws_funding_rate_spec,
-    liquidations_spec,
-    mark_price_spec,
+)
+from laakhay.data.providers.kraken.ws.endpoints import (
     ohlcv_spec,
     open_interest_spec,
-    order_book_spec as ws_order_book_spec,
     trades_spec,
 )
-
+from laakhay.data.providers.kraken.ws.endpoints import (
+    order_book_spec as ws_order_book_spec,
+)
 
 # ============================================================================
 # Provider Instantiation Tests
@@ -111,6 +106,7 @@ def test_kraken_provider_instantiation_futures():
 
 def test_kraken_provider_context_manager_closes():
     """Unified provider works as context manager."""
+
     async def run() -> bool:
         async with KrakenProvider() as provider:
             return provider.market_type == MarketType.SPOT
@@ -171,7 +167,7 @@ def test_symbol_normalization_fallback():
     # Unknown symbol should use fallback logic
     result_spot = normalize_symbol_to_kraken("UNKNOWNUSD", MarketType.SPOT)
     assert "USD" in result_spot or result_spot == "UNKNOWNUSD"
-    
+
     result_futures = normalize_symbol_to_kraken("UNKNOWNUSD", MarketType.FUTURES)
     assert result_futures.startswith("PI_") or result_futures == "PI_UNKNOWNUSD"
 
@@ -206,8 +202,8 @@ def test_candles_spec_builds_path_futures():
 def test_candles_spec_builds_query_spot():
     """Candles endpoint spec builds correct query for Spot."""
     spec = candles_spec()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+
     params = {
         "market_type": MarketType.SPOT,
         "symbol": "BTCUSD",
@@ -215,7 +211,7 @@ def test_candles_spec_builds_query_spot():
         "start_time": base_time,
         "limit": 100,
     }
-    
+
     query = spec.build_query(params)
     assert query["pair"] == "XBT/USD"
     assert query["interval"] == "15"
@@ -226,8 +222,8 @@ def test_candles_spec_builds_query_spot():
 def test_candles_spec_builds_query_futures():
     """Candles endpoint spec builds correct query for Futures."""
     spec = candles_spec()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+
     params = {
         "market_type": MarketType.FUTURES,
         "symbol": "BTCUSD",
@@ -236,7 +232,7 @@ def test_candles_spec_builds_query_futures():
         "end_time": base_time + timedelta(hours=1),
         "limit": 1000,
     }
-    
+
     query = spec.build_query(params)
     assert query["interval"] == "15"
     assert query["start"] == int(base_time.timestamp() * 1000)
@@ -248,10 +244,10 @@ def test_exchange_info_spec_builds_path():
     """Exchange info endpoint spec builds correct path."""
     spec_spot = exchange_info_spec()
     spec_futures = exchange_info_spec()
-    
+
     params_spot = {"market_type": MarketType.SPOT}
     params_futures = {"market_type": MarketType.FUTURES}
-    
+
     assert spec_spot.build_path(params_spot) == "/0/public/AssetPairs"
     assert spec_futures.build_path(params_futures) == "/instruments"
 
@@ -264,7 +260,7 @@ def test_order_book_spec_builds_query_spot():
         "symbol": "BTCUSD",
         "limit": 100,
     }
-    
+
     query = spec.build_query(params)
     assert query["pair"] == "XBT/USD"
     assert query["count"] == 100
@@ -278,7 +274,7 @@ def test_order_book_spec_builds_query_futures():
         "symbol": "BTCUSD",
         "limit": 100,
     }
-    
+
     query = spec.build_query(params)
     assert query["symbol"] == "PI_XBTUSD"
     assert query["depth"] == 100  # Mapped to nearest supported depth
@@ -288,7 +284,7 @@ def test_recent_trades_spec_builds_query():
     """Recent trades endpoint spec builds correct query."""
     spec_spot = recent_trades_spec()
     spec_futures = recent_trades_spec()
-    
+
     params_spot = {
         "market_type": MarketType.SPOT,
         "symbol": "BTCUSD",
@@ -299,10 +295,10 @@ def test_recent_trades_spec_builds_query():
         "symbol": "BTCUSD",
         "limit": 50,
     }
-    
+
     query_spot = spec_spot.build_query(params_spot)
     query_futures = spec_futures.build_query(params_futures)
-    
+
     assert query_spot["pair"] == "XBT/USD"
     assert query_spot["count"] == 50
     assert query_futures["symbol"] == "PI_XBTUSD"
@@ -316,7 +312,7 @@ def test_funding_rate_spec_raises_for_spot():
         "market_type": MarketType.SPOT,
         "symbol": "BTCUSD",
     }
-    
+
     with pytest.raises(ValueError, match="Futures-only"):
         spec.build_path(params)
 
@@ -328,7 +324,7 @@ def test_open_interest_spec_raises_for_spot():
         "market_type": MarketType.SPOT,
         "symbol": "BTCUSD",
     }
-    
+
     with pytest.raises(ValueError, match="Futures-only"):
         spec.build_path(params)
 
@@ -352,7 +348,16 @@ def test_extract_result_handles_futures_response():
     """_extract_result handles Kraken Futures response format."""
     response = {
         "result": "ok",
-        "candles": [{"time": 1704110400000, "open": "50000", "high": "50100", "low": "49900", "close": "50050", "volume": "100"}],
+        "candles": [
+            {
+                "time": 1704110400000,
+                "open": "50000",
+                "high": "50100",
+                "low": "49900",
+                "close": "50050",
+                "volume": "100",
+            }
+        ],
     }
     result = _extract_result(response, MarketType.FUTURES)
     assert "candles" in result
@@ -368,9 +373,9 @@ def test_extract_result_raises_on_error():
 def test_candles_response_adapter_parses_spot_response():
     """Candles adapter parses valid Kraken Spot response."""
     adapter = CandlesResponseAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     ts = int(base_time.timestamp())
-    
+
     response = {
         "error": [],
         "result": {
@@ -379,18 +384,18 @@ def test_candles_response_adapter_parses_spot_response():
             ],
         },
     }
-    
+
     params = {
         "market_type": MarketType.SPOT,
         "symbol": "BTCUSD",
         "interval": Timeframe.M15,
     }
     result = adapter.parse(response, params)
-    
+
     assert isinstance(result, OHLCV)
     assert result.meta.symbol == "BTCUSD"
     assert len(result.bars) == 1
-    
+
     bar = result.bars[0]
     assert bar.timestamp == base_time
     assert bar.open == Decimal("50000.5")
@@ -403,9 +408,9 @@ def test_candles_response_adapter_parses_spot_response():
 def test_candles_response_adapter_parses_futures_response():
     """Candles adapter parses valid Kraken Futures response."""
     adapter = CandlesResponseAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     response = {
         "result": "ok",
         "candles": [
@@ -419,14 +424,14 @@ def test_candles_response_adapter_parses_futures_response():
             },
         ],
     }
-    
+
     params = {
         "market_type": MarketType.FUTURES,
         "symbol": "BTCUSD",
         "interval": Timeframe.M15,
     }
     result = adapter.parse(response, params)
-    
+
     assert isinstance(result, OHLCV)
     assert len(result.bars) == 1
     assert result.bars[0].timestamp == base_time
@@ -435,7 +440,7 @@ def test_candles_response_adapter_parses_futures_response():
 def test_exchange_info_symbols_adapter_parses_spot():
     """Exchange info adapter parses Spot symbols."""
     adapter = ExchangeInfoSymbolsAdapter()
-    
+
     response = {
         "error": [],
         "result": {
@@ -451,10 +456,10 @@ def test_exchange_info_symbols_adapter_parses_spot():
             },
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 1
     assert result[0].symbol == "BTCUSD"  # Normalized
     assert result[0].base_asset == "BTC"  # XBT converted to BTC
@@ -464,7 +469,7 @@ def test_exchange_info_symbols_adapter_parses_spot():
 def test_exchange_info_symbols_adapter_parses_futures():
     """Exchange info adapter parses Futures symbols."""
     adapter = ExchangeInfoSymbolsAdapter()
-    
+
     response = {
         "result": "ok",
         "instruments": [
@@ -479,10 +484,10 @@ def test_exchange_info_symbols_adapter_parses_futures():
             },
         ],
     }
-    
+
     params = {"market_type": MarketType.FUTURES}
     result = adapter.parse(response, params)
-    
+
     assert len(result) >= 1  # At least one instrument parsed
     # Find the BTCUSD symbol
     btc_symbol = next((s for s in result if s.symbol == "BTCUSD"), None)
@@ -495,7 +500,7 @@ def test_exchange_info_symbols_adapter_parses_futures():
 def test_order_book_response_adapter_parses_spot():
     """Order book adapter parses Spot response."""
     adapter = OrderBookResponseAdapter()
-    
+
     response = {
         "error": [],
         "result": {
@@ -505,10 +510,10 @@ def test_order_book_response_adapter_parses_spot():
             },
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert isinstance(result, OrderBook)
     assert result.symbol == "BTCUSD"
     assert len(result.bids) == 2
@@ -519,7 +524,7 @@ def test_order_book_response_adapter_parses_spot():
 def test_order_book_response_adapter_parses_futures():
     """Order book adapter parses Futures response."""
     adapter = OrderBookResponseAdapter()
-    
+
     response = {
         "result": "ok",
         "orderBook": {
@@ -529,10 +534,10 @@ def test_order_book_response_adapter_parses_futures():
             "sequenceNumber": 12345,
         },
     }
-    
+
     params = {"market_type": MarketType.FUTURES, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert isinstance(result, OrderBook)
     assert result.last_update_id == 12345
     assert len(result.bids) == 2
@@ -541,9 +546,9 @@ def test_order_book_response_adapter_parses_futures():
 def test_recent_trades_adapter_parses_spot():
     """Recent trades adapter parses Spot response."""
     adapter = RecentTradesAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_float = base_time.timestamp()
-    
+
     response = {
         "error": [],
         "result": {
@@ -553,10 +558,10 @@ def test_recent_trades_adapter_parses_spot():
             ],
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 2
     assert result[0].symbol == "BTCUSD"
     assert result[0].price == Decimal("50000.5")
@@ -566,9 +571,9 @@ def test_recent_trades_adapter_parses_spot():
 def test_recent_trades_adapter_parses_futures():
     """Recent trades adapter parses Futures response."""
     adapter = RecentTradesAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     response = {
         "result": "ok",
         "history": [
@@ -581,10 +586,10 @@ def test_recent_trades_adapter_parses_futures():
             },
         ],
     }
-    
+
     params = {"market_type": MarketType.FUTURES, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 1
     assert result[0].symbol == "BTCUSD"
     assert result[0].price == Decimal("50000.5")
@@ -594,9 +599,9 @@ def test_recent_trades_adapter_parses_futures():
 def test_funding_rate_adapter_parses_futures():
     """Funding rate adapter parses Futures response."""
     adapter = FundingRateAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     response = {
         "result": "ok",
         "fundingRates": [
@@ -607,10 +612,10 @@ def test_funding_rate_adapter_parses_futures():
             },
         ],
     }
-    
+
     params = {"market_type": MarketType.FUTURES, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 1
     assert result[0].funding_rate == Decimal("0.0001")
     assert result[0].mark_price == Decimal("50000.0")
@@ -619,9 +624,9 @@ def test_funding_rate_adapter_parses_futures():
 def test_open_interest_current_adapter_parses_futures():
     """Open interest current adapter parses Futures response."""
     adapter = OpenInterestCurrentAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     response = {
         "result": "ok",
         "ticker": {
@@ -630,10 +635,10 @@ def test_open_interest_current_adapter_parses_futures():
             "serverTime": time_ms,
         },
     }
-    
+
     params = {"market_type": MarketType.FUTURES, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 1
     assert result[0].open_interest == Decimal("1000000.5")
     assert result[0].open_interest_value == Decimal("50000000000")
@@ -642,9 +647,9 @@ def test_open_interest_current_adapter_parses_futures():
 def test_open_interest_hist_adapter_parses_futures():
     """Open interest historical adapter parses Futures response."""
     adapter = OpenInterestHistAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     response = {
         "result": "ok",
         "openInterest": [
@@ -655,10 +660,10 @@ def test_open_interest_hist_adapter_parses_futures():
             },
         ],
     }
-    
+
     params = {"market_type": MarketType.FUTURES, "symbol": "BTCUSD"}
     result = adapter.parse(response, params)
-    
+
     assert len(result) == 1
     assert result[0].open_interest == Decimal("1000000.5")
 
@@ -671,20 +676,20 @@ def test_open_interest_hist_adapter_parses_futures():
 def test_ohlcv_spec_builds_stream_name_spot():
     """OHLCV WebSocket spec builds correct stream name for Spot."""
     spec = ohlcv_spec(MarketType.SPOT)
-    
+
     params = {"interval": Timeframe.M15}
     stream_name = spec.build_stream_name("BTCUSD", params)
-    
+
     assert stream_name == "ohlc-XBT/USD-15"
 
 
 def test_ohlcv_spec_builds_stream_name_futures():
     """OHLCV WebSocket spec builds correct stream name for Futures."""
     spec = ohlcv_spec(MarketType.FUTURES)
-    
+
     params = {"interval": Timeframe.M15}
     stream_name = spec.build_stream_name("BTCUSD", params)
-    
+
     assert stream_name == "ohlc-PI_XBTUSD-15"
 
 
@@ -692,7 +697,7 @@ def test_trades_spec_builds_stream_name():
     """Trades WebSocket spec builds correct stream name."""
     spec_spot = trades_spec(MarketType.SPOT)
     spec_futures = trades_spec(MarketType.FUTURES)
-    
+
     assert spec_spot.build_stream_name("BTCUSD", {}) == "trade-XBT/USD"
     assert spec_futures.build_stream_name("BTCUSD", {}) == "trade-PI_XBTUSD"
 
@@ -701,19 +706,19 @@ def test_order_book_ws_spec_builds_stream_name():
     """Order book WebSocket spec builds correct stream name."""
     spec_spot = ws_order_book_spec(MarketType.SPOT)
     spec_futures = ws_order_book_spec(MarketType.FUTURES)
-    
+
     params = {"update_speed": "100ms"}
     assert spec_spot.build_stream_name("BTCUSD", params) == "book-XBT/USD-10"
     assert spec_futures.build_stream_name("BTCUSD", params) == "book-PI_XBTUSD-10"
 
 
-def test_open_interest_spec_raises_for_spot():
+def test_open_interest_ws_spec_raises_for_spot():
     """Open interest WebSocket spec raises ValueError for Spot."""
     with pytest.raises(ValueError, match="Futures-only"):
         open_interest_spec(MarketType.SPOT)
 
 
-def test_funding_rate_spec_raises_for_spot():
+def test_funding_rate_ws_spec_raises_for_spot():
     """Funding rate WebSocket spec raises ValueError for Spot."""
     with pytest.raises(ValueError, match="Futures-only"):
         ws_funding_rate_spec(MarketType.SPOT)
@@ -727,7 +732,7 @@ def test_funding_rate_spec_raises_for_spot():
 def test_ohlcv_adapter_is_relevant():
     """OHLCV adapter correctly identifies relevant messages."""
     adapter = OhlcvAdapter()
-    
+
     assert adapter.is_relevant({"channel": "ohlc", "symbol": "PI_XBTUSD"})
     assert adapter.is_relevant({"event": "ohlc", "data": []})
     assert not adapter.is_relevant({"channel": "trade", "data": []})
@@ -736,9 +741,9 @@ def test_ohlcv_adapter_is_relevant():
 def test_ohlcv_adapter_parses_valid_message():
     """OHLCV adapter parses valid candle message."""
     adapter = OhlcvAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     payload = {
         "channel": "ohlc",
         "symbol": "PI_XBTUSD",
@@ -754,9 +759,9 @@ def test_ohlcv_adapter_parses_valid_message():
             },
         ],
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     bar = result[0]
     assert bar.symbol == "BTCUSD"  # Normalized
@@ -768,9 +773,9 @@ def test_ohlcv_adapter_parses_valid_message():
 def test_trades_adapter_parses_valid_message():
     """Trades adapter parses valid trades message."""
     adapter = TradesAdapter()
-    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     time_ms = int(base_time.timestamp() * 1000)
-    
+
     payload = {
         "channel": "trade",
         "symbol": "PI_XBTUSD",
@@ -784,9 +789,9 @@ def test_trades_adapter_parses_valid_message():
             },
         ],
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     trade = result[0]
     assert trade.symbol == "BTCUSD"  # Normalized
@@ -797,7 +802,7 @@ def test_trades_adapter_parses_valid_message():
 def test_order_book_adapter_parses_valid_message():
     """Order book adapter parses valid book message."""
     adapter = OrderBookAdapter()
-    
+
     payload = {
         "channel": "book",
         "symbol": "PI_XBTUSD",
@@ -808,9 +813,9 @@ def test_order_book_adapter_parses_valid_message():
         },
         "time": 1704110400000,
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     ob = result[0]
     assert ob.symbol == "BTCUSD"  # Normalized
@@ -822,7 +827,7 @@ def test_order_book_adapter_parses_valid_message():
 def test_open_interest_adapter_parses_valid_message():
     """Open interest adapter parses valid message."""
     adapter = OpenInterestAdapter()
-    
+
     payload = {
         "channel": "open_interest",
         "symbol": "PI_XBTUSD",
@@ -832,9 +837,9 @@ def test_open_interest_adapter_parses_valid_message():
             "time": 1704110400000,
         },
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     oi = result[0]
     assert oi.symbol == "BTCUSD"  # Normalized
@@ -844,7 +849,7 @@ def test_open_interest_adapter_parses_valid_message():
 def test_funding_rate_adapter_parses_valid_message():
     """Funding rate adapter parses valid message."""
     adapter = WSFundingRateAdapter()
-    
+
     payload = {
         "channel": "funding_rate",
         "symbol": "PI_XBTUSD",
@@ -854,9 +859,9 @@ def test_funding_rate_adapter_parses_valid_message():
             "time": 1704110400000,
         },
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     fr = result[0]
     assert fr.symbol == "BTCUSD"  # Normalized
@@ -866,7 +871,7 @@ def test_funding_rate_adapter_parses_valid_message():
 def test_mark_price_adapter_parses_valid_message():
     """Mark price adapter parses valid message."""
     adapter = MarkPriceAdapter()
-    
+
     payload = {
         "channel": "ticker",
         "symbol": "PI_XBTUSD",
@@ -878,9 +883,9 @@ def test_mark_price_adapter_parses_valid_message():
         },
         "time": 1704110400000,
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     mp = result[0]
     assert mp.symbol == "BTCUSD"  # Normalized
@@ -891,7 +896,7 @@ def test_mark_price_adapter_parses_valid_message():
 def test_liquidations_adapter_parses_valid_message():
     """Liquidations adapter parses valid message."""
     adapter = LiquidationsAdapter()
-    
+
     payload = {
         "channel": "liquidation",
         "symbol": "PI_XBTUSD",
@@ -902,9 +907,9 @@ def test_liquidations_adapter_parses_valid_message():
             "time": 1704110400000,
         },
     }
-    
+
     result = adapter.parse(payload)
-    
+
     assert len(result) == 1
     liq = result[0]
     assert liq.symbol == "BTCUSD"  # Normalized
@@ -921,7 +926,7 @@ def test_liquidations_adapter_parses_valid_message():
 async def test_kraken_rest_get_candles_chunking(monkeypatch):
     """REST provider handles chunking for large candle requests."""
     provider = KrakenRESTProvider()
-    base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
         bars = []
@@ -968,7 +973,7 @@ async def test_kraken_rest_get_candles_chunking(monkeypatch):
 async def test_kraken_rest_get_candles_respects_max_chunks(monkeypatch):
     """REST provider respects max_chunks limit."""
     provider = KrakenRESTProvider()
-    base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
         bars = []
@@ -1017,7 +1022,7 @@ async def test_kraken_rest_get_candles_respects_max_chunks(monkeypatch):
 def test_candles_adapter_handles_missing_fields():
     """Candles adapter handles missing fields gracefully."""
     adapter = CandlesResponseAdapter()
-    
+
     response = {
         "error": [],
         "result": {
@@ -1027,10 +1032,10 @@ def test_candles_adapter_handles_missing_fields():
             ],
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT, "symbol": "BTCUSD", "interval": Timeframe.M15}
     result = adapter.parse(response, params)
-    
+
     # First row skipped, second parsed
     assert len(result.bars) == 1
 
@@ -1038,7 +1043,7 @@ def test_candles_adapter_handles_missing_fields():
 def test_trades_adapter_handles_missing_fields():
     """Trades adapter handles missing fields gracefully."""
     adapter = TradesAdapter()
-    
+
     payload = {
         "channel": "trade",
         "symbol": "PI_XBTUSD",
@@ -1047,9 +1052,9 @@ def test_trades_adapter_handles_missing_fields():
             {"time": 1704110400000, "price": "50000", "size": "1.0", "side": "buy"},
         ],
     }
-    
+
     result = adapter.parse(payload)
-    
+
     # First trade skipped, second parsed
     assert len(result) == 1
 
@@ -1057,7 +1062,7 @@ def test_trades_adapter_handles_missing_fields():
 def test_order_book_adapter_handles_empty_levels():
     """Order book adapter handles empty levels gracefully."""
     adapter = OrderBookAdapter()
-    
+
     payload = {
         "channel": "book",
         "symbol": "PI_XBTUSD",
@@ -1066,9 +1071,9 @@ def test_order_book_adapter_handles_empty_levels():
             "asks": [],
         },
     }
-    
+
     result = adapter.parse(payload)
-    
+
     # Should return empty list or OrderBook with default values
     if len(result) > 0:
         assert result[0].bids == [(Decimal("0"), Decimal("0"))]
@@ -1078,7 +1083,7 @@ def test_order_book_adapter_handles_empty_levels():
 def test_exchange_info_adapter_filters_by_status():
     """Exchange info adapter filters symbols by status."""
     adapter = ExchangeInfoSymbolsAdapter()
-    
+
     response = {
         "error": [],
         "result": {
@@ -1086,10 +1091,10 @@ def test_exchange_info_adapter_filters_by_status():
             "ETH/USD": {"status": "cancel_only", "base": "ETH", "quote": "USD"},
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT}
     result = adapter.parse(response, params)
-    
+
     # Only "online" status should be included
     assert len(result) == 1
     assert result[0].symbol == "BTCUSD"
@@ -1098,7 +1103,7 @@ def test_exchange_info_adapter_filters_by_status():
 def test_exchange_info_adapter_filters_by_quote_asset():
     """Exchange info adapter filters symbols by quote asset."""
     adapter = ExchangeInfoSymbolsAdapter()
-    
+
     response = {
         "error": [],
         "result": {
@@ -1106,10 +1111,10 @@ def test_exchange_info_adapter_filters_by_quote_asset():
             "XBT/USDT": {"status": "online", "base": "XBT", "quote": "USDT"},
         },
     }
-    
+
     params = {"market_type": MarketType.SPOT, "quote_asset": "USD"}
     result = adapter.parse(response, params)
-    
+
     # Only USD pairs should be included
     assert len(result) == 1
     assert result[0].quote_asset == "USD"
@@ -1123,10 +1128,10 @@ def test_exchange_info_adapter_filters_by_quote_asset():
 def test_kraken_provider_unified_interface():
     """Unified provider correctly delegates to REST and WS providers."""
     provider = KrakenProvider(market_type=MarketType.SPOT)
-    
+
     assert provider._rest.market_type == MarketType.SPOT
     assert provider._ws.market_type == MarketType.SPOT
-    
+
     # Verify both providers are accessible
     assert isinstance(provider._rest, KrakenRESTProvider)
     assert isinstance(provider._ws, KrakenWSProvider)
@@ -1134,13 +1139,10 @@ def test_kraken_provider_unified_interface():
 
 def test_kraken_ws_provider_stream_ohlcv_format():
     """WebSocket provider uses correct stream format for OHLCV."""
-    provider = KrakenWSProvider(market_type=MarketType.FUTURES)
-    
     # Verify endpoint spec is correct
     spec = ohlcv_spec(MarketType.FUTURES)
     stream_name = spec.build_stream_name("BTCUSD", {"interval": Timeframe.M15})
-    
+
     assert stream_name == "ohlc-PI_XBTUSD-15"
     assert spec.combined_supported is True
     assert spec.max_streams_per_connection >= 1
-

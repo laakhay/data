@@ -1,6 +1,6 @@
 """Unit tests for OpenInterest model."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -12,7 +12,7 @@ def test_open_interest_valid():
     """Test valid OpenInterest creation."""
     oi = OpenInterest(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
         open_interest=Decimal("12345.67"),
         open_interest_value=Decimal("500000000.50"),
     )
@@ -25,7 +25,7 @@ def test_open_interest_frozen():
     """Test OpenInterest is immutable."""
     oi = OpenInterest(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open_interest=Decimal("1000"),
     )
     with pytest.raises(Exception):  # ValidationError or AttributeError
@@ -37,7 +37,7 @@ def test_open_interest_negative_values():
     with pytest.raises(Exception):  # ValidationError
         OpenInterest(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
             open_interest=Decimal("-1000"),  # negative OI
         )
 
@@ -46,7 +46,7 @@ def test_open_interest_zero_values():
     """Test zero values are allowed."""
     oi = OpenInterest(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open_interest=Decimal("0"),
         open_interest_value=Decimal("0"),
     )
@@ -58,7 +58,7 @@ def test_open_interest_optional_fields():
     """Test optional fields can be None."""
     oi = OpenInterest(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
         open_interest=Decimal("1000"),
         open_interest_value=None,
         sum_open_interest=None,
@@ -71,7 +71,7 @@ def test_open_interest_optional_fields():
 
 def test_open_interest_timestamp_ms():
     """Test timestamp_ms property."""
-    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     oi = OpenInterest(
         symbol="BTCUSDT",
         timestamp=timestamp,
@@ -83,7 +83,7 @@ def test_open_interest_timestamp_ms():
 
 def test_open_interest_get_age_seconds():
     """Test get_age_seconds calculation."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     past_time = now - timedelta(minutes=5)  # 5 minutes ago
 
     oi = OpenInterest(
@@ -99,7 +99,7 @@ def test_open_interest_get_age_seconds():
 
 def test_open_interest_is_fresh():
     """Test is_fresh method."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     recent_time = now - timedelta(seconds=30)  # 30 seconds ago
     old_time = now - timedelta(minutes=5)  # 5 minutes ago
 
@@ -122,7 +122,7 @@ def test_open_interest_is_fresh():
 
 def test_open_interest_to_dict():
     """Test to_dict serialization."""
-    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     oi = OpenInterest(
         symbol="BTCUSDT",
         timestamp=timestamp,
@@ -146,7 +146,7 @@ def test_open_interest_to_dict():
 
 def test_open_interest_to_dict_with_none():
     """Test to_dict with None values."""
-    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     oi = OpenInterest(
         symbol="BTCUSDT",
         timestamp=timestamp,

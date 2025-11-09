@@ -8,7 +8,7 @@ Message format: {"channel": "candle", "data": [...]} or {"channel": "trades", "d
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -19,7 +19,7 @@ from ....models.streaming_bar import StreamingBar
 
 class OhlcvAdapter(MessageAdapter):
     """Adapter for candle/OHLCV WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "candle", "data": [{"t": open_ms, "T": close_ms, "s": coin, "i": interval, "o": open, "c": close, "h": high, "l": low, "v": volume, "n": trades}, ...]}
     """
 
@@ -27,7 +27,7 @@ class OhlcvAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "candle"
+        return bool(channel == "candle")
 
     def parse(self, payload: Any) -> list[StreamingBar]:
         out: list[StreamingBar] = []
@@ -54,7 +54,9 @@ class OhlcvAdapter(MessageAdapter):
                 close_price = item.get("c")
                 volume = item.get("v")
 
-                if not all([open_ms, symbol, open_price, high_price, low_price, close_price, volume]):
+                if not all(
+                    [open_ms, symbol, open_price, high_price, low_price, close_price, volume]
+                ):
                     continue
 
                 # Candle is closed if close_ms exists and is different from open_ms
@@ -63,7 +65,7 @@ class OhlcvAdapter(MessageAdapter):
                 out.append(
                     StreamingBar(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(open_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(open_ms / 1000, tz=UTC),
                         open=Decimal(str(open_price)),
                         high=Decimal(str(high_price)),
                         low=Decimal(str(low_price)),
@@ -80,7 +82,7 @@ class OhlcvAdapter(MessageAdapter):
 
 class TradesAdapter(MessageAdapter):
     """Adapter for trade WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "trades", "data": [{"coin": "BTC", "side": "A"/"B", "px": price, "sz": size, "hash": hash, "time": ms, "tid": trade_id, "users": [buyer, seller]}, ...]}
     """
 
@@ -88,7 +90,7 @@ class TradesAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "trades"
+        return bool(channel == "trades")
 
     def parse(self, payload: Any) -> list[Trade]:
         out: list[Trade] = []
@@ -130,7 +132,7 @@ class TradesAdapter(MessageAdapter):
                         price=price,
                         quantity=quantity,
                         quote_quantity=quote_quantity,
-                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(int(time_ms) / 1000, tz=UTC),
                         is_buyer_maker=is_buyer_maker,
                         is_best_match=None,
                     )
@@ -143,7 +145,7 @@ class TradesAdapter(MessageAdapter):
 
 class OrderBookAdapter(MessageAdapter):
     """Adapter for orderbook WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "l2Book", "data": {"coin": "BTC", "time": ms, "levels": [[bids...], [asks...]]}}
     Where levels[0] = bids, levels[1] = asks
     Each level: {"px": price, "sz": size, "n": number of orders}
@@ -153,7 +155,7 @@ class OrderBookAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "l2Book"
+        return bool(channel == "l2Book")
 
     def parse(self, payload: Any) -> list[OrderBook]:
         out: list[OrderBook] = []
@@ -235,9 +237,9 @@ class OrderBookAdapter(MessageAdapter):
         # Extract timestamp
         timestamp_ms = data.get("time", 0)
         timestamp = (
-            datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+            datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
             if timestamp_ms
-            else datetime.now(timezone.utc)
+            else datetime.now(UTC)
         )
 
         out.append(
@@ -255,7 +257,7 @@ class OrderBookAdapter(MessageAdapter):
 
 class OpenInterestAdapter(MessageAdapter):
     """Adapter for open interest WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "activeAssetCtx", "data": {"coin": "BTC", "ctx": {"openInterest": value, ...}}}
     Open interest is part of activeAssetCtx context data.
     """
@@ -264,7 +266,7 @@ class OpenInterestAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[OpenInterest]:
         out: list[OpenInterest] = []
@@ -278,7 +280,7 @@ class OpenInterestAdapter(MessageAdapter):
 
         symbol = data.get("coin", "").upper()
         ctx = data.get("ctx", {})
-        
+
         if not symbol or not isinstance(ctx, dict):
             return out
 
@@ -293,9 +295,9 @@ class OpenInterestAdapter(MessageAdapter):
             out.append(
                 OpenInterest(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                     if timestamp_ms
-                    else datetime.now(timezone.utc),
+                    else datetime.now(UTC),
                     open_interest=Decimal(str(oi_value)),
                     open_interest_value=None,
                 )
@@ -308,7 +310,7 @@ class OpenInterestAdapter(MessageAdapter):
 
 class FundingRateAdapter(MessageAdapter):
     """Adapter for funding rate WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "activeAssetCtx", "data": {"coin": "BTC", "ctx": {"funding": rate, ...}}}
     Funding rate is part of activeAssetCtx context data.
     """
@@ -317,7 +319,7 @@ class FundingRateAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[FundingRate]:
         out: list[FundingRate] = []
@@ -331,14 +333,14 @@ class FundingRateAdapter(MessageAdapter):
 
         symbol = data.get("coin", "").upper()
         ctx = data.get("ctx", {})
-        
+
         if not symbol or not isinstance(ctx, dict):
             return out
 
         # Extract funding rate from context
         funding_rate = ctx.get("funding")
         mark_price = ctx.get("markPx")
-        
+
         if funding_rate is None:
             return out
 
@@ -347,9 +349,9 @@ class FundingRateAdapter(MessageAdapter):
             out.append(
                 FundingRate(
                     symbol=symbol,
-                    funding_time=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                    funding_time=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                     if timestamp_ms
-                    else datetime.now(timezone.utc),
+                    else datetime.now(UTC),
                     funding_rate=Decimal(str(funding_rate)),
                     mark_price=Decimal(str(mark_price)) if mark_price is not None else None,
                 )
@@ -362,7 +364,7 @@ class FundingRateAdapter(MessageAdapter):
 
 class MarkPriceAdapter(MessageAdapter):
     """Adapter for mark price WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "activeAssetCtx", "data": {"coin": "BTC", "ctx": {"markPx": price, ...}}}
     Mark price is part of activeAssetCtx context data.
     """
@@ -371,7 +373,7 @@ class MarkPriceAdapter(MessageAdapter):
         if not isinstance(payload, dict):
             return False
         channel = payload.get("channel", "")
-        return channel == "activeAssetCtx"
+        return bool(channel == "activeAssetCtx")
 
     def parse(self, payload: Any) -> list[MarkPrice]:
         out: list[MarkPrice] = []
@@ -385,7 +387,7 @@ class MarkPriceAdapter(MessageAdapter):
 
         symbol = data.get("coin", "").upper()
         ctx = data.get("ctx", {})
-        
+
         if not symbol or not isinstance(ctx, dict):
             return out
 
@@ -399,9 +401,9 @@ class MarkPriceAdapter(MessageAdapter):
             out.append(
                 MarkPrice(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                    timestamp=datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
                     if timestamp_ms
-                    else datetime.now(timezone.utc),
+                    else datetime.now(UTC),
                     mark_price=Decimal(str(mark_price)),
                 )
             )
@@ -413,7 +415,7 @@ class MarkPriceAdapter(MessageAdapter):
 
 class LiquidationsAdapter(MessageAdapter):
     """Adapter for liquidation WebSocket messages.
-    
+
     Hyperliquid format: {"channel": "userEvents", "data": {"liquidation": {"lid": id, "liquidator": addr, "liquidated_user": addr, "liquidated_ntl_pos": pos, "liquidated_account_value": value}}}
     Note: Liquidations are only available via userEvents subscription (requires user address).
     Public liquidations are not directly available.
@@ -427,7 +429,7 @@ class LiquidationsAdapter(MessageAdapter):
             return False
         # Check if data contains liquidation event
         data = payload.get("data", {})
-        return isinstance(data, dict) and "liquidation" in data
+        return bool(isinstance(data, dict) and "liquidation" in data)
 
     def parse(self, payload: Any) -> list[Liquidation]:
         out: list[Liquidation] = []
@@ -444,21 +446,18 @@ class LiquidationsAdapter(MessageAdapter):
         if not isinstance(liquidation_data, dict):
             return out
 
-        try:
+        from contextlib import suppress
+
+        with suppress(ValueError, TypeError, KeyError):
             # Hyperliquid format: {"lid": id, "liquidator": addr, "liquidated_user": addr, "liquidated_ntl_pos": pos, "liquidated_account_value": value}
             # Note: This doesn't include symbol, price, size directly - may need additional API call
             # For now, return minimal liquidation info
-            liquidated_ntl_pos = liquidation_data.get("liquidated_ntl_pos", "0")
-            
             # Symbol not available in liquidation event - would need to query user positions
             # For now, use placeholder or skip
             # This is a limitation of Hyperliquid's API - liquidations require user context
-            
+
             # Skip for now - liquidations need user address and position data
             # This would require additional API calls to get full liquidation details
             pass
-        except (ValueError, TypeError, KeyError):
-            pass
 
         return out
-

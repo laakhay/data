@@ -1,7 +1,7 @@
 """Integration tests for Binance Open Interest functionality."""
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -65,7 +65,7 @@ async def test_get_historical_open_interest():
 async def test_get_open_interest_with_time_range():
     """Test fetching historical OI with time range."""
     async with BinanceProvider(market_type=MarketType.FUTURES) as provider:
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         start_time = end_time - timedelta(hours=2)
 
         oi_list = await provider.get_open_interest(

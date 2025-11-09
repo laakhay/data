@@ -1,7 +1,7 @@
 """Unit tests for OKX REST/WS providers (decoupled)."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -59,7 +59,7 @@ def test_okx_provider_context_manager_closes():
 @pytest.mark.asyncio
 async def test_okx_rest_get_candles_chunking(monkeypatch):
     provider = OKXRESTProvider()
-    base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
         bars = []
@@ -109,7 +109,7 @@ async def test_okx_rest_get_candles_chunking(monkeypatch):
 @pytest.mark.asyncio
 async def test_okx_rest_get_candles_respects_max_chunks(monkeypatch):
     provider = OKXRESTProvider()
-    base_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
         bars = []
@@ -148,4 +148,3 @@ async def test_okx_rest_get_candles_respects_max_chunks(monkeypatch):
 
     assert len(result.bars) == 600
     assert len(calls) == 2
-

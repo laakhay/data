@@ -1,6 +1,6 @@
 """Unit tests for OrderBook model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -15,7 +15,7 @@ def test_orderbook_valid():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1.5")), (Decimal("49900"), Decimal("2.0"))],
         asks=[(Decimal("50100"), Decimal("1.0")), (Decimal("50200"), Decimal("1.5"))],
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
     )
 
     assert ob.symbol == "BTCUSDT"
@@ -30,7 +30,7 @@ def test_orderbook_best_prices():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1")), (Decimal("49900"), Decimal("2"))],
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("2"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert ob.best_bid_price == Decimal("50000")
@@ -46,7 +46,7 @@ def test_orderbook_spread():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50100"), Decimal("1"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert ob.spread == Decimal("100")
@@ -67,7 +67,7 @@ def test_orderbook_tight_wide_spread():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50001"), Decimal("1"))],  # 1 dollar spread
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert tight_ob.is_tight_spread is True
     assert tight_ob.is_wide_spread is False
@@ -78,7 +78,7 @@ def test_orderbook_tight_wide_spread():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50300"), Decimal("1"))],  # 300 dollar spread
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert wide_ob.is_tight_spread is False
     assert wide_ob.is_wide_spread is True
@@ -91,7 +91,7 @@ def test_orderbook_volume():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1")), (Decimal("49900"), Decimal("2"))],
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("1.5"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert ob.total_bid_volume == Decimal("3")  # 1 + 2
@@ -105,7 +105,7 @@ def test_orderbook_value():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1")), (Decimal("49900"), Decimal("2"))],
         asks=[(Decimal("50100"), Decimal("1")), (Decimal("50200"), Decimal("1.5"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Bid value: 50000*1 + 49900*2 = 149800
@@ -123,7 +123,7 @@ def test_orderbook_imbalance():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("5"))],
         asks=[(Decimal("50100"), Decimal("5"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert balanced_ob.imbalance == Decimal("0")
     assert balanced_ob.market_pressure == "neutral"
@@ -134,7 +134,7 @@ def test_orderbook_imbalance():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("8"))],
         asks=[(Decimal("50100"), Decimal("2"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert bid_heavy_ob.imbalance > Decimal("0")
     assert bid_heavy_ob.is_bid_heavy is True
@@ -146,7 +146,7 @@ def test_orderbook_imbalance():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("2"))],
         asks=[(Decimal("50100"), Decimal("8"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert ask_heavy_ob.imbalance < Decimal("0")
     assert ask_heavy_ob.is_ask_heavy is True
@@ -168,7 +168,7 @@ def test_orderbook_depth_percentage():
             (Decimal("50200"), Decimal("2")),  # 0.2% away
             (Decimal("50600"), Decimal("5")),  # 1% away
         ],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Within 0.5% of mid price
@@ -185,14 +185,14 @@ def test_orderbook_is_fresh():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50100"), Decimal("1"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert fresh_ob.is_fresh(max_age_seconds=10) is True
 
     # Stale orderbook
     from datetime import timedelta
 
-    stale_time = datetime.now(timezone.utc) - timedelta(seconds=30)
+    stale_time = datetime.now(UTC) - timedelta(seconds=30)
     stale_ob = OrderBook(
         symbol="BTCUSDT",
         last_update_id=123456,
@@ -210,7 +210,7 @@ def test_orderbook_to_dict():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50100"), Decimal("1"))],
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
     )
 
     data = ob.to_dict(include_levels=False)
@@ -233,7 +233,7 @@ def test_orderbook_frozen():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("1"))],
         asks=[(Decimal("50100"), Decimal("1"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     with pytest.raises(Exception):  # Pydantic frozen validation error
@@ -249,7 +249,7 @@ def test_orderbook_validation():
             last_update_id=123456,
             bids=[(Decimal("50000"), Decimal("1"))],
             asks=[(Decimal("50100"), Decimal("1"))],
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     # Empty bids/asks should fail
@@ -259,7 +259,7 @@ def test_orderbook_validation():
             last_update_id=123456,
             bids=[],
             asks=[(Decimal("50100"), Decimal("1"))],
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     # Invalid price (non-positive) should fail
@@ -269,7 +269,7 @@ def test_orderbook_validation():
             last_update_id=123456,
             bids=[(Decimal("-50000"), Decimal("1"))],
             asks=[(Decimal("50100"), Decimal("1"))],
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
 
@@ -281,6 +281,6 @@ def test_orderbook_depth_score():
         last_update_id=123456,
         bids=[(Decimal("50000"), Decimal("0.001"))],  # $50 worth
         asks=[(Decimal("50100"), Decimal("0.001"))],
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert thin_ob.depth_score in ["thin", "moderate", "deep"]

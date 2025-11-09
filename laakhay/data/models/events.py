@@ -36,7 +36,7 @@ class ConnectionEvent:
     timestamp: datetime
     symbols_count: int = 0
     error: str | None = None
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -52,7 +52,7 @@ class DataEvent:
     symbol: str
     bar: Bar | None = None
     connection_id: str | None = None
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -92,6 +92,6 @@ class DataEvent:
                 "status": connection_event.status.value,
                 "symbols_count": connection_event.symbols_count,
                 "error": connection_event.error,
-                **connection_event.metadata,
+                **(connection_event.metadata or {}),
             },
         )

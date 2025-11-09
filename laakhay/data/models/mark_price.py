@@ -1,6 +1,6 @@
 """Mark Price and Index Price data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -97,28 +97,28 @@ class MarkPrice(BaseModel):
     @property
     def timestamp_ms(self) -> int:
         """Timestamp in milliseconds."""
-        return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.timestamp.replace(tzinfo=UTC).timestamp() * 1000)
 
     @property
     def next_funding_time_ms(self) -> int | None:
         """Next funding time in milliseconds."""
         if self.next_funding_time is None:
             return None
-        return int(self.next_funding_time.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.next_funding_time.replace(tzinfo=UTC).timestamp() * 1000)
 
     @property
     def seconds_to_funding(self) -> int | None:
         """Seconds until next funding time."""
         if self.next_funding_time is None:
             return None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         delta = self.next_funding_time - now
         return max(0, int(delta.total_seconds()))
 
     def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since timestamp."""
         if now_ms is None:
-            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            now_ms = int(datetime.now(UTC).timestamp() * 1000)
         return max(0.0, (now_ms - self.timestamp_ms) / 1000.0)
 
     def is_fresh(self, max_age_seconds: float = 10.0) -> bool:

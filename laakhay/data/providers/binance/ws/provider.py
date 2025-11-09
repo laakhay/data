@@ -50,7 +50,7 @@ class BinanceWSProvider(WSProvider):
             "liquidations": (liquidations_spec, LiquidationsAdapter),
         }
 
-    async def stream_ohlcv(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
         interval: Timeframe,
@@ -70,7 +70,7 @@ class BinanceWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_ohlcv_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
         interval: Timeframe,

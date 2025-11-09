@@ -59,7 +59,7 @@ class KrakenWSProvider(WSProvider):
             "liquidations": (liquidations_spec, LiquidationsAdapter),
         }
 
-    async def stream_ohlcv(  # type: ignore[override]
+    async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
         interval: Timeframe,
@@ -78,7 +78,7 @@ class KrakenWSProvider(WSProvider):
         ):
             yield obj
 
-    async def stream_ohlcv_multi(  # type: ignore[override]
+    async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
         interval: Timeframe,
@@ -126,6 +126,8 @@ class KrakenWSProvider(WSProvider):
             last_emit: dict[str, float] = {}
             last_close: dict[tuple[str, int], str] = {}
 
+            if self._ws_url is None:
+                raise RuntimeError("WebSocket URL not configured")
             transport = KrakenWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(channel_chunks[0]):
                 if not adapter.is_relevant(payload):
@@ -154,14 +156,16 @@ class KrakenWSProvider(WSProvider):
         queue: asyncio.Queue = asyncio.Queue()
 
         async def pump(channels_chunk: list[str]):
+            if self._ws_url is None:
+                raise RuntimeError("WebSocket URL not configured")
             transport = KrakenWebSocketTransport(url=self._ws_url)
             async for payload in transport.stream(channels_chunk):
                 if adapter.is_relevant(payload):
                     await queue.put(payload)
 
         tasks = [asyncio.create_task(pump(chunk)) for chunk in channel_chunks]
-        last_emit: dict[str, float] = {}
-        last_close: dict[tuple[str, int], str] = {}
+        last_emit: dict[str, float] = {}  # type: ignore[no-redef]
+        last_close: dict[tuple[str, int], str] = {}  # type: ignore[no-redef]
 
         try:
             while True:
@@ -264,7 +268,6 @@ class KrakenWSProvider(WSProvider):
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         # Kraken liquidations require subscribing to specific symbols
         # Subscribe to major symbols for liquidations
-        symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AVAXUSDT', 'ADAUSDT']
+        symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT"]
         async for obj in self.stream("liquidations", symbols, {}):
             yield obj
-

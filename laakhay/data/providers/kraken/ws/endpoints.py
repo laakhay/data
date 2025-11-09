@@ -20,7 +20,7 @@ def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
         interval: Timeframe = params["interval"]
         interval_str = INTERVAL_MAP[interval]
         kraken_symbol = normalize_symbol_to_kraken(symbol, market_type)
-        
+
         if market_type == MarketType.FUTURES:
             # Kraken Futures format: ohlc-{symbol}-{interval}
             return f"ohlc-{kraken_symbol}-{interval_str}"
@@ -57,7 +57,7 @@ def trades_spec(market_type: MarketType) -> WSEndpointSpec:
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
         kraken_symbol = normalize_symbol_to_kraken(symbol, market_type)
-        
+
         if market_type == MarketType.FUTURES:
             # Kraken Futures format: trade-{symbol}
             return f"trade-{kraken_symbol}"
@@ -100,7 +100,7 @@ def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
             depth = "25"
         else:
             depth = "10"  # Default
-        
+
         if market_type == MarketType.FUTURES:
             # Kraken Futures format: book-{symbol}-{depth}
             return f"book-{kraken_symbol}-{depth}"
@@ -251,4 +251,3 @@ def liquidations_spec(market_type: MarketType) -> WSEndpointSpec:
         build_combined_url=build_combined_url,
         build_single_url=build_single_url,
     )
-

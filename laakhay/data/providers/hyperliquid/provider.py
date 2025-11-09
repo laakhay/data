@@ -69,7 +69,7 @@ class HyperliquidProvider(BaseProvider):
             limit=limit,
         )
 
-    async def get_symbols(
+    async def get_symbols(  # type: ignore[override]
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         return await self._rest.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
@@ -194,4 +194,3 @@ class HyperliquidProvider(BaseProvider):
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
-
