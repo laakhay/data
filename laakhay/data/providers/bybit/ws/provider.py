@@ -264,7 +264,7 @@ class BybitWSProvider(WSProvider):
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         # Bybit liquidations require subscribing to specific symbols
         # Subscribe to major symbols for liquidations
-        symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT', 'DOGEUSDT', 'MATICUSDT']
+        symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AVAXUSDT', 'ADAUSDT']
         async for obj in self.stream("liquidations", symbols, {}):
             yield obj
 
