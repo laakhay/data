@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import contextlib
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -15,7 +16,7 @@ from ..constants import normalize_symbol_from_kraken
 
 def _extract_result(response: Any, market_type: MarketType) -> Any:
     """Extract result from Kraken's response wrapper.
-    
+
     Kraken API responses vary:
     - Spot: {error: [], result: {...}}
     - Futures: May have different wrapper or direct result
@@ -36,12 +37,12 @@ def _extract_result(response: Any, market_type: MarketType) -> Any:
         if result_value == "ok" and market_type == MarketType.FUTURES:
             return response
         return result_value
-    
+
     # Kraken Futures may return direct result or wrapped
     # Check for common error indicators
     if "error" in response and response["error"]:
         raise DataError(f"Kraken API error: {response.get('error', 'Unknown error')}")
-    
+
     # Return response itself if no wrapper
     return response
 
@@ -53,15 +54,17 @@ class CandlesResponseAdapter(ResponseAdapter):
         market_type: MarketType = params["market_type"]
         symbol = params["symbol"].upper()
         interval = params["interval"]
-        
+
         result = _extract_result(response, market_type)
 
         if market_type == MarketType.FUTURES:
             # Kraken Futures format: {result: "ok", candles: [{time, open, high, low, close, volume}, ...]}
             candles_data = result.get("candles", []) if isinstance(result, dict) else result
-            
+
             if not isinstance(candles_data, list):
-                raise DataError(f"Invalid candles response format: expected list, got {type(candles_data)}")
+                raise DataError(
+                    f"Invalid candles response format: expected list, got {type(candles_data)}"
+                )
 
             meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
             bars = []
@@ -82,7 +85,7 @@ class CandlesResponseAdapter(ResponseAdapter):
 
                     bars.append(
                         Bar(
-                            timestamp=datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc),
+                            timestamp=datetime.fromtimestamp(time_ms / 1000, tz=UTC),
                             open=Decimal(str(open_price)),
                             high=Decimal(str(high_price)),
                             low=Decimal(str(low_price)),
@@ -103,12 +106,14 @@ class CandlesResponseAdapter(ResponseAdapter):
             pair_data = None
             if isinstance(result, dict):
                 # Find first key that looks like a pair
-                for key in result.keys():
+                for key in result:
                     pair_data = result[key]
                     break
-            
+
             if not isinstance(pair_data, list):
-                raise DataError(f"Invalid OHLC response format: expected list, got {type(pair_data)}")
+                raise DataError(
+                    f"Invalid OHLC response format: expected list, got {type(pair_data)}"
+                )
 
             meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
             bars = []
@@ -121,7 +126,7 @@ class CandlesResponseAdapter(ResponseAdapter):
                     ts = int(row[0])
                     bars.append(
                         Bar(
-                            timestamp=datetime.fromtimestamp(ts, tz=timezone.utc),
+                            timestamp=datetime.fromtimestamp(ts, tz=UTC),
                             open=Decimal(str(row[1])),
                             high=Decimal(str(row[2])),
                             low=Decimal(str(row[3])),
@@ -142,7 +147,7 @@ class ExchangeInfoSymbolsAdapter(ResponseAdapter):
     def parse(self, response: Any, params: dict[str, Any]) -> list[Symbol]:
         market_type: MarketType = params["market_type"]
         quote_asset_filter = params.get("quote_asset")
-        
+
         result = _extract_result(response, market_type)
 
         out: list[Symbol] = []
@@ -186,17 +191,13 @@ class ExchangeInfoSymbolsAdapter(ResponseAdapter):
 
                 tick_size_str = inst.get("tickSize")
                 if tick_size_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         tick_size = Decimal(str(tick_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
                 step_size_str = inst.get("contractSize") or inst.get("lotSize")
                 if step_size_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         step_size = Decimal(str(step_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
                 contract_type = inst.get("type", "perpetual")
                 delivery_date = inst.get("expiry") or inst.get("expiryDate")
@@ -250,25 +251,19 @@ class ExchangeInfoSymbolsAdapter(ResponseAdapter):
 
                 tick_size_str = pair_info.get("tick_size")
                 if tick_size_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         tick_size = Decimal(str(tick_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
                 step_size_str = pair_info.get("lot_decimals")
                 if step_size_str is not None:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         # lot_decimals is number of decimals, calculate step size
                         step_size = Decimal("1") / (Decimal("10") ** int(step_size_str))
-                    except (ValueError, TypeError):
-                        pass
 
                 min_notional_str = pair_info.get("ordermin")
                 if min_notional_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         min_notional = Decimal(str(min_notional_str))
-                    except (ValueError, TypeError):
-                        pass
 
                 out.append(
                     Symbol(
@@ -292,7 +287,7 @@ class OrderBookResponseAdapter(ResponseAdapter):
     def parse(self, response: Any, params: dict[str, Any]) -> OrderBook:
         market_type: MarketType = params["market_type"]
         symbol = params["symbol"].upper()
-        
+
         result = _extract_result(response, market_type)
 
         bids = []
@@ -301,25 +296,33 @@ class OrderBookResponseAdapter(ResponseAdapter):
         if market_type == MarketType.FUTURES:
             # Kraken Futures format: {result: "ok", orderBook: {bids: [[price, qty], ...], asks: [[price, qty], ...]}}
             orderbook_data = result.get("orderBook", result) if isinstance(result, dict) else result
-            
+
             bids_data = orderbook_data.get("bids", []) if isinstance(orderbook_data, dict) else []
             asks_data = orderbook_data.get("asks", []) if isinstance(orderbook_data, dict) else []
 
             if isinstance(bids_data, list):
-                bids = [(Decimal(str(p)), Decimal(str(q))) for p, q in bids_data if len([p, q]) >= 2]
+                bids = [
+                    (Decimal(str(p)), Decimal(str(q))) for p, q in bids_data if len([p, q]) >= 2
+                ]
 
             if isinstance(asks_data, list):
-                asks = [(Decimal(str(p)), Decimal(str(q))) for p, q in asks_data if len([p, q]) >= 2]
+                asks = [
+                    (Decimal(str(p)), Decimal(str(q))) for p, q in asks_data if len([p, q]) >= 2
+                ]
 
-            timestamp_ms = orderbook_data.get("serverTime", 0) if isinstance(orderbook_data, dict) else 0
-            last_update_id = orderbook_data.get("sequenceNumber", 0) if isinstance(orderbook_data, dict) else 0
+            timestamp_ms = (
+                orderbook_data.get("serverTime", 0) if isinstance(orderbook_data, dict) else 0
+            )
+            last_update_id = (
+                orderbook_data.get("sequenceNumber", 0) if isinstance(orderbook_data, dict) else 0
+            )
 
         else:
             # Kraken Spot format: {result: {PAIR: {bids: [[price, volume, timestamp], ...], asks: [[price, volume, timestamp], ...]}}}
             pair_data = None
             if isinstance(result, dict):
                 # Find first key that looks like a pair
-                for key in result.keys():
+                for key in result:
                     pair_data = result[key]
                     break
 
@@ -329,18 +332,26 @@ class OrderBookResponseAdapter(ResponseAdapter):
 
                 if isinstance(bids_data, list):
                     # Kraken Spot: [price, volume, timestamp]
-                    bids = [(Decimal(str(row[0])), Decimal(str(row[1]))) for row in bids_data if len(row) >= 2]
+                    bids = [
+                        (Decimal(str(row[0])), Decimal(str(row[1])))
+                        for row in bids_data
+                        if len(row) >= 2
+                    ]
 
                 if isinstance(asks_data, list):
-                    asks = [(Decimal(str(row[0])), Decimal(str(row[1]))) for row in asks_data if len(row) >= 2]
+                    asks = [
+                        (Decimal(str(row[0])), Decimal(str(row[1])))
+                        for row in asks_data
+                        if len(row) >= 2
+                    ]
 
                 timestamp_ms = 0
                 last_update_id = 0
 
         timestamp = (
-            datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
             if timestamp_ms
-            else datetime.now(timezone.utc)
+            else datetime.now(UTC)
         )
 
         # OrderBook requires at least one level - use default if empty
@@ -367,7 +378,7 @@ class RecentTradesAdapter(ResponseAdapter):
     def parse(self, response: Any, params: dict[str, Any]) -> list[Trade]:
         market_type: MarketType = params["market_type"]
         symbol = params["symbol"].upper()
-        
+
         result = _extract_result(response, market_type)
 
         out: list[Trade] = []
@@ -402,11 +413,15 @@ class RecentTradesAdapter(ResponseAdapter):
                     out.append(
                         Trade(
                             symbol=symbol,
-                            trade_id=int(trade_id) if trade_id and str(trade_id).isdigit() else int(hash(str(trade_id))),
+                            trade_id=int(trade_id)
+                            if trade_id and str(trade_id).isdigit()
+                            else int(hash(str(trade_id))),
                             price=price,
                             quantity=quantity,
                             quote_quantity=quote_quantity,
-                            timestamp=datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else datetime.now(timezone.utc),
+                            timestamp=datetime.fromtimestamp(time_ms / 1000, tz=UTC)
+                            if time_ms
+                            else datetime.now(UTC),
                             is_buyer_maker=is_buyer_maker,
                             is_best_match=None,
                         )
@@ -418,7 +433,7 @@ class RecentTradesAdapter(ResponseAdapter):
             # Kraken Spot format: {result: {PAIR: [[price, volume, time, buy/sell, market/limit, misc], ...]}}
             pair_data = None
             if isinstance(result, dict):
-                for key in result.keys():
+                for key in result:
                     pair_data = result[key]
                     break
 
@@ -450,7 +465,7 @@ class RecentTradesAdapter(ResponseAdapter):
                             price=price,
                             quantity=quantity,
                             quote_quantity=quote_quantity,
-                            timestamp=datetime.fromtimestamp(time_float, tz=timezone.utc),
+                            timestamp=datetime.fromtimestamp(time_float, tz=UTC),
                             is_buyer_maker=is_buyer_maker,
                             is_best_match=None,
                         )
@@ -468,7 +483,7 @@ class FundingRateAdapter(ResponseAdapter):
         market_type: MarketType = params["market_type"]
         if market_type != MarketType.FUTURES:
             return []
-        
+
         symbol = params["symbol"].upper()
         result = _extract_result(response, market_type)
 
@@ -496,7 +511,7 @@ class FundingRateAdapter(ResponseAdapter):
                 out.append(
                     FundingRate(
                         symbol=symbol,
-                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         funding_rate=funding_rate,
                         mark_price=mark_price,
                     )
@@ -514,13 +529,13 @@ class OpenInterestCurrentAdapter(ResponseAdapter):
         market_type: MarketType = params["market_type"]
         if market_type != MarketType.FUTURES:
             return []
-        
+
         symbol = params["symbol"].upper()
         result = _extract_result(response, market_type)
 
         # Kraken Futures format: {result: "ok", ticker: {openInterest, openInterestValue, ...}}
         ticker_data = result.get("ticker", result) if isinstance(result, dict) else result
-        
+
         if not isinstance(ticker_data, dict):
             return []
 
@@ -535,7 +550,9 @@ class OpenInterestCurrentAdapter(ResponseAdapter):
             return [
                 OpenInterest(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc) if timestamp_ms else datetime.now(timezone.utc),
+                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
+                    if timestamp_ms
+                    else datetime.now(UTC),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=Decimal(str(oi_value_str)) if oi_value_str else None,
                 )
@@ -551,7 +568,7 @@ class OpenInterestHistAdapter(ResponseAdapter):
         market_type: MarketType = params["market_type"]
         if market_type != MarketType.FUTURES:
             return []
-        
+
         symbol = params["symbol"].upper()
         result = _extract_result(response, market_type)
 
@@ -576,7 +593,7 @@ class OpenInterestHistAdapter(ResponseAdapter):
                 out.append(
                     OpenInterest(
                         symbol=symbol,
-                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                         open_interest=Decimal(str(oi_str)),
                         open_interest_value=Decimal(str(oi_value_str)) if oi_value_str else None,
                     )
@@ -585,4 +602,3 @@ class OpenInterestHistAdapter(ResponseAdapter):
                 continue
 
         return out
-

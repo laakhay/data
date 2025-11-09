@@ -3,4 +3,3 @@
 from .provider import CoinbaseWSProvider
 
 __all__ = ["CoinbaseWSProvider"]
-

@@ -7,7 +7,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any
 
 from ..core import Timeframe
 from ..models import (
@@ -21,8 +21,8 @@ from ..models import (
 )
 from .base_feed import SymbolStreamFeed
 
-Callback = Union[Callable[[StreamingBar], Awaitable[None]], Callable[[StreamingBar], None]]
-EventCallback = Union[Callable[[DataEvent], Awaitable[None]], Callable[[DataEvent], None]]
+Callback = Callable[[StreamingBar], Awaitable[None]] | Callable[[StreamingBar], None]
+EventCallback = Callable[[DataEvent], Awaitable[None]] | Callable[[DataEvent], None]
 
 
 @dataclass(frozen=True)
@@ -296,7 +296,7 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
             interval = self._interval or Timeframe.M1
         bars = self.get_bar_history(symbol, interval=interval, count=count)
         meta = SeriesMeta(symbol=symbol.upper(), timeframe=interval.value)
-        return OHLCV(meta=meta, bars=[bar for bar in bars])
+        return OHLCV(meta=meta, bars=list(bars))
 
     def get_connection_status(self) -> dict[str, Any]:
         now = time.time()

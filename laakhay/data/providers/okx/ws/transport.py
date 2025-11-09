@@ -69,7 +69,7 @@ class OKXWebSocketTransport:
                         confirm_data = json.loads(confirm)
                         if confirm_data.get("code") != "0":
                             logger.error(f"Subscription failed: {confirm_data}")
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning("No subscription confirmation received")
 
                     # Stream messages
@@ -77,9 +77,10 @@ class OKXWebSocketTransport:
                         try:
                             data = json.loads(message)
                             # Skip subscription confirmations and pings
-                            if isinstance(data, dict):
-                                if data.get("event") == "subscribe" or data.get("event") == "error":
-                                    continue
+                            if isinstance(data, dict) and (
+                                data.get("event") == "subscribe" or data.get("event") == "error"
+                            ):
+                                continue
                             yield data
                         except json.JSONDecodeError:
                             logger.warning(f"Failed to parse message: {message}")
@@ -95,4 +96,3 @@ class OKXWebSocketTransport:
                 logger.error(f"WebSocket error: {e}")
                 await asyncio.sleep(self._reconnect_delay)
                 self._reconnect_delay = min(self._reconnect_delay * 2, self.max_reconnect_delay)
-

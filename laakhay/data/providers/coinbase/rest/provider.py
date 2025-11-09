@@ -44,13 +44,13 @@ class CoinbaseRESTProvider(RESTProvider):
                 "Coinbase Advanced Trade API only supports Spot markets. "
                 f"Got market_type={market_type}"
             )
-        
+
         self.market_type = MarketType.SPOT  # Force to SPOT
         from ..constants import BASE_URLS
 
         self._transport = RESTTransport(base_url=BASE_URLS[MarketType.SPOT])
         self._runner = RestRunner(self._transport)
-        
+
         # Registry: key -> (spec_builder, adapter_class)
         self._ENDPOINTS: dict[str, tuple[Callable[..., Any], type]] = {
             "ohlcv": (candles_spec, CandlesResponseAdapter),
@@ -59,7 +59,7 @@ class CoinbaseRESTProvider(RESTProvider):
             "recent_trades": (recent_trades_spec, RecentTradesAdapter),
             "exchange_info_raw": (exchange_info_raw_spec, ExchangeInfoSymbolsAdapter),
         }
-        
+
         # Note: Coinbase doesn't support Futures features:
         # - funding_rate
         # - open_interest
@@ -90,7 +90,7 @@ class CoinbaseRESTProvider(RESTProvider):
         max_chunks: int | None = None,
     ) -> OHLCV:
         """Fetch OHLCV candles for a symbol.
-        
+
         Coinbase returns up to 300 candles per request. If more are needed,
         requests are chunked automatically.
         """
@@ -248,4 +248,3 @@ class CoinbaseRESTProvider(RESTProvider):
     async def close(self) -> None:
         """Close HTTP transport."""
         await self._transport.close()
-

@@ -234,4 +234,3 @@ def liquidations_spec(market_type: MarketType) -> WSEndpointSpec:
         build_combined_url=build_combined_url,
         build_single_url=build_single_url,
     )
-

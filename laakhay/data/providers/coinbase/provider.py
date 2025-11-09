@@ -13,7 +13,7 @@ from .ws.provider import CoinbaseWSProvider
 
 class CoinbaseProvider(BaseProvider):
     """High-level Coinbase provider exposing REST and streaming helpers.
-    
+
     Coinbase Advanced Trade API only supports Spot markets.
     """
 
@@ -32,7 +32,7 @@ class CoinbaseProvider(BaseProvider):
                 "Coinbase Advanced Trade API only supports Spot markets. "
                 f"Got market_type={market_type}"
             )
-        
+
         super().__init__(name="coinbase")
         self.market_type = MarketType.SPOT  # Force to SPOT
         self._rest = rest_provider or CoinbaseRESTProvider(
@@ -166,7 +166,7 @@ class CoinbaseProvider(BaseProvider):
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
         """Stream order book updates.
-        
+
         Note: Coinbase Exchange API requires authentication for level2 WebSocket.
         This method will raise NotImplementedError. Use REST API (get_order_book) for order book data instead.
         """
@@ -177,9 +177,7 @@ class CoinbaseProvider(BaseProvider):
         )
         yield  # type: ignore[unreachable]  # Never reached, but needed for async generator type
 
-    async def stream_open_interest(
-        self, symbols: list[str], period: str = "5m"
-    ) -> AsyncIterator:
+    async def stream_open_interest(self, symbols: list[str], period: str = "5m") -> AsyncIterator:
         """Stream open interest - NOT SUPPORTED by Coinbase Advanced Trade API."""
         raise NotImplementedError(
             "Coinbase Advanced Trade API does not support open interest "
@@ -221,4 +219,3 @@ class CoinbaseProvider(BaseProvider):
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
-

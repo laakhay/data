@@ -67,7 +67,7 @@ class OpenInterestFeed(SymbolStreamFeed[OpenInterest]):
 
     def _prepare_stream_args(self, args: dict[str, Any]) -> dict[str, Any]:
         args = dict(args)
-        args["period"] = self._period if "period" not in args else args["period"]
+        args["period"] = args.get("period", self._period)
         self._period = args["period"]
         return super()._prepare_stream_args(args)
 

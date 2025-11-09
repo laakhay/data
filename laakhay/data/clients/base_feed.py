@@ -3,26 +3,27 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, Union
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
-Callback = Union[Callable[[T], Awaitable[None]], Callable[[T], None]]
+Callback = Callable[[T], Awaitable[None]] | Callable[[T], None]
 
 _SINGLETON_KEY = "__single__"
 
 
 @dataclass(frozen=True)
-class _BaseSubscription(Generic[T]):
+class _BaseSubscription[T]:
     callback: Callback
     keys: set[str] | None
 
 
-class BaseStreamFeed(Generic[T]):
+class BaseStreamFeed[T]:
     """Reusable base for async streaming feeds with cache and subscriptions."""
 
     def __init__(
@@ -64,10 +65,8 @@ class BaseStreamFeed(Generic[T]):
             self._running = False
             if self._stream_task and not self._stream_task.done():
                 self._stream_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self._stream_task
-                except asyncio.CancelledError:
-                    pass
             self._stream_task = None
 
     async def update_stream(self, **changes: Any) -> None:
@@ -204,10 +203,8 @@ class BaseStreamFeed(Generic[T]):
     async def _restart_stream_locked(self) -> None:
         if self._stream_task and not self._stream_task.done():
             self._stream_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._stream_task
-            except asyncio.CancelledError:
-                pass
         if self._running:
             await self._before_start(is_restart=True)
             self._stream_task = asyncio.create_task(self._run_stream())

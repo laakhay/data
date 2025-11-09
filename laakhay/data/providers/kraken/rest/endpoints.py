@@ -11,7 +11,7 @@ from ..constants import INTERVAL_MAP, normalize_symbol_to_kraken
 
 def candles_spec() -> RestEndpointSpec:
     """OHLCV/Candles endpoint spec.
-    
+
     Note: Kraken Futures API may use different endpoint structure.
     For Spot: /0/public/OHLCData
     For Futures: Check if available in Futures API
@@ -49,7 +49,7 @@ def candles_spec() -> RestEndpointSpec:
             return q
         else:
             # Kraken Spot API
-            q: dict[str, Any] = {
+            q: dict[str, Any] = {  # type: ignore[no-redef]
                 "pair": kraken_symbol,
                 "interval": interval_str,
             }
@@ -118,9 +118,7 @@ def order_book_spec() -> RestEndpointSpec:
     def build_path(params: dict[str, Any]) -> str:
         market_type: MarketType = params["market_type"]
         if market_type == MarketType.FUTURES:
-            symbol = params["symbol"]
-            kraken_symbol = normalize_symbol_to_kraken(symbol, market_type)
-            return f"/orderbook"
+            return "/orderbook"
         else:
             return "/0/public/Depth"
 
@@ -288,4 +286,3 @@ def open_interest_hist_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
     )
-

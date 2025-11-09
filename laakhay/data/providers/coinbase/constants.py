@@ -66,21 +66,22 @@ SYMBOL_FROM_COINBASE: dict[str, str] = {
     # Add more as needed
 }
 
+
 # Reverse mapping helper
 def normalize_symbol_to_coinbase(symbol: str) -> str:
     """Convert standard format (BTCUSD) to Coinbase format (BTC-USD).
-    
+
     If symbol is already in Coinbase format, returns as-is.
     If not found in map, attempts to infer format by splitting.
     """
     # If already hyphenated, assume Coinbase format
     if "-" in symbol:
         return symbol.upper()
-    
+
     # Check explicit mapping
     if symbol in SYMBOL_TO_COINBASE:
         return SYMBOL_TO_COINBASE[symbol]
-    
+
     # Attempt to infer: split base/quote
     # Coinbase only supports USD pairs, so USDT pairs map to USD pairs
     # This is a fallback - ideally we'd query /products first
@@ -91,24 +92,23 @@ def normalize_symbol_to_coinbase(symbol: str) -> str:
         # Coinbase doesn't support USDT pairs - map to USD instead
         base = symbol[:-4]
         return f"{base}-USD"
-    
+
     # Return as-is if can't determine
     return symbol.upper()
 
 
 def normalize_symbol_from_coinbase(symbol: str) -> str:
     """Convert Coinbase format (BTC-USD) to standard format (BTCUSD).
-    
+
     If symbol is already in standard format, returns as-is.
     """
     # If no hyphen, assume already standard format
     if "-" not in symbol:
         return symbol.upper()
-    
+
     # Check explicit mapping
     if symbol in SYMBOL_FROM_COINBASE:
         return SYMBOL_FROM_COINBASE[symbol]
-    
+
     # Remove hyphen as fallback
     return symbol.replace("-", "").upper()
-

@@ -252,4 +252,3 @@ class KrakenRESTProvider(RESTProvider):
 
     async def close(self) -> None:
         await self._transport.close()
-

@@ -17,7 +17,7 @@ def candles_spec() -> RestEndpointSpec:
         market: MarketType = params["market_type"]
         if market != MarketType.SPOT:
             raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-        
+
         symbol = params["symbol"]
         product_id = normalize_symbol_to_coinbase(symbol)
         return f"/products/{product_id}/candles"
@@ -37,7 +37,7 @@ def candles_spec() -> RestEndpointSpec:
             "ONE_DAY": 86400,
         }
         granularity_sec = granularity_map.get(interval_str, 60)
-        
+
         q: dict[str, Any] = {
             "granularity": granularity_sec,
         }
@@ -108,7 +108,7 @@ def order_book_spec() -> RestEndpointSpec:
         market: MarketType = params["market_type"]
         if market != MarketType.SPOT:
             raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-        
+
         symbol = params["symbol"]
         product_id = normalize_symbol_to_coinbase(symbol)
         return f"/products/{product_id}/book"
@@ -144,7 +144,7 @@ def recent_trades_spec() -> RestEndpointSpec:
         market: MarketType = params["market_type"]
         if market != MarketType.SPOT:
             raise ValueError("Coinbase Advanced Trade API only supports Spot markets")
-        
+
         symbol = params["symbol"]
         product_id = normalize_symbol_to_coinbase(symbol)
         return f"/products/{product_id}/trades"
@@ -168,4 +168,3 @@ def recent_trades_spec() -> RestEndpointSpec:
 # - Funding Rate (Futures feature, not available on Spot)
 # - Open Interest (Futures feature, not available on Spot)
 # These endpoints are intentionally omitted
-

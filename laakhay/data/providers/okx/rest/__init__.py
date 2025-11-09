@@ -1,2 +1,1 @@
 """OKX REST provider implementation."""
-

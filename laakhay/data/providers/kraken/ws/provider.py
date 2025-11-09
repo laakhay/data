@@ -160,8 +160,8 @@ class KrakenWSProvider(WSProvider):
                     await queue.put(payload)
 
         tasks = [asyncio.create_task(pump(chunk)) for chunk in channel_chunks]
-        last_emit: dict[str, float] = {}
-        last_close: dict[tuple[str, int], str] = {}
+        last_emit: dict[str, float] = {}  # type: ignore[no-redef]
+        last_close: dict[tuple[str, int], str] = {}  # type: ignore[no-redef]
 
         try:
             while True:
@@ -264,7 +264,6 @@ class KrakenWSProvider(WSProvider):
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         # Kraken liquidations require subscribing to specific symbols
         # Subscribe to major symbols for liquidations
-        symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AVAXUSDT', 'ADAUSDT']
+        symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT"]
         async for obj in self.stream("liquidations", symbols, {}):
             yield obj
-

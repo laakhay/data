@@ -1,6 +1,6 @@
 """Trade data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -85,12 +85,12 @@ class Trade(BaseModel):
     @property
     def timestamp_ms(self) -> int:
         """Timestamp in milliseconds."""
-        return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.timestamp.replace(tzinfo=UTC).timestamp() * 1000)
 
     def get_age_seconds(self, now_ms: int | None = None) -> float:
         """Seconds since trade."""
         if now_ms is None:
-            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            now_ms = int(datetime.now(UTC).timestamp() * 1000)
         return max(0.0, (now_ms - self.timestamp_ms) / 1000.0)
 
     def is_fresh(self, max_age_seconds: float = 60.0) -> bool:

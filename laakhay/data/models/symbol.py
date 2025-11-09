@@ -59,14 +59,12 @@ class Symbol(BaseModel):
         Missing constraints are ignored.
         """
         # Tick size alignment
-        if self.tick_size is not None:
-            if self.round_price(price) != price:
-                return False
+        if self.tick_size is not None and self.round_price(price) != price:
+            return False
 
         # Step size alignment
-        if self.step_size is not None:
-            if self.round_quantity(quantity) != quantity:
-                return False
+        if self.step_size is not None and self.round_quantity(quantity) != quantity:
+            return False
 
         # Notional threshold
         if self.min_notional is not None:

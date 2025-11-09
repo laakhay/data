@@ -160,8 +160,8 @@ class OKXWSProvider(WSProvider):
                     await queue.put(payload)
 
         tasks = [asyncio.create_task(pump(chunk)) for chunk in topic_chunks]
-        last_emit: dict[str, float] = {}
-        last_close: dict[tuple[str, int], str] = {}
+        last_emit: dict[str, float] = {}  # type: ignore[no-redef]
+        last_close: dict[tuple[str, int], str] = {}  # type: ignore[no-redef]
 
         try:
             while True:
@@ -267,4 +267,3 @@ class OKXWSProvider(WSProvider):
         symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT"]
         async for obj in self.stream("liquidations", symbols, {}):
             yield obj
-

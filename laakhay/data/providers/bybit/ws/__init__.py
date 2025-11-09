@@ -1,2 +1,1 @@
 """Bybit WebSocket provider implementation."""
-

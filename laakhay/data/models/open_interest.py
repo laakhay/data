@@ -1,6 +1,6 @@
 """Open Interest data model."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -49,9 +49,9 @@ class OpenInterest(BaseModel):
 
     def get_age_seconds(self) -> float:
         """Seconds since measurement timestamp."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return max(0.0, (now - self.timestamp).total_seconds())
 
     def is_fresh(self, max_age_seconds: float = 120.0) -> bool:

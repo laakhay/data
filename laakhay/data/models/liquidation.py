@@ -1,6 +1,6 @@
 """Liquidation data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -81,7 +81,7 @@ class Liquidation(BaseModel):
 
     def get_age_seconds(self) -> float:
         """Seconds since liquidation timestamp."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return max(0.0, (now - self.timestamp).total_seconds())
 
     def is_fresh(self, max_age_seconds: float = 300.0) -> bool:

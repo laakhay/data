@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -17,7 +17,7 @@ class CandlesResponseAdapter(ResponseAdapter):
         meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
         bars = [
             Bar(
-                timestamp=datetime.fromtimestamp(row[0] / 1000, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(row[0] / 1000, tz=UTC),
                 open=Decimal(str(row[1])),
                 high=Decimal(str(row[2])),
                 low=Decimal(str(row[3])),
@@ -81,7 +81,7 @@ class OrderBookResponseAdapter(ResponseAdapter):
             last_update_id=response.get("lastUpdateId", 0),
             bids=bids,
             asks=asks,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
 
@@ -95,7 +95,7 @@ class OpenInterestCurrentAdapter(ResponseAdapter):
         return [
             OpenInterest(
                 symbol=symbol,
-                timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                 open_interest=Decimal(str(oi_str)),
                 open_interest_value=None,
             )
@@ -114,7 +114,7 @@ class OpenInterestHistAdapter(ResponseAdapter):
             out.append(
                 OpenInterest(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                    timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=None,
                 )
@@ -138,9 +138,7 @@ class RecentTradesAdapter(ResponseAdapter):
                         if row.get("quoteQty") is not None
                         else None
                     ),
-                    timestamp=datetime.fromtimestamp(
-                        int(row.get("time", 0)) / 1000, tz=timezone.utc
-                    ),
+                    timestamp=datetime.fromtimestamp(int(row.get("time", 0)) / 1000, tz=UTC),
                     is_buyer_maker=bool(row.get("isBuyerMaker")),
                     is_best_match=row.get("isBestMatch"),
                 )
@@ -158,7 +156,7 @@ class FundingRateAdapter(ResponseAdapter):
             out.append(
                 FundingRate(
                     symbol=symbol,
-                    funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                    funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                     funding_rate=fr,
                     mark_price=(
                         Decimal(str(row.get("markPrice")))

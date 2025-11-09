@@ -1,6 +1,6 @@
 """Bar (OHLCV) data model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
@@ -47,7 +47,7 @@ class Bar(BaseModel):
     @property
     def open_time_ms(self) -> int:
         """Opening time in milliseconds since epoch."""
-        return int(self.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+        return int(self.timestamp.replace(tzinfo=UTC).timestamp() * 1000)
 
     def close_time_ms(self, interval_seconds: int = 60) -> int:
         """Approximate close time in ms given interval seconds (default 60s).
@@ -59,7 +59,7 @@ class Bar(BaseModel):
 
     def get_age_seconds(self, *, is_closed: bool = True, interval_seconds: int = 60) -> float:
         """Get age of this bar in seconds."""
-        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        now_ms = int(datetime.now(UTC).timestamp() * 1000)
         ref = self.close_time_ms(interval_seconds) if is_closed else now_ms
         return max(0.0, (now_ms - ref) / 1000.0)
 

@@ -231,4 +231,3 @@ def open_interest_hist_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
     )
-

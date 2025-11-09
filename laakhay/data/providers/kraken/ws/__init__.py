@@ -3,4 +3,3 @@
 from .provider import KrakenWSProvider
 
 __all__ = ["KrakenWSProvider"]
-

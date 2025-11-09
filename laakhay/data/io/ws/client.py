@@ -1,6 +1,7 @@
 """WebSocket client for real-time data streaming."""
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Callable
 from enum import Enum
@@ -160,10 +161,8 @@ class WebSocketClient:
         # Cancel receive task
         if self._receive_task and not self._receive_task.done():
             self._receive_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._receive_task
-            except asyncio.CancelledError:
-                pass
 
         # Close WebSocket connection
         if self._ws and not self._ws.closed:
