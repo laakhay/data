@@ -1,6 +1,6 @@
 """Unit tests for MarkPrice model."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -16,8 +16,8 @@ def test_mark_price_valid():
         index_price=Decimal("49950.00"),
         estimated_settle_price=Decimal("49975.00"),
         last_funding_rate=Decimal("0.0001"),
-        next_funding_time=datetime(2024, 1, 1, 8, 0, tzinfo=timezone.utc),
-        timestamp=datetime(2024, 1, 1, 7, 0, tzinfo=timezone.utc),
+        next_funding_time=datetime(2024, 1, 1, 8, 0, tzinfo=UTC),
+        timestamp=datetime(2024, 1, 1, 7, 0, tzinfo=UTC),
     )
 
     assert mp.symbol == "BTCUSDT"
@@ -30,7 +30,7 @@ def test_mark_price_without_optional_fields():
     mp = MarkPrice(
         symbol="ETHUSDT",
         mark_price=Decimal("3000.00"),
-        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
     )
 
     assert mp.symbol == "ETHUSDT"
@@ -47,7 +47,7 @@ def test_mark_index_spread():
         symbol="BTCUSDT",
         mark_price=Decimal("50100.00"),  # Premium
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert mp.mark_index_spread == Decimal("100.00")
@@ -61,7 +61,7 @@ def test_mark_index_spread_discount():
         symbol="BTCUSDT",
         mark_price=Decimal("49900.00"),  # Discount
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert mp.mark_index_spread == Decimal("-100.00")
@@ -75,7 +75,7 @@ def test_mark_index_spread_bps():
         symbol="BTCUSDT",
         mark_price=Decimal("50050.00"),
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Spread = 50, Index = 50000
@@ -90,7 +90,7 @@ def test_mark_index_spread_percentage():
         symbol="BTCUSDT",
         mark_price=Decimal("50050.00"),
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Spread = 50, Index = 50000
@@ -101,7 +101,7 @@ def test_mark_index_spread_percentage():
 
 def test_spread_severity():
     """Test spread severity categorization."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Normal spread < 10 bps (< 0.10%)
     mp_normal = MarkPrice(
@@ -146,7 +146,7 @@ def test_compare_to_last_price():
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
         index_price=Decimal("49990.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Last price diverged significantly from mark
@@ -167,7 +167,7 @@ def test_compare_to_exchange_spot():
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Exchange spot diverged from index
@@ -183,7 +183,7 @@ def test_compare_to_exchange_spot():
 
 def test_seconds_to_funding():
     """Test seconds until next funding calculation."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     next_funding = now + timedelta(hours=1)
 
     mp = MarkPrice(
@@ -200,7 +200,7 @@ def test_seconds_to_funding():
 def test_is_fresh():
     """Test freshness check."""
     # Fresh data
-    recent_time = datetime.now(timezone.utc) - timedelta(seconds=5)
+    recent_time = datetime.now(UTC) - timedelta(seconds=5)
     mp_fresh = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
@@ -209,7 +209,7 @@ def test_is_fresh():
     assert mp_fresh.is_fresh(max_age_seconds=10.0) is True
 
     # Stale data
-    old_time = datetime.now(timezone.utc) - timedelta(seconds=15)
+    old_time = datetime.now(UTC) - timedelta(seconds=15)
     mp_stale = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
@@ -226,8 +226,8 @@ def test_to_dict():
         index_price=Decimal("49990.00"),
         estimated_settle_price=Decimal("49995.00"),
         last_funding_rate=Decimal("0.0001"),
-        next_funding_time=datetime(2024, 1, 1, 8, 0, tzinfo=timezone.utc),
-        timestamp=datetime(2024, 1, 1, 7, 0, tzinfo=timezone.utc),
+        next_funding_time=datetime(2024, 1, 1, 8, 0, tzinfo=UTC),
+        timestamp=datetime(2024, 1, 1, 7, 0, tzinfo=UTC),
     )
 
     data = mp.to_dict()
@@ -245,7 +245,7 @@ def test_mark_price_frozen():
     mp = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     with pytest.raises(Exception):  # Pydantic frozen validation error
@@ -261,7 +261,7 @@ def test_mark_price_validation():
     mp = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert mp.symbol == "BTCUSDT"
 
@@ -270,7 +270,7 @@ def test_mark_price_validation():
         MarkPrice(
             symbol="",
             mark_price=Decimal("50000.00"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     # Negative mark price should fail
@@ -278,7 +278,7 @@ def test_mark_price_validation():
         MarkPrice(
             symbol="BTCUSDT",
             mark_price=Decimal("-50000.00"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
 
@@ -288,7 +288,7 @@ def test_high_spread_detection():
         symbol="BTCUSDT",
         mark_price=Decimal("50151.00"),  # > 30 bps spread
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     # Threshold is > 30 bps
@@ -299,14 +299,14 @@ def test_high_spread_detection():
         symbol="BTCUSDT",
         mark_price=Decimal("50010.00"),  # 2 bps
         index_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     assert mp_small.is_high_spread is False
 
 
 def test_get_age_seconds():
     """Test age calculation."""
-    old_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+    old_time = datetime.now(UTC) - timedelta(minutes=5)
     mp = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
@@ -319,7 +319,7 @@ def test_get_age_seconds():
 
 def test_timestamp_ms():
     """Test timestamp conversion to milliseconds."""
-    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
     mp = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
@@ -336,7 +336,7 @@ def test_edge_cases():
     mp_no_index = MarkPrice(
         symbol="BTCUSDT",
         mark_price=Decimal("50000.00"),
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
     assert mp_no_index.mark_index_spread is None

@@ -1,6 +1,6 @@
 """Unit tests for Liquidation model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -15,7 +15,7 @@ class TestLiquidation:
         """Test valid Liquidation creation."""
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -38,7 +38,7 @@ class TestLiquidation:
         """Test Liquidation creation with optional fields."""
         liquidation = Liquidation(
             symbol="ETHUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="BUY",
             order_type="LIQUIDATION",
             time_in_force="GTC",
@@ -65,7 +65,7 @@ class TestLiquidation:
         for side in ["BUY", "SELL", "buy", "sell"]:
             liquidation = Liquidation(
                 symbol="BTCUSDT",
-                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
                 side=side,
                 order_type="LIQUIDATION",
                 time_in_force="IOC",
@@ -82,7 +82,7 @@ class TestLiquidation:
         with pytest.raises(ValueError, match="side must be 'BUY' or 'SELL'"):
             Liquidation(
                 symbol="BTCUSDT",
-                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
                 side="INVALID",
                 order_type="LIQUIDATION",
                 time_in_force="IOC",
@@ -99,7 +99,7 @@ class TestLiquidation:
         # Valid prices
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -116,7 +116,7 @@ class TestLiquidation:
         with pytest.raises(Exception):  # Pydantic validation error
             Liquidation(
                 symbol="BTCUSDT",
-                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
                 side="SELL",
                 order_type="LIQUIDATION",
                 time_in_force="IOC",
@@ -133,7 +133,7 @@ class TestLiquidation:
         # Valid quantities
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -150,7 +150,7 @@ class TestLiquidation:
         with pytest.raises(Exception):  # Pydantic validation error
             Liquidation(
                 symbol="BTCUSDT",
-                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
                 side="SELL",
                 order_type="LIQUIDATION",
                 time_in_force="IOC",
@@ -166,7 +166,7 @@ class TestLiquidation:
         """Test liquidation properties."""
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -179,7 +179,7 @@ class TestLiquidation:
         )
 
         # Test timestamp_ms property
-        expected_ms = int(datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc).timestamp() * 1000)
+        expected_ms = int(datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC).timestamp() * 1000)
         assert liquidation.timestamp_ms == expected_ms
 
         # Test value_usdt property
@@ -198,7 +198,7 @@ class TestLiquidation:
         """Test age and freshness methods."""
         from datetime import timedelta
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         recent_time = now - timedelta(minutes=1)  # 1 minute ago
         old_time = now - timedelta(minutes=10)  # 10 minutes ago
 
@@ -242,7 +242,7 @@ class TestLiquidation:
         """Test to_dict method."""
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -272,7 +272,7 @@ class TestLiquidation:
         """Test that liquidation is immutable."""
         liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -296,7 +296,7 @@ class TestLiquidation:
         # Very small liquidation
         small_liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="SELL",
             order_type="LIQUIDATION",
             time_in_force="IOC",
@@ -314,7 +314,7 @@ class TestLiquidation:
         # Partial fill liquidation
         partial_liquidation = Liquidation(
             symbol="BTCUSDT",
-            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
             side="BUY",
             order_type="LIQUIDATION",
             time_in_force="IOC",

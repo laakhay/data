@@ -2,7 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -35,7 +35,7 @@ async def test_open_interest_feed_cache_and_subscribe():
 
     oi_btc = OpenInterest(
         symbol="BTCUSDT",
-        timestamp=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 1, 1, tzinfo=UTC),
         open_interest=Decimal("12345.67"),
         open_interest_value=Decimal("500000000.00"),
     )

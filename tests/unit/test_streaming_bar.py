@@ -1,6 +1,6 @@
 """Unit tests for StreamingBar model."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -12,7 +12,7 @@ def test_streaming_bar_creation():
     """Test StreamingBar creation."""
     streaming_bar = StreamingBar(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -22,7 +22,7 @@ def test_streaming_bar_creation():
     )
 
     assert streaming_bar.symbol == "BTCUSDT"
-    assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
     assert streaming_bar.close == Decimal("50500")
 
 
@@ -30,7 +30,7 @@ def test_streaming_bar_inheritance():
     """Test that StreamingBar inherits Bar properties."""
     streaming_bar = StreamingBar(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -40,7 +40,7 @@ def test_streaming_bar_inheritance():
     )
 
     # Test inherited properties
-    assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    assert streaming_bar.timestamp == datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
     assert streaming_bar.open == Decimal("50000")
     assert streaming_bar.high == Decimal("51000")
     assert streaming_bar.low == Decimal("49000")
@@ -55,7 +55,7 @@ def test_streaming_bar_method_inheritance():
     """Test that StreamingBar inherits Bar methods."""
     streaming_bar = StreamingBar(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
@@ -81,7 +81,7 @@ def test_streaming_bar_immutable():
     """Test that StreamingBar is immutable."""
     streaming_bar = StreamingBar(
         symbol="BTCUSDT",
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         open=Decimal("50000"),
         high=Decimal("51000"),
         low=Decimal("49000"),
