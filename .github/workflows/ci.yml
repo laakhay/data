@@ -77,6 +77,9 @@ jobs:
   test:
     name: Test Data Library
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
     
     steps:
       - name: Checkout code
@@ -87,8 +90,8 @@ jobs:
         with:
           version: "latest"
       
-      - name: Set up Python
-        run: uv python install 3.12
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
       
       - name: Install dependencies
         run: make install
@@ -97,6 +100,7 @@ jobs:
         run: make test-cov-xml-unit
       
       - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
@@ -107,6 +111,9 @@ jobs:
   build:
     name: Build Data Library
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
     
     steps:
       - name: Checkout code
@@ -117,8 +124,8 @@ jobs:
         with:
           version: "latest"
       
-      - name: Set up Python
-        run: uv python install 3.12
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
       
       - name: Install dependencies
         run: make install
