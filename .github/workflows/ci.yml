@@ -7,24 +7,88 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  test:
+  lint:
+    name: Lint Data Library
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12', '3.13']
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
       
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        run: uv python install 3.12
+      
+      - name: Install dependencies
+        run: make install
+      
+      - name: Run ruff check
+        run: make lint
+
+  type-check:
+    name: Type Check Data Library
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          version: "latest"
+      
+      - name: Set up Python
+        run: uv python install 3.12
+      
+      - name: Install dependencies
+        run: make install
+      
+      - name: Run type check
+        run: make type-check
+        continue-on-error: true
+
+  format:
+    name: Format Data Library
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+      
+      - name: Set up Python
+        run: uv python install 3.12
+      
+      - name: Install dependencies
+        run: make install
+      
+      - name: Run ruff format check
+        run: make format-check
+
+  test:
+    name: Test Data Library
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+      
+      - name: Set up Python
+        run: uv python install 3.12
       
       - name: Install dependencies
         run: make install
@@ -33,37 +97,31 @@ jobs:
         run: make test-cov-xml-unit
       
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.xml
+          file: ./coverage.xml
+          flags: data-library
+          name: data-library-coverage
           fail_ci_if_error: false
 
-  lint:
+  build:
+    name: Build Data Library
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
       
       - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+        run: uv python install 3.12
       
       - name: Install dependencies
         run: make install
       
-      - name: Run lint
-        run: make lint
-      
-      - name: Run format check
-        run: make format-check
-      
-      - name: Run type check
-        run: make type-check
-        continue-on-error: true
+      - name: Build package
+        run: make build
