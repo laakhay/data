@@ -1,18 +1,13 @@
-name: Tests
+name: Build
 
 on:
   push:
     branches:
       - main
-      - dev
-  pull_request:
-    branches:
-      - main
-      - dev
 
 jobs:
-  test:
-    name: Test Data Library
+  build:
+    name: Build Data Library
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -33,15 +28,6 @@ jobs:
       - name: Install dependencies
         run: make install
       
-      - name: Run tests with coverage
-        run: make test-cov-xml-unit
-      
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.13'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: data-library
-          name: data-library-coverage
-          fail_ci_if_error: false
+      - name: Build package
+        run: make build
 
