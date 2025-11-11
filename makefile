@@ -43,13 +43,21 @@ install:
 test: unit-test integration-test
 
 unit-test:
-	@$(PY) -m pytest -q tests/unit
+	@$(PY) -m pytest tests/unit -q
 
 integration-test:
-	@$(PY) -m pytest -q tests/integration
+	@$(PY) -m pytest tests/integration -q
 
-coverage:
-	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term
+test-cov: ## Run tests with coverage (HTML report)
+	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term -v
+
+test-cov-xml: ## Run tests with coverage (XML report for CI)
+	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=xml --cov-report=term -v
+
+test-cov-xml-unit: ## Run unit tests with coverage (XML report for CI)
+	@$(PY) -m pytest tests/unit --cov=laakhay/data --cov-report=xml --cov-report=term -v
+
+coverage: test-cov ## Run tests with coverage (alias)
 
 lint:
 	@$(PY) -m ruff check . 2>&1 || (echo "ruff check failed or not installed" && exit 1)

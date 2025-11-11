@@ -144,7 +144,6 @@ pythonpath = ["."]
 addopts = [
     "--strict-markers",
     "--tb=short",
-    "-v",
 ]
 markers = [
     "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",

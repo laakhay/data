@@ -1,6 +1,7 @@
 .venv/
 
 **/__pycache__/
+**/.DS_Store
 
 # Dev web server to run demo
 app.py
