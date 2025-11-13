@@ -4,6 +4,7 @@ from .clients.ohlcv_feed import OHLCVFeed
 from .core import (
     BaseProvider,
     DataError,
+    EXCHANGE_METADATA,
     InvalidIntervalError,
     InvalidSymbolError,
     MarketType,
@@ -11,6 +12,16 @@ from .core import (
     RateLimitError,
     Timeframe,
     ValidationError,
+    get_all_capabilities,
+    get_all_exchanges,
+    get_all_supported_market_types,
+    get_exchange_capability,
+    get_supported_data_types,
+    get_supported_market_types,
+    get_supported_timeframes,
+    is_exchange_supported,
+    supports_data_type,
+    supports_market_type,
 )
 from .models import (
     OHLCV,
@@ -99,4 +110,16 @@ __all__ = [
     "InvalidSymbolError",
     "InvalidIntervalError",
     "ValidationError",
+    # Capabilities API
+    "EXCHANGE_METADATA",
+    "get_all_exchanges",
+    "get_exchange_capability",
+    "get_all_capabilities",
+    "get_supported_market_types",
+    "get_supported_timeframes",
+    "get_supported_data_types",
+    "get_all_supported_market_types",
+    "is_exchange_supported",
+    "supports_market_type",
+    "supports_data_type",
 ]
