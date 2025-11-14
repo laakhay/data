@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 
-from ...core import BaseProvider, MarketType, Timeframe
+from ...core import (
+    BaseProvider,
+    DataFeature,
+    InstrumentType,
+    MarketType,
+    Timeframe,
+    TransportKind,
+)
+from ...core.capabilities import CapabilityStatus, supports
 from ...models import (
     OHLCV,
     FundingRate,
@@ -180,6 +188,28 @@ class BybitProvider(BaseProvider):
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         async for liq in self._ws.stream_liquidations():
             yield liq
+
+    # --- Capability discovery ----------------------------------------------
+    async def describe_capabilities(
+        self,
+        feature: DataFeature,
+        transport: TransportKind,
+        *,
+        market_type: MarketType,
+        instrument_type: InstrumentType,
+    ) -> CapabilityStatus:
+        """Describe capabilities for Bybit.
+
+        Returns static capability status from the registry.
+        Runtime discovery can be added later to probe actual API availability.
+        """
+        return supports(
+            feature=feature,
+            transport=transport,
+            exchange="bybit",
+            market_type=market_type,
+            instrument_type=instrument_type,
+        )
 
     # --- Lifecycle --------------------------------------------------------
     async def close(self) -> None:

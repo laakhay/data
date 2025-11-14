@@ -1,7 +1,9 @@
 """Core enumerations for standardized types across all providers."""
 
+from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 # Conversion mapping
 _SECONDS_MAP = {
@@ -87,3 +89,74 @@ class MarketType(str, Enum):
     def __str__(self) -> str:
         """String representation returns the value."""
         return self.value
+
+
+class DataFeature(str, Enum):
+    """Data features available from exchanges."""
+
+    OHLCV = "ohlcv"
+    ORDER_BOOK = "order_book"
+    TRADES = "trades"
+    LIQUIDATIONS = "liquidations"
+    OPEN_INTEREST = "open_interest"
+    FUNDING_RATE = "funding_rates"
+    MARK_PRICE = "mark_price"
+    SYMBOL_METADATA = "symbol_metadata"
+
+    def __str__(self) -> str:
+        """String representation returns the value."""
+        return self.value
+
+
+class TransportKind(str, Enum):
+    """Transport mechanisms for data access."""
+
+    REST = "rest"
+    WS = "ws"
+
+    def __str__(self) -> str:
+        """String representation returns the value."""
+        return self.value
+
+
+class InstrumentType(str, Enum):
+    """Instrument types for trading."""
+
+    SPOT = "spot"
+    PERPETUAL = "perpetual"
+    FUTURE = "future"
+    OPTION = "option"
+    MOVE = "move"
+    BASKET = "basket"
+
+    def __str__(self) -> str:
+        """String representation returns the value."""
+        return self.value
+
+
+@dataclass(frozen=True)
+class InstrumentSpec:
+    """Canonical description of an instrument.
+
+    Encodes base, quote, instrument type, and optional metadata
+    (expiry, strike, contract size, etc.).
+    """
+
+    base: str
+    quote: str
+    instrument_type: InstrumentType
+    expiry: datetime | None = None
+    strike: float | None = None
+    contract_size: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __str__(self) -> str:
+        """String representation."""
+        parts = [f"{self.base}/{self.quote}"]
+        if self.instrument_type != InstrumentType.SPOT:
+            parts.append(self.instrument_type.value)
+        if self.expiry:
+            parts.append(self.expiry.strftime("%Y%m%d"))
+        if self.strike:
+            parts.append(f"C{int(self.strike)}" if self.strike else "")
+        return ":".join(filter(None, parts))

@@ -1,10 +1,37 @@
 """Custom exception hierarchy."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .capabilities import CapabilityKey, CapabilityStatus, FallbackOption
+
 
 class DataError(Exception):
     """Base exception for all library errors."""
 
     pass
+
+
+class CapabilityError(DataError):
+    """Capability is unsupported or unavailable.
+
+    Raised when a requested feature/transport/instrument combination
+    is not supported by the exchange. Includes recommendations for alternatives.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        key: CapabilityKey | None = None,
+        status: CapabilityStatus | None = None,
+        recommendations: list[FallbackOption] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.key = key
+        self.status = status
+        self.recommendations = recommendations or []
 
 
 class ProviderError(DataError):
