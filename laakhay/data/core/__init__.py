@@ -39,6 +39,13 @@ from .exceptions import (
     SymbolResolutionError,
     ValidationError,
 )
+from .registry import (
+    FeatureHandler,
+    ProviderRegistry,
+    collect_feature_handlers,
+    get_provider_registry,
+    register_feature_handler,
+)
 from .urm import (
     UniversalRepresentationMapper,
     URMRegistry,
@@ -91,4 +98,10 @@ __all__ = [
     "supports",
     "describe_exchange",
     "list_features",
+    # Provider Registry API
+    "ProviderRegistry",
+    "FeatureHandler",
+    "get_provider_registry",
+    "register_feature_handler",
+    "collect_feature_handlers",
 ]
