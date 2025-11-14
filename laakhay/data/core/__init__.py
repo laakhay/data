@@ -1,6 +1,7 @@
 """Core components."""
 
 from ..io import RESTProvider, WSProvider
+from .api import DataAPI
 from .base import BaseProvider
 from .capabilities import (
     EXCHANGE_METADATA,
@@ -46,6 +47,7 @@ from .registry import (
     get_provider_registry,
     register_feature_handler,
 )
+from .router import DataRouter
 from .urm import (
     UniversalRepresentationMapper,
     URMRegistry,
@@ -104,4 +106,7 @@ __all__ = [
     "get_provider_registry",
     "register_feature_handler",
     "collect_feature_handlers",
+    # DataRouter & DataAPI
+    "DataRouter",
+    "DataAPI",
 ]
