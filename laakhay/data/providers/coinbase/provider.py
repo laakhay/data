@@ -12,6 +12,7 @@ from ...core import (
     MarketType,
     Timeframe,
     TransportKind,
+    register_feature_handler,
 )
 from ...core.capabilities import CapabilityStatus, supports
 from ...models import OHLCV, OrderBook, StreamingBar, Symbol, Trade
@@ -58,6 +59,7 @@ class CoinbaseProvider(BaseProvider):
         return list(INTERVAL_MAP.keys())
 
     # --- REST delegations -------------------------------------------------
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
     async def get_candles(
         self,
         symbol: str,
@@ -75,12 +77,14 @@ class CoinbaseProvider(BaseProvider):
             limit=limit,
         )
 
+    @register_feature_handler(DataFeature.SYMBOL_METADATA, TransportKind.REST)
     async def get_symbols(  # type: ignore[override]
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         """List trading symbols."""
         return await self._rest.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
 
+    @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.REST)
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
         """Fetch current order book."""
         return await self._rest.get_order_book(symbol=symbol, limit=limit)
@@ -89,10 +93,12 @@ class CoinbaseProvider(BaseProvider):
         """Get raw exchange info."""
         return await self._rest.get_exchange_info()
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.REST)
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         """Fetch recent trades."""
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
 
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.REST)
     async def get_funding_rate(
         self,
         symbol: str,
@@ -106,6 +112,7 @@ class CoinbaseProvider(BaseProvider):
             "(Futures feature, not available on Spot markets)"
         )
 
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.REST)
     async def get_open_interest(
         self,
         symbol: str,
@@ -122,6 +129,7 @@ class CoinbaseProvider(BaseProvider):
         )
 
     # --- Streaming delegations -------------------------------------------
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.WS)
     async def stream_ohlcv(
         self,
         symbol: str,
@@ -160,6 +168,7 @@ class CoinbaseProvider(BaseProvider):
         ):
             yield bar
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
     async def stream_trades(self, symbol: str) -> AsyncIterator[Trade]:
         """Stream trades."""
         async for trade in self._ws.stream_trades(symbol):
@@ -170,6 +179,7 @@ class CoinbaseProvider(BaseProvider):
         async for trade in self._ws.stream_trades_multi(symbols):
             yield trade
 
+    @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.WS)
     async def stream_order_book(
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
@@ -185,6 +195,7 @@ class CoinbaseProvider(BaseProvider):
         )
         yield  # type: ignore[unreachable]  # Never reached, but needed for async generator type
 
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.WS)
     async def stream_open_interest(self, symbols: list[str], period: str = "5m") -> AsyncIterator:
         """Stream open interest - NOT SUPPORTED by Coinbase Advanced Trade API."""
         raise NotImplementedError(
@@ -192,6 +203,7 @@ class CoinbaseProvider(BaseProvider):
             "(Futures feature, not available on Spot markets)"
         )
 
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.WS)
     async def stream_funding_rate(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator:
@@ -201,6 +213,7 @@ class CoinbaseProvider(BaseProvider):
             "(Futures feature, not available on Spot markets)"
         )
 
+    @register_feature_handler(DataFeature.MARK_PRICE, TransportKind.WS)
     async def stream_mark_price(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator:
@@ -210,6 +223,7 @@ class CoinbaseProvider(BaseProvider):
             "(Futures feature, not available on Spot markets)"
         )
 
+    @register_feature_handler(DataFeature.LIQUIDATIONS, TransportKind.WS)
     async def stream_liquidations(self) -> AsyncIterator:
         """Stream liquidations - NOT SUPPORTED by Coinbase Advanced Trade API."""
         raise NotImplementedError(
