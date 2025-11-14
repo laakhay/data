@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .capabilities import CapabilityKey, CapabilityStatus, FallbackOption
+    from .enums import MarketType
 
 
 class DataError(Exception):
@@ -70,3 +71,25 @@ class ValidationError(DataError):
     """Data validation failure."""
 
     pass
+
+
+class SymbolResolutionError(DataError):
+    """Symbol cannot be resolved or converted.
+
+    Raised when URM cannot resolve a symbol to/from exchange format.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        exchange: str | None = None,
+        value: str | None = None,
+        market_type: "MarketType | None" = None,
+        known_aliases: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.exchange = exchange
+        self.value = value
+        self.market_type = market_type
+        self.known_aliases = known_aliases or {}
