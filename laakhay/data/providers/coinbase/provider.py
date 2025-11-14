@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 
-from ...core import BaseProvider, MarketType, Timeframe
+from ...core import (
+    BaseProvider,
+    DataFeature,
+    InstrumentType,
+    MarketType,
+    Timeframe,
+    TransportKind,
+)
+from ...core.capabilities import CapabilityStatus, supports
 from ...models import OHLCV, OrderBook, StreamingBar, Symbol, Trade
 from .rest.provider import CoinbaseRESTProvider
 from .ws.provider import CoinbaseWSProvider
@@ -207,6 +215,28 @@ class CoinbaseProvider(BaseProvider):
         raise NotImplementedError(
             "Coinbase Advanced Trade API does not support liquidations "
             "(Futures feature, not available on Spot markets)"
+        )
+
+    # --- Capability discovery ----------------------------------------------
+    async def describe_capabilities(
+        self,
+        feature: DataFeature,
+        transport: TransportKind,
+        *,
+        market_type: MarketType,
+        instrument_type: InstrumentType,
+    ) -> CapabilityStatus:
+        """Describe capabilities for Coinbase.
+
+        Returns static capability status from the registry.
+        Runtime discovery can be added later to probe actual API availability.
+        """
+        return supports(
+            feature=feature,
+            transport=transport,
+            exchange="coinbase",
+            market_type=market_type,
+            instrument_type=instrument_type,
         )
 
     # --- Lifecycle --------------------------------------------------------
