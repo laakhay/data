@@ -40,8 +40,8 @@ from .exceptions import (
     ValidationError,
 )
 from .urm import (
-    URMRegistry,
     UniversalRepresentationMapper,
+    URMRegistry,
     get_urm_registry,
     parse_urm_id,
     spec_to_urm_id,
