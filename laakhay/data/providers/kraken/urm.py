@@ -123,6 +123,14 @@ class KrakenURM:
                     value=str(spec),
                     market_type=market_type,
                 )
+            # Kraken futures use USD, not USDT - raise error if USDT is requested
+            if spec.quote == "USDT":
+                raise SymbolResolutionError(
+                    "Kraken futures only support USD, not USDT",
+                    exchange="kraken",
+                    value=str(spec),
+                    market_type=market_type,
+                )
             return f"PI_{base}{quote}"
 
     def _normalize_asset(self, asset: str) -> str:
