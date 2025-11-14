@@ -2,13 +2,13 @@
 
 from .clients.ohlcv_feed import OHLCVFeed
 from .core import (
+    EXCHANGE_METADATA,
     BaseProvider,
     CapabilityError,
     CapabilityKey,
     CapabilityStatus,
     DataError,
     DataFeature,
-    EXCHANGE_METADATA,
     FallbackOption,
     InstrumentSpec,
     InstrumentType,

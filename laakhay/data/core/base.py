@@ -54,12 +54,12 @@ class BaseProvider(ABC):
 
     async def describe_capabilities(
         self,
-        feature: "DataFeature",
-        transport: "TransportKind",
+        feature: DataFeature,
+        transport: TransportKind,
         *,
-        market_type: "MarketType",
-        instrument_type: "InstrumentType",
-    ) -> "CapabilityStatus":
+        market_type: MarketType,
+        instrument_type: InstrumentType,
+    ) -> CapabilityStatus:
         """Describe capabilities for a specific feature/transport combination.
 
         Providers should override this method to return runtime-discovered capabilities.

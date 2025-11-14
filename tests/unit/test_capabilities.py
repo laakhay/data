@@ -274,4 +274,3 @@ def test_supports_futures_features():
         instrument_type=InstrumentType.SPOT,
     )
     assert status3.supported is False
-
