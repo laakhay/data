@@ -51,18 +51,23 @@ class DataRequest:
 
     def __post_init__(self) -> None:
         """Validate request parameters."""
-        if self.symbol is None and self.symbols is None:
-            # Some features don't require symbols (e.g., global liquidations)
-            if self.feature not in (DataFeature.LIQUIDATIONS,):
-                raise ValueError("Either 'symbol' or 'symbols' must be provided")
+        if (
+            self.symbol is None
+            and self.symbols is None
+            and self.feature not in (DataFeature.LIQUIDATIONS,)
+        ):
+            raise ValueError("Either 'symbol' or 'symbols' must be provided")
 
         if self.symbol is not None and self.symbols is not None:
             raise ValueError("Cannot specify both 'symbol' and 'symbols'")
 
         # Validate timeframe for OHLCV
-        if self.feature == DataFeature.OHLCV and self.transport == TransportKind.REST:
-            if self.timeframe is None:
-                raise ValueError("timeframe is required for OHLCV REST requests")
+        if (
+            self.feature == DataFeature.OHLCV
+            and self.transport == TransportKind.REST
+            and self.timeframe is None
+        ):
+            raise ValueError("timeframe is required for OHLCV REST requests")
 
         # Validate depth for order book
         if self.feature == DataFeature.ORDER_BOOK and self.depth is None:
@@ -293,4 +298,3 @@ def request(
             builder.extra_param(key, value)
 
     return builder.build()
-
