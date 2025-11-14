@@ -85,7 +85,7 @@ class SymbolResolutionError(DataError):
         *,
         exchange: str | None = None,
         value: str | None = None,
-        market_type: "MarketType | None" = None,
+        market_type: MarketType | None = None,
         known_aliases: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
