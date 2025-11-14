@@ -123,4 +123,3 @@ async def test_in_memory_sink_get_timeout():
     await sink.publish({"event": 1})
     event = await sink.get(timeout=0.1)
     assert event == {"event": 1}
-

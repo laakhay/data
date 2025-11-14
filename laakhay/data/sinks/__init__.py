@@ -4,4 +4,3 @@ from .in_memory import InMemorySink
 from .redis import RedisStreamSink
 
 __all__ = ["InMemorySink", "RedisStreamSink"]
-

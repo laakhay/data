@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..core.relay import StreamSink
-
 
 class RedisStreamSink:
     """Redis Streams sink that publishes events to Redis.
@@ -43,7 +41,7 @@ class RedisStreamSink:
         except ImportError:
             raise ImportError(
                 "Redis sink requires redis library. Install with: pip install redis"
-            )
+            ) from None
 
         self.stream_key = stream_key
         self.batch_size = batch_size
@@ -109,4 +107,3 @@ class RedisStreamSink:
             await self._flush_batch()
             await self._redis.aclose()
             self._closed = True
-

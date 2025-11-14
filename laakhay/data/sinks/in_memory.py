@@ -10,8 +10,6 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
-from ..core.relay import StreamSink
-
 
 class InMemorySink:
     """In-memory sink that stores events in an async queue.
@@ -102,4 +100,3 @@ class InMemorySink:
     async def close(self) -> None:
         """Close the sink."""
         self._closed = True
-
