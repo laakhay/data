@@ -9,6 +9,7 @@ The DataRouter is the central coordinator that:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +20,8 @@ from .urm import get_urm_registry
 
 if TYPE_CHECKING:
     from .registry import ProviderRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class DataRouter:
@@ -68,17 +71,34 @@ class DataRouter:
             SymbolResolutionError: If symbol cannot be resolved
             ProviderError: If provider lookup or invocation fails
         """
+        logger.debug(
+            "Routing request",
+            extra={
+                "exchange": request.exchange,
+                "feature": request.feature.value,
+                "transport": request.transport.value,
+                "market_type": request.market_type.value,
+                "symbol": request.symbol,
+            },
+        )
+
         # Step 1: Validate capability
         self._capability_service.validate_request(request)
+        logger.debug("Capability validation passed")
 
         # Step 2: Resolve symbol(s) via URM
         exchange_symbols = self._resolve_symbols(request)
+        logger.debug(
+            "Symbol resolution complete",
+            extra={"exchange_symbols": exchange_symbols},
+        )
 
         # Step 3: Get provider instance
         provider = await self._provider_registry.get_provider(
             request.exchange,
             request.market_type,
         )
+        logger.debug("Provider instance retrieved", extra={"provider": provider.name})
 
         # Step 4: Get feature handler
         handler = self._provider_registry.get_feature_handler(
@@ -88,17 +108,33 @@ class DataRouter:
         )
 
         if handler is None:
+            logger.error(
+                "No handler found",
+                extra={
+                    "exchange": request.exchange,
+                    "feature": request.feature.value,
+                    "transport": request.transport.value,
+                },
+            )
             raise ProviderError(
                 f"No handler found for {request.feature.value} "
                 f"({request.transport.value}) on {request.exchange}"
             )
 
+        logger.debug(
+            "Feature handler found",
+            extra={"method_name": handler.method_name},
+        )
+
         # Step 5: Build method arguments from request
         method_args = self._build_method_args(request, exchange_symbols)
 
         # Step 6: Invoke provider method
+        logger.debug("Invoking provider method", extra={"method": handler.method_name})
         method = getattr(provider, handler.method_name)
-        return await method(**method_args)
+        result = await method(**method_args)
+        logger.debug("Request completed successfully")
+        return result
 
     async def route_stream(self, request: DataRequest) -> AsyncIterator[Any]:
         """Route a streaming data request.
@@ -121,17 +157,34 @@ class DataRouter:
         if request.transport != TransportKind.WS:
             raise ValueError("route_stream() requires transport=TransportKind.WS")
 
+        logger.debug(
+            "Routing stream request",
+            extra={
+                "exchange": request.exchange,
+                "feature": request.feature.value,
+                "transport": request.transport.value,
+                "market_type": request.market_type.value,
+                "symbol": request.symbol,
+            },
+        )
+
         # Step 1: Validate capability
         self._capability_service.validate_request(request)
+        logger.debug("Capability validation passed")
 
         # Step 2: Resolve symbol(s) via URM
         exchange_symbols = self._resolve_symbols(request)
+        logger.debug(
+            "Symbol resolution complete",
+            extra={"exchange_symbols": exchange_symbols},
+        )
 
         # Step 3: Get provider instance
         provider = await self._provider_registry.get_provider(
             request.exchange,
             request.market_type,
         )
+        logger.debug("Provider instance retrieved", extra={"provider": provider.name})
 
         # Step 4: Get feature handler
         handler = self._provider_registry.get_feature_handler(
@@ -141,18 +194,40 @@ class DataRouter:
         )
 
         if handler is None:
+            logger.error(
+                "No handler found",
+                extra={
+                    "exchange": request.exchange,
+                    "feature": request.feature.value,
+                    "transport": request.transport.value,
+                },
+            )
             raise ProviderError(
                 f"No handler found for {request.feature.value} "
                 f"({request.transport.value}) on {request.exchange}"
             )
 
+        logger.debug(
+            "Feature handler found",
+            extra={"method_name": handler.method_name},
+        )
+
         # Step 5: Build method arguments from request
         method_args = self._build_method_args(request, exchange_symbols)
 
         # Step 6: Invoke provider method and yield results
+        logger.debug("Starting stream", extra={"method": handler.method_name})
         method = getattr(provider, handler.method_name)
+        item_count = 0
         async for item in method(**method_args):
+            item_count += 1
+            if item_count % 100 == 0:
+                logger.debug(
+                    "Stream progress",
+                    extra={"items_yielded": item_count},
+                )
             yield item
+        logger.debug("Stream completed", extra={"total_items": item_count})
 
     def _resolve_symbols(self, request: DataRequest) -> str | list[str] | None:
         """Resolve symbol(s) via URM to exchange-native format.
