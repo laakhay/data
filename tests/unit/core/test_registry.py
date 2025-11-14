@@ -1,8 +1,5 @@
 """Unit tests for ProviderRegistry."""
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 
 from laakhay.data.core import (
@@ -13,7 +10,7 @@ from laakhay.data.core import (
     ProviderRegistry,
     TransportKind,
 )
-from laakhay.data.core.registry import FeatureHandler, collect_feature_handlers
+from laakhay.data.core.registry import FeatureHandler
 
 
 class MockProvider(BaseProvider):
@@ -244,4 +241,3 @@ async def test_registry_get_provider_after_close():
 
     with pytest.raises(ProviderError, match="closed"):
         await registry.get_provider("test_exchange", MarketType.SPOT)
-

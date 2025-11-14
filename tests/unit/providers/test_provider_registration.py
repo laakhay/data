@@ -142,7 +142,9 @@ async def test_feature_handler_mapping():
     register_bybit(registry)
 
     # Test REST handlers
-    binance_ohlcv_rest = registry.get_feature_handler("binance", DataFeature.OHLCV, TransportKind.REST)
+    binance_ohlcv_rest = registry.get_feature_handler(
+        "binance", DataFeature.OHLCV, TransportKind.REST
+    )
     bybit_ohlcv_rest = registry.get_feature_handler("bybit", DataFeature.OHLCV, TransportKind.REST)
 
     assert binance_ohlcv_rest is not None
@@ -152,7 +154,9 @@ async def test_feature_handler_mapping():
     assert bybit_ohlcv_rest.method_name == "get_candles"
 
     # Test WS handlers
-    binance_trades_ws = registry.get_feature_handler("binance", DataFeature.TRADES, TransportKind.WS)
+    binance_trades_ws = registry.get_feature_handler(
+        "binance", DataFeature.TRADES, TransportKind.WS
+    )
     bybit_trades_ws = registry.get_feature_handler("bybit", DataFeature.TRADES, TransportKind.WS)
 
     assert binance_trades_ws is not None
@@ -248,4 +252,3 @@ async def test_register_coinbase():
     # Coinbase should not support futures
     with pytest.raises(Exception):  # ProviderError from registry
         await registry.get_provider("coinbase", MarketType.FUTURES)
-

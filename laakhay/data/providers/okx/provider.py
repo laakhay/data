@@ -12,6 +12,7 @@ from ...core import (
     MarketType,
     Timeframe,
     TransportKind,
+    register_feature_handler,
 )
 from ...core.capabilities import CapabilityStatus, supports
 from ...models import (
@@ -57,6 +58,7 @@ class OKXProvider(BaseProvider):
         return list(INTERVAL_MAP.keys())
 
     # --- REST delegations -------------------------------------------------
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
     async def get_candles(
         self,
         symbol: str,
@@ -73,20 +75,24 @@ class OKXProvider(BaseProvider):
             limit=limit,
         )
 
+    @register_feature_handler(DataFeature.SYMBOL_METADATA, TransportKind.REST)
     async def get_symbols(  # type: ignore[override]
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         return await self._rest.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
 
+    @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.REST)
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
         return await self._rest.get_order_book(symbol=symbol, limit=limit)
 
     async def get_exchange_info(self) -> dict:
         return await self._rest.get_exchange_info()
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.REST)
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
 
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.REST)
     async def get_funding_rate(
         self,
         symbol: str,
@@ -98,6 +104,7 @@ class OKXProvider(BaseProvider):
             symbol=symbol, start_time=start_time, end_time=end_time, limit=limit
         )
 
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.REST)
     async def get_open_interest(
         self,
         symbol: str,
@@ -117,6 +124,7 @@ class OKXProvider(BaseProvider):
         )
 
     # --- Streaming delegations -------------------------------------------
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.WS)
     async def stream_ohlcv(
         self,
         symbol: str,
@@ -153,6 +161,7 @@ class OKXProvider(BaseProvider):
         ):
             yield bar
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
     async def stream_trades(self, symbol: str) -> AsyncIterator[Trade]:
         async for trade in self._ws.stream_trades(symbol):
             yield trade
@@ -161,30 +170,35 @@ class OKXProvider(BaseProvider):
         async for trade in self._ws.stream_trades_multi(symbols):
             yield trade
 
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.WS)
     async def stream_open_interest(
         self, symbols: list[str], period: str = "5m"
     ) -> AsyncIterator[OpenInterest]:
         async for oi in self._ws.stream_open_interest(symbols, period=period):
             yield oi
 
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.WS)
     async def stream_funding_rate(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator[FundingRate]:
         async for rate in self._ws.stream_funding_rate(symbols, update_speed=update_speed):
             yield rate
 
+    @register_feature_handler(DataFeature.MARK_PRICE, TransportKind.WS)
     async def stream_mark_price(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator[MarkPrice]:
         async for mark in self._ws.stream_mark_price(symbols, update_speed=update_speed):
             yield mark
 
+    @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.WS)
     async def stream_order_book(
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
         async for ob in self._ws.stream_order_book(symbol, update_speed=update_speed):
             yield ob
 
+    @register_feature_handler(DataFeature.LIQUIDATIONS, TransportKind.WS)
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         async for liq in self._ws.stream_liquidations():
             yield liq

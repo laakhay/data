@@ -7,65 +7,91 @@ ProviderRegistry and setting up feature handlers.
 from __future__ import annotations
 
 from laakhay.data.core import (
-    DataFeature,
-    FeatureHandler,
     MarketType,
     ProviderRegistry,
-    TransportKind,
+    collect_feature_handlers,
     get_provider_registry,
 )
+
+# Explicitly import and re-export all public classes from provider modules
 from laakhay.data.providers.binance import (
     BinanceProvider,
+    BinanceRESTProvider,
     BinanceURM,
+    BinanceWSProvider,
 )
-from laakhay.data.providers.binance import (
-    BinanceRESTProvider as BinanceRESTProvider,
+from laakhay.data.providers.bybit import (
+    BybitProvider,
+    BybitRESTProvider,
+    BybitWSProvider,
 )
-from laakhay.data.providers.binance import (
-    BinanceWSProvider as BinanceWSProvider,
-)
-from laakhay.data.providers.bybit import BybitProvider
 from laakhay.data.providers.bybit.urm import BybitURM
 from laakhay.data.providers.coinbase import (
     CoinbaseProvider,
+    CoinbaseRESTProvider,
     CoinbaseURM,
-)
-from laakhay.data.providers.coinbase import (
-    CoinbaseRESTProvider as CoinbaseRESTProvider,
-)
-from laakhay.data.providers.coinbase import (
-    CoinbaseWSProvider as CoinbaseWSProvider,
+    CoinbaseWSProvider,
 )
 from laakhay.data.providers.hyperliquid import (
     HyperliquidProvider,
+    HyperliquidRESTProvider,
     HyperliquidURM,
-)
-from laakhay.data.providers.hyperliquid import (
-    HyperliquidRESTProvider as HyperliquidRESTProvider,
-)
-from laakhay.data.providers.hyperliquid import (
-    HyperliquidWSProvider as HyperliquidWSProvider,
+    HyperliquidWSProvider,
 )
 from laakhay.data.providers.kraken import (
     KrakenProvider,
+    KrakenRESTProvider,
     KrakenURM,
-)
-from laakhay.data.providers.kraken import (
-    KrakenRESTProvider as KrakenRESTProvider,
-)
-from laakhay.data.providers.kraken import (
-    KrakenWSProvider as KrakenWSProvider,
+    KrakenWSProvider,
 )
 from laakhay.data.providers.okx import (
     OKXURM,
     OKXProvider,
+    OKXRESTProvider,
+    OKXWSProvider,
 )
-from laakhay.data.providers.okx import (
-    OKXRESTProvider as OKXRESTProvider,
-)
-from laakhay.data.providers.okx import (
-    OKXWSProvider as OKXWSProvider,
-)
+
+# Explicit re-exports to satisfy ruff (these are exported via __all__)
+__all__ = [
+    # Binance
+    "BinanceProvider",
+    "BinanceRESTProvider",
+    "BinanceURM",
+    "BinanceWSProvider",
+    # Bybit
+    "BybitProvider",
+    "BybitRESTProvider",
+    "BybitURM",
+    "BybitWSProvider",
+    # Coinbase
+    "CoinbaseProvider",
+    "CoinbaseRESTProvider",
+    "CoinbaseURM",
+    "CoinbaseWSProvider",
+    # Hyperliquid
+    "HyperliquidProvider",
+    "HyperliquidRESTProvider",
+    "HyperliquidURM",
+    "HyperliquidWSProvider",
+    # Kraken
+    "KrakenProvider",
+    "KrakenRESTProvider",
+    "KrakenURM",
+    "KrakenWSProvider",
+    # OKX
+    "OKXProvider",
+    "OKXRESTProvider",
+    "OKXURM",
+    "OKXWSProvider",
+    # Registration functions
+    "register_binance",
+    "register_bybit",
+    "register_coinbase",
+    "register_hyperliquid",
+    "register_kraken",
+    "register_okx",
+    "register_all",
+]
 
 
 def register_binance(registry: ProviderRegistry | None = None) -> None:
@@ -77,95 +103,14 @@ def register_binance(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Map feature handlers manually (decorators can be added later)
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=BinanceProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=BinanceProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=BinanceProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.REST): FeatureHandler(
-            method_name="get_funding_rate",
-            method=BinanceProvider.get_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.REST): FeatureHandler(
-            method_name="get_open_interest",
-            method=BinanceProvider.get_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=BinanceProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=BinanceProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=BinanceProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=BinanceProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=BinanceProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=BinanceProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=BinanceProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=BinanceProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(BinanceProvider)  # noqa: F405
 
     registry.register(
         "binance",
-        BinanceProvider,
+        BinanceProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=BinanceURM(),
+        urm_mapper=BinanceURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -179,95 +124,14 @@ def register_bybit(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Map feature handlers manually
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=BybitProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=BybitProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=BybitProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.REST): FeatureHandler(
-            method_name="get_funding_rate",
-            method=BybitProvider.get_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.REST): FeatureHandler(
-            method_name="get_open_interest",
-            method=BybitProvider.get_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=BybitProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=BybitProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=BybitProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=BybitProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=BybitProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=BybitProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=BybitProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=BybitProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(BybitProvider)  # noqa: F405
 
     registry.register(
         "bybit",
-        BybitProvider,
+        BybitProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=BybitURM(),
+        urm_mapper=BybitURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -281,94 +145,14 @@ def register_okx(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=OKXProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=OKXProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=OKXProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.REST): FeatureHandler(
-            method_name="get_funding_rate",
-            method=OKXProvider.get_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.REST): FeatureHandler(
-            method_name="get_open_interest",
-            method=OKXProvider.get_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=OKXProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=OKXProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=OKXProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=OKXProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=OKXProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=OKXProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=OKXProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=OKXProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(OKXProvider)  # noqa: F405
 
     registry.register(
         "okx",
-        OKXProvider,
+        OKXProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=OKXURM(),
+        urm_mapper=OKXURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -382,94 +166,14 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=KrakenProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=KrakenProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=KrakenProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.REST): FeatureHandler(
-            method_name="get_funding_rate",
-            method=KrakenProvider.get_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.REST): FeatureHandler(
-            method_name="get_open_interest",
-            method=KrakenProvider.get_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=KrakenProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=KrakenProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=KrakenProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=KrakenProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=KrakenProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=KrakenProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=KrakenProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=KrakenProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
 
     registry.register(
         "kraken",
-        KrakenProvider,
+        KrakenProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=KrakenURM(),
+        urm_mapper=KrakenURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -483,94 +187,14 @@ def register_hyperliquid(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=HyperliquidProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=HyperliquidProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=HyperliquidProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.REST): FeatureHandler(
-            method_name="get_funding_rate",
-            method=HyperliquidProvider.get_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.REST): FeatureHandler(
-            method_name="get_open_interest",
-            method=HyperliquidProvider.get_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=HyperliquidProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=HyperliquidProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=HyperliquidProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=HyperliquidProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=HyperliquidProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=HyperliquidProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=HyperliquidProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=HyperliquidProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(HyperliquidProvider)  # noqa: F405
 
     registry.register(
         "hyperliquid",
-        HyperliquidProvider,
+        HyperliquidProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=HyperliquidURM(),
+        urm_mapper=HyperliquidURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -586,82 +210,14 @@ def register_coinbase(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    feature_handlers = {
-        # REST handlers
-        (DataFeature.OHLCV, TransportKind.REST): FeatureHandler(
-            method_name="get_candles",
-            method=CoinbaseProvider.get_candles,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.REST): FeatureHandler(
-            method_name="get_order_book",
-            method=CoinbaseProvider.get_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.TRADES, TransportKind.REST): FeatureHandler(
-            method_name="get_recent_trades",
-            method=CoinbaseProvider.get_recent_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-        ),
-        (DataFeature.SYMBOL_METADATA, TransportKind.REST): FeatureHandler(
-            method_name="get_symbols",
-            method=CoinbaseProvider.get_symbols,
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-        ),
-        # WebSocket handlers
-        (DataFeature.OHLCV, TransportKind.WS): FeatureHandler(
-            method_name="stream_ohlcv",
-            method=CoinbaseProvider.stream_ohlcv,
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.ORDER_BOOK, TransportKind.WS): FeatureHandler(
-            method_name="stream_order_book",
-            method=CoinbaseProvider.stream_order_book,
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.TRADES, TransportKind.WS): FeatureHandler(
-            method_name="stream_trades",
-            method=CoinbaseProvider.stream_trades,
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.OPEN_INTEREST, TransportKind.WS): FeatureHandler(
-            method_name="stream_open_interest",
-            method=CoinbaseProvider.stream_open_interest,
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.FUNDING_RATE, TransportKind.WS): FeatureHandler(
-            method_name="stream_funding_rate",
-            method=CoinbaseProvider.stream_funding_rate,
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.MARK_PRICE, TransportKind.WS): FeatureHandler(
-            method_name="stream_mark_price",
-            method=CoinbaseProvider.stream_mark_price,
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-        ),
-        (DataFeature.LIQUIDATIONS, TransportKind.WS): FeatureHandler(
-            method_name="stream_liquidations",
-            method=CoinbaseProvider.stream_liquidations,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-        ),
-    }
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(CoinbaseProvider)  # noqa: F405
 
     registry.register(
         "coinbase",
-        CoinbaseProvider,
+        CoinbaseProvider,  # noqa: F405
         market_types=[MarketType.SPOT],  # Coinbase only supports spot
-        urm_mapper=CoinbaseURM(),
+        urm_mapper=CoinbaseURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -678,43 +234,3 @@ def register_all(registry: ProviderRegistry | None = None) -> None:
     register_kraken(registry)
     register_hyperliquid(registry)
     register_coinbase(registry)
-
-
-__all__ = [
-    # Binance
-    "BinanceProvider",
-    "BinanceRESTProvider",
-    "BinanceWSProvider",
-    "BinanceURM",
-    # Bybit
-    "BybitProvider",
-    "BybitURM",
-    # Coinbase
-    "CoinbaseProvider",
-    "CoinbaseRESTProvider",
-    "CoinbaseWSProvider",
-    "CoinbaseURM",
-    # Hyperliquid
-    "HyperliquidProvider",
-    "HyperliquidRESTProvider",
-    "HyperliquidWSProvider",
-    "HyperliquidURM",
-    # Kraken
-    "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenWSProvider",
-    "KrakenURM",
-    # OKX
-    "OKXProvider",
-    "OKXRESTProvider",
-    "OKXWSProvider",
-    "OKXURM",
-    # Registration functions
-    "register_binance",
-    "register_bybit",
-    "register_coinbase",
-    "register_hyperliquid",
-    "register_kraken",
-    "register_okx",
-    "register_all",
-]

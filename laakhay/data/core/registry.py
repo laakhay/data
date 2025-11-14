@@ -380,4 +380,3 @@ def collect_feature_handlers(
                 )
 
     return handlers
-
