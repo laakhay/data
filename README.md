@@ -14,6 +14,43 @@ pip install laakhay-data
 
 ## Quick Start
 
+### Using DataAPI (Recommended)
+
+```python
+import asyncio
+from laakhay.data.core import DataAPI, MarketType, Timeframe
+
+async def main():
+    async with DataAPI() as api:
+        # REST API - unified interface across all exchanges
+        candles = await api.fetch_ohlcv(
+            symbol="BTCUSDT",
+            timeframe=Timeframe.M1,
+            exchange="binance",
+            market_type=MarketType.SPOT,
+            limit=100,
+        )
+        order_book = await api.fetch_order_book(
+            symbol="BTCUSDT",
+            exchange="binance",
+            market_type=MarketType.SPOT,
+            depth=20,
+        )
+        
+        # WebSocket streaming
+        async for trade in api.stream_trades(
+            symbol="BTCUSDT",
+            exchange="binance",
+            market_type=MarketType.SPOT,
+        ):
+            print(f"{trade.symbol}: ${trade.value:.2f} ({trade.side})")
+            break
+
+asyncio.run(main())
+```
+
+### Using Direct Providers (Still Supported)
+
 ```python
 import asyncio
 from laakhay.data import BinanceProvider, MarketType, Timeframe
@@ -31,6 +68,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+> **Note**: We recommend using `DataAPI` for new code. It provides better error messages, automatic capability validation, and URM symbol resolution. See the [Migration Guide](docs/migration-guide.md) for details.
 
 ## Supported Exchanges
 
@@ -62,7 +101,13 @@ All providers implement the unified `BaseProvider` interface—switch exchanges 
 
 ```
 laakhay/data/
-├── core/              # BaseProvider, enums, exceptions
+├── core/              # BaseProvider, enums, exceptions, DataAPI, DataRouter
+│   ├── api.py         # DataAPI facade (unified interface)
+│   ├── router.py      # DataRouter (URM + capability + provider routing)
+│   ├── registry.py    # ProviderRegistry (provider lifecycle management)
+│   ├── capabilities.py # Capability store (feature support matrix)
+│   ├── urm.py         # URM registry (symbol normalization)
+│   └── relay.py       # StreamRelay (forward streams to sinks)
 ├── models/            # Pydantic models (Bar, OHLCV, OrderBook, Trade, etc.)
 ├── providers/         # Exchange implementations
 │   ├── binance/       # Binance REST + WS
@@ -74,6 +119,7 @@ laakhay/data/
 ├── io/                # REST/WS abstraction layer
 │   ├── rest/          # RESTProvider, HTTP transport, adapters
 │   └── ws/            # WSProvider, WebSocket transport, message adapters
+├── sinks/             # Stream sinks (InMemorySink, RedisStreamSink)
 └── clients/           # High-level streaming feeds
     ├── ohlcv_feed.py
     ├── liquidation_feed.py
@@ -93,6 +139,118 @@ Providers use modular components:
 - **Transports**: HTTP client (aiohttp) and WebSocket client (websockets)
 
 ## Core Features
+
+### Unified DataAPI
+
+The new `DataAPI` provides a single interface for accessing data across all exchanges:
+
+```python
+from laakhay.data.core import DataAPI, MarketType, Timeframe
+
+async with DataAPI(
+    default_exchange="binance",
+    default_market_type=MarketType.SPOT,
+) as api:
+    # Switch exchanges easily - same API
+    binance_ohlcv = await api.fetch_ohlcv(
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+        exchange="binance",
+        limit=100,
+    )
+    
+    bybit_ohlcv = await api.fetch_ohlcv(
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+        exchange="bybit",
+        limit=100,
+    )
+    
+    # Automatic capability validation
+    # Raises CapabilityError with recommendations if unsupported
+```
+
+### Universal Representation Mapping (URM)
+
+Use global aliases, URM IDs, or exchange-native symbols:
+
+```python
+async with DataAPI() as api:
+    # Global alias
+    ohlcv1 = await api.fetch_ohlcv(
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+    )
+    
+    # URM ID
+    ohlcv2 = await api.fetch_ohlcv(
+        symbol="urm://binance:btc/usdt:spot",
+        timeframe=Timeframe.H1,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+    )
+    
+    # Exchange-native (still works)
+    ohlcv3 = await api.fetch_ohlcv(
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+    )
+```
+
+### Capability Discovery
+
+Check what features are supported before making requests:
+
+```python
+from laakhay.data.core import supports, DataFeature, TransportKind, MarketType, InstrumentType
+
+# Check if OHLCV REST is supported
+status = supports(
+    feature=DataFeature.OHLCV,
+    transport=TransportKind.REST,
+    exchange="binance",
+    market_type=MarketType.SPOT,
+    instrument_type=InstrumentType.SPOT,
+)
+
+if status.supported:
+    print("Supported!")
+    print(f"Constraints: {status.constraints}")
+else:
+    print(f"Not supported: {status.reason}")
+    print(f"Alternatives: {status.recommendations}")
+```
+
+### Stream Relay
+
+Forward streams to external sinks (Redis, Kafka, etc.):
+
+```python
+from laakhay.data.core import StreamRelay, DataRequest, DataFeature, TransportKind, MarketType
+from laakhay.data.sinks import InMemorySink
+
+relay = StreamRelay()
+sink = InMemorySink()
+relay.add_sink(sink)
+
+request = DataRequest(
+    feature=DataFeature.TRADES,
+    transport=TransportKind.WS,
+    exchange="binance",
+    market_type=MarketType.SPOT,
+    symbol="BTCUSDT",
+)
+
+await relay.relay(request)
+
+# Consume from sink
+async for event in sink.stream():
+    print(event)
+```
 
 ### Multi-Exchange Support
 
