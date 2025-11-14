@@ -9,7 +9,15 @@ from laakhay.data.core import (
     TransportKind,
     get_provider_registry,
 )
-from laakhay.data.providers import register_binance, register_bybit
+from laakhay.data.providers import (
+    register_all,
+    register_binance,
+    register_bybit,
+    register_coinbase,
+    register_hyperliquid,
+    register_kraken,
+    register_okx,
+)
 
 
 @pytest.mark.asyncio
@@ -152,4 +160,92 @@ async def test_feature_handler_mapping():
     # Both should map to stream_trades
     assert binance_trades_ws.method_name == "stream_trades"
     assert bybit_trades_ws.method_name == "stream_trades"
+
+
+@pytest.mark.asyncio
+async def test_register_all_exchanges():
+    """Test registering all exchanges."""
+    registry = ProviderRegistry()
+
+    register_all(registry)
+
+    expected_exchanges = ["binance", "bybit", "okx", "kraken", "hyperliquid", "coinbase"]
+    assert set(registry.list_exchanges()) == set(expected_exchanges)
+
+    # Verify all have URM mappers
+    for exchange in expected_exchanges:
+        urm = registry.get_urm_mapper(exchange)
+        assert urm is not None, f"{exchange} should have URM mapper"
+
+
+@pytest.mark.asyncio
+async def test_register_okx():
+    """Test registering OKX provider."""
+    registry = ProviderRegistry()
+
+    register_okx(registry)
+
+    assert registry.is_registered("okx")
+    urm = registry.get_urm_mapper("okx")
+    assert urm is not None
+
+    # Test provider retrieval
+    spot_provider = await registry.get_provider("okx", MarketType.SPOT)
+    assert spot_provider.name == "okx"
+    assert spot_provider.market_type == MarketType.SPOT
+
+
+@pytest.mark.asyncio
+async def test_register_kraken():
+    """Test registering Kraken provider."""
+    registry = ProviderRegistry()
+
+    register_kraken(registry)
+
+    assert registry.is_registered("kraken")
+    urm = registry.get_urm_mapper("kraken")
+    assert urm is not None
+
+    # Test provider retrieval
+    spot_provider = await registry.get_provider("kraken", MarketType.SPOT)
+    assert spot_provider.name == "kraken"
+    assert spot_provider.market_type == MarketType.SPOT
+
+
+@pytest.mark.asyncio
+async def test_register_hyperliquid():
+    """Test registering Hyperliquid provider."""
+    registry = ProviderRegistry()
+
+    register_hyperliquid(registry)
+
+    assert registry.is_registered("hyperliquid")
+    urm = registry.get_urm_mapper("hyperliquid")
+    assert urm is not None
+
+    # Test provider retrieval
+    spot_provider = await registry.get_provider("hyperliquid", MarketType.SPOT)
+    assert spot_provider.name == "hyperliquid"
+    assert spot_provider.market_type == MarketType.SPOT
+
+
+@pytest.mark.asyncio
+async def test_register_coinbase():
+    """Test registering Coinbase provider (spot only)."""
+    registry = ProviderRegistry()
+
+    register_coinbase(registry)
+
+    assert registry.is_registered("coinbase")
+    urm = registry.get_urm_mapper("coinbase")
+    assert urm is not None
+
+    # Test provider retrieval (spot only)
+    spot_provider = await registry.get_provider("coinbase", MarketType.SPOT)
+    assert spot_provider.name == "coinbase"
+    assert spot_provider.market_type == MarketType.SPOT
+
+    # Coinbase should not support futures
+    with pytest.raises(Exception):  # ProviderError from registry
+        await registry.get_provider("coinbase", MarketType.FUTURES)
 
