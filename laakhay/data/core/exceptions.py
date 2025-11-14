@@ -7,6 +7,26 @@ class DataError(Exception):
     pass
 
 
+class CapabilityError(DataError):
+    """Capability is unsupported or unavailable.
+
+    Raised when a requested feature/transport/instrument combination
+    is not supported by the exchange. Includes recommendations for alternatives.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        key: "CapabilityKey | None" = None,  # type: ignore[name-defined]
+        status: "CapabilityStatus | None" = None,  # type: ignore[name-defined]
+        recommendations: list["FallbackOption"] | None = None,  # type: ignore[name-defined]
+    ) -> None:
+        super().__init__(message)
+        self.key = key
+        self.status = status
+        self.recommendations = recommendations or []
+
+
 class ProviderError(DataError):
     """Error from external data provider."""
 
