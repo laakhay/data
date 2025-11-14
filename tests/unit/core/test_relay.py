@@ -246,7 +246,7 @@ async def test_relay_metrics(relay, in_memory_sink):
     """Test relay metrics collection."""
     relay.add_sink(in_memory_sink)
 
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         yield {"symbol": "BTCUSDT", "price": 50000}
         yield {"symbol": "BTCUSDT", "price": 50001}
 
@@ -260,7 +260,7 @@ async def test_relay_metrics(relay, in_memory_sink):
         symbol="BTCUSDT",
     )
 
-    relay_task = asyncio.create_task(relay.relay(request))
+    asyncio.create_task(relay.relay(request))
     await asyncio.sleep(0.1)
     await relay.stop()
     await relay_task
