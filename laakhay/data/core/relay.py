@@ -8,18 +8,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 from .enums import TransportKind
-from .exceptions import DataError, RelayError
+from .exceptions import RelayError
 from .request import DataRequest
 from .router import DataRouter
-
-if TYPE_CHECKING:
-    from ..models import Trade, OHLCV, OrderBook, Liquidation
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +160,7 @@ class StreamRelay:
                         self._metrics.events_dropped += 1
                         logger.warning("Event buffer full, dropping event")
                         continue
+                    self._event_buffer.put_nowait(event)
                 elif self._backpressure_policy == "block":
                     # Block until space available
                     await self._event_buffer.put(event)
@@ -190,10 +187,8 @@ class StreamRelay:
             try:
                 # Get event from buffer (with timeout to allow checking _running)
                 try:
-                    event = await asyncio.wait_for(
-                        self._event_buffer.get(), timeout=1.0
-                    )
-                except asyncio.TimeoutError:
+                    event = await asyncio.wait_for(self._event_buffer.get(), timeout=1.0)
+                except TimeoutError:
                     continue
 
                 # Publish to all sinks
@@ -281,4 +276,3 @@ class StreamRelay:
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.stop()
-

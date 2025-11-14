@@ -16,6 +16,18 @@ from laakhay.data.core.router import DataRouter
 from laakhay.data.sinks.in_memory import InMemorySink
 
 
+async def wait_for_condition(predicate, timeout: float = 0.5) -> None:
+    """Wait until predicate returns True or timeout."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while True:
+        if predicate():
+            return
+        if loop.time() >= deadline:
+            raise AssertionError("Condition not met within timeout")
+        await asyncio.sleep(0.01)
+
+
 class MockSink:
     """Mock sink for testing."""
 
@@ -199,10 +211,10 @@ async def test_relay_retry_on_failure(relay):
         symbol="BTCUSDT",
     )
 
-    relay_task = asyncio.create_task(relay.relay(request))
-    await asyncio.sleep(0.1)
+    task = asyncio.create_task(relay.relay(request))
+    await wait_for_condition(lambda: failing_sink.call_count >= 1)
     await relay.stop()
-    await relay_task
+    await task
 
     # Should have retried and eventually succeeded
     assert failing_sink.call_count >= 1
@@ -234,7 +246,7 @@ async def test_relay_max_retries_exceeded(relay):
     )
 
     task = asyncio.create_task(relay.relay(request))
-    await asyncio.sleep(0.2)
+    await wait_for_condition(lambda: relay.get_metrics().events_failed > 0)
     await relay.stop()
     await task
 
@@ -261,10 +273,10 @@ async def test_relay_metrics(relay, in_memory_sink):
         symbol="BTCUSDT",
     )
 
-    asyncio.create_task(relay.relay(request))
-    await asyncio.sleep(0.1)
+    task = asyncio.create_task(relay.relay(request))
+    await wait_for_condition(lambda: relay.get_metrics().events_published >= 1)
     await relay.stop()
-    await relay_task
+    await task
 
     metrics = relay.get_metrics()
     assert metrics.events_published >= 0
@@ -325,4 +337,3 @@ async def test_relay_temporary_sink(relay, in_memory_sink):
 
     # Temporary sink should be removed
     assert in_memory_sink not in relay._sinks
-
