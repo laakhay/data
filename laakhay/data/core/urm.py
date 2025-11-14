@@ -112,7 +112,7 @@ class URMRegistry:
 
         # Clear cache entries for this exchange
         keys_to_remove = [
-            key for key in self._cache.keys() if key[0] == exchange_lower
+            key for key in self._cache if key[0] == exchange_lower
         ]
         for key in keys_to_remove:
             del self._cache[key]
@@ -224,7 +224,7 @@ class URMRegistry:
         if exchange:
             exchange_lower = exchange.lower()
             keys_to_remove = [
-                key for key in self._cache.keys() if key[0] == exchange_lower
+                key for key in self._cache if key[0] == exchange_lower
             ]
             for key in keys_to_remove:
                 del self._cache[key]
