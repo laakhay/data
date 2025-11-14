@@ -16,31 +16,56 @@ from laakhay.data.core import (
 )
 from laakhay.data.providers.binance import (
     BinanceProvider,
-    BinanceRESTProvider,
     BinanceURM,
-    BinanceWSProvider,
+)
+from laakhay.data.providers.binance import (
+    BinanceRESTProvider as BinanceRESTProvider,
+)
+from laakhay.data.providers.binance import (
+    BinanceWSProvider as BinanceWSProvider,
 )
 from laakhay.data.providers.bybit import BybitProvider
 from laakhay.data.providers.bybit.urm import BybitURM
 from laakhay.data.providers.coinbase import (
     CoinbaseProvider,
-    CoinbaseRESTProvider,
     CoinbaseURM,
-    CoinbaseWSProvider,
+)
+from laakhay.data.providers.coinbase import (
+    CoinbaseRESTProvider as CoinbaseRESTProvider,
+)
+from laakhay.data.providers.coinbase import (
+    CoinbaseWSProvider as CoinbaseWSProvider,
 )
 from laakhay.data.providers.hyperliquid import (
     HyperliquidProvider,
-    HyperliquidRESTProvider,
     HyperliquidURM,
-    HyperliquidWSProvider,
+)
+from laakhay.data.providers.hyperliquid import (
+    HyperliquidRESTProvider as HyperliquidRESTProvider,
+)
+from laakhay.data.providers.hyperliquid import (
+    HyperliquidWSProvider as HyperliquidWSProvider,
 )
 from laakhay.data.providers.kraken import (
     KrakenProvider,
-    KrakenRESTProvider,
     KrakenURM,
-    KrakenWSProvider,
 )
-from laakhay.data.providers.okx import OKXURM, OKXProvider, OKXRESTProvider, OKXWSProvider
+from laakhay.data.providers.kraken import (
+    KrakenRESTProvider as KrakenRESTProvider,
+)
+from laakhay.data.providers.kraken import (
+    KrakenWSProvider as KrakenWSProvider,
+)
+from laakhay.data.providers.okx import (
+    OKXURM,
+    OKXProvider,
+)
+from laakhay.data.providers.okx import (
+    OKXRESTProvider as OKXRESTProvider,
+)
+from laakhay.data.providers.okx import (
+    OKXWSProvider as OKXWSProvider,
+)
 
 
 def register_binance(registry: ProviderRegistry | None = None) -> None:
