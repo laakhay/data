@@ -13,14 +13,12 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from .capability_service import CapabilityService
-from .enums import InstrumentSpec, InstrumentType, MarketType
-from .exceptions import ProviderError, SymbolResolutionError
+from .exceptions import ProviderError
 from .request import DataRequest
 from .urm import get_urm_registry
 
 if TYPE_CHECKING:
-    from .base import BaseProvider
-    from .registry import FeatureHandler, ProviderRegistry, get_provider_registry
+    from .registry import ProviderRegistry
 
 
 class DataRouter:
@@ -261,4 +259,3 @@ class DataRouter:
         args.update(request.extra_params)
 
         return args
-

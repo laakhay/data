@@ -6,7 +6,7 @@ ensures consistent error handling with recommendations.
 
 from __future__ import annotations
 
-from .capabilities import CapabilityKey, CapabilityStatus, FallbackOption, supports
+from .capabilities import CapabilityKey, CapabilityStatus, supports
 from .enums import DataFeature, InstrumentType, MarketType, TransportKind
 from .exceptions import CapabilityError
 from .request import DataRequest
@@ -111,4 +111,3 @@ class CapabilityService:
             transport=request.transport,
             stream_variant=None,
         )
-
