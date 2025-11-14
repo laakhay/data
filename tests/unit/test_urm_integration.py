@@ -23,7 +23,9 @@ def test_registry_with_binance_mapper():
     spec = registry.urm_to_spec("BTCUSDT", exchange="binance", market_type=MarketType.FUTURES)
     assert spec.instrument_type == InstrumentType.PERPETUAL
 
-    symbol = registry.urm_to_exchange_symbol(spec, exchange="binance", market_type=MarketType.FUTURES)
+    symbol = registry.urm_to_exchange_symbol(
+        spec, exchange="binance", market_type=MarketType.FUTURES
+    )
     assert symbol == "BTCUSDT"
 
 
@@ -46,7 +48,9 @@ def test_registry_with_kraken_mapper():
     assert spec.base == "BTC"
     assert spec.instrument_type == InstrumentType.PERPETUAL
 
-    symbol = registry.urm_to_exchange_symbol(spec, exchange="kraken", market_type=MarketType.FUTURES)
+    symbol = registry.urm_to_exchange_symbol(
+        spec, exchange="kraken", market_type=MarketType.FUTURES
+    )
     assert symbol == "PI_XBTUSD"
 
 
@@ -60,17 +64,24 @@ def test_registry_cross_exchange():
     spec = InstrumentSpec(base="BTC", quote="USD", instrument_type=InstrumentType.SPOT)
 
     # Convert to Binance format
-    binance_symbol = registry.urm_to_exchange_symbol(spec, exchange="binance", market_type=MarketType.SPOT)
+    binance_symbol = registry.urm_to_exchange_symbol(
+        spec, exchange="binance", market_type=MarketType.SPOT
+    )
     assert binance_symbol == "BTCUSD"
 
     # Convert to Kraken format
-    kraken_symbol = registry.urm_to_exchange_symbol(spec, exchange="kraken", market_type=MarketType.SPOT)
+    kraken_symbol = registry.urm_to_exchange_symbol(
+        spec, exchange="kraken", market_type=MarketType.SPOT
+    )
     assert kraken_symbol == "XBT/USD"
 
     # Both should resolve back to the same spec
-    binance_spec = registry.urm_to_spec(binance_symbol, exchange="binance", market_type=MarketType.SPOT)
-    kraken_spec = registry.urm_to_spec(kraken_symbol, exchange="kraken", market_type=MarketType.SPOT)
+    binance_spec = registry.urm_to_spec(
+        binance_symbol, exchange="binance", market_type=MarketType.SPOT
+    )
+    kraken_spec = registry.urm_to_spec(
+        kraken_symbol, exchange="kraken", market_type=MarketType.SPOT
+    )
 
     assert binance_spec.base == kraken_spec.base == "BTC"
     assert binance_spec.quote == kraken_spec.quote == "USD"
-

@@ -316,4 +316,3 @@ def test_validate_urm_id():
     assert validate_urm_id("urm://*:btc/usdt:perpetual") is True
     assert validate_urm_id("invalid") is False
     assert validate_urm_id("urm://binance:btc/usdt") is False
-

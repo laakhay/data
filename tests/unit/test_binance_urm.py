@@ -64,9 +64,7 @@ def test_binance_urm_spec_to_perpetual_symbol():
     """Test converting spec to Binance perpetual futures symbol."""
     mapper = BinanceURM()
 
-    spec = InstrumentSpec(
-        base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL
-    )
+    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL)
     symbol = mapper.to_exchange_symbol(spec, market_type=MarketType.FUTURES)
     assert symbol == "BTCUSDT"
 
@@ -117,9 +115,7 @@ def test_binance_urm_invalid_futures_for_spot():
     """Test error when trying to convert futures spec to spot symbol."""
     mapper = BinanceURM()
 
-    spec = InstrumentSpec(
-        base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL
-    )
+    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL)
 
     with pytest.raises(SymbolResolutionError):
         mapper.to_exchange_symbol(spec, market_type=MarketType.SPOT)
@@ -133,4 +129,3 @@ def test_binance_urm_invalid_spot_for_futures():
 
     with pytest.raises(SymbolResolutionError):
         mapper.to_exchange_symbol(spec, market_type=MarketType.FUTURES)
-

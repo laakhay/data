@@ -155,4 +155,3 @@ class BinanceURM:
                 exchange="binance",
                 value=symbol,
             )
-

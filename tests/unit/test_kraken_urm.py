@@ -53,15 +53,11 @@ def test_kraken_urm_spec_to_futures_symbol():
     """Test converting spec to Kraken futures symbol."""
     mapper = KrakenURM()
 
-    spec = InstrumentSpec(
-        base="BTC", quote="USD", instrument_type=InstrumentType.PERPETUAL
-    )
+    spec = InstrumentSpec(base="BTC", quote="USD", instrument_type=InstrumentType.PERPETUAL)
     symbol = mapper.to_exchange_symbol(spec, market_type=MarketType.FUTURES)
     assert symbol == "PI_XBTUSD"  # BTC denormalized to XBT
 
-    spec = InstrumentSpec(
-        base="ETH", quote="USD", instrument_type=InstrumentType.PERPETUAL
-    )
+    spec = InstrumentSpec(base="ETH", quote="USD", instrument_type=InstrumentType.PERPETUAL)
     symbol = mapper.to_exchange_symbol(spec, market_type=MarketType.FUTURES)
     assert symbol == "PI_ETHUSD"
 
@@ -106,9 +102,7 @@ def test_kraken_urm_invalid_futures_for_spot():
     """Test error when trying to convert futures spec to spot symbol."""
     mapper = KrakenURM()
 
-    spec = InstrumentSpec(
-        base="BTC", quote="USD", instrument_type=InstrumentType.PERPETUAL
-    )
+    spec = InstrumentSpec(base="BTC", quote="USD", instrument_type=InstrumentType.PERPETUAL)
 
     with pytest.raises(SymbolResolutionError):
         mapper.to_exchange_symbol(spec, market_type=MarketType.SPOT)
@@ -139,4 +133,3 @@ def test_kraken_urm_invalid_future_type():
 
     with pytest.raises(SymbolResolutionError):
         mapper.to_exchange_symbol(spec, market_type=MarketType.FUTURES)
-

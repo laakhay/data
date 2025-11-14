@@ -170,4 +170,3 @@ class KrakenURM:
                 exchange="kraken",
                 value=symbol,
             )
-
