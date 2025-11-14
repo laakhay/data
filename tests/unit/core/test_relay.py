@@ -155,7 +155,7 @@ async def test_relay_backpressure_drop(relay, in_memory_sink):
     relay.add_sink(slow_sink)
 
     # Mock router to return many events quickly
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         for i in range(10):
             yield {"symbol": "BTCUSDT", "price": 50000 + i}
 
