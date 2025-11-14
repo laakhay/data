@@ -14,13 +14,33 @@ from laakhay.data.core import (
     TransportKind,
     get_provider_registry,
 )
-from laakhay.data.providers.binance import BinanceProvider, BinanceURM
+from laakhay.data.providers.binance import (
+    BinanceProvider,
+    BinanceRESTProvider,
+    BinanceURM,
+    BinanceWSProvider,
+)
 from laakhay.data.providers.bybit import BybitProvider
 from laakhay.data.providers.bybit.urm import BybitURM
-from laakhay.data.providers.coinbase import CoinbaseProvider, CoinbaseURM
-from laakhay.data.providers.hyperliquid import HyperliquidProvider, HyperliquidURM
-from laakhay.data.providers.kraken import KrakenProvider, KrakenURM
-from laakhay.data.providers.okx import OKXURM, OKXProvider
+from laakhay.data.providers.coinbase import (
+    CoinbaseProvider,
+    CoinbaseRESTProvider,
+    CoinbaseURM,
+    CoinbaseWSProvider,
+)
+from laakhay.data.providers.hyperliquid import (
+    HyperliquidProvider,
+    HyperliquidRESTProvider,
+    HyperliquidURM,
+    HyperliquidWSProvider,
+)
+from laakhay.data.providers.kraken import (
+    KrakenProvider,
+    KrakenRESTProvider,
+    KrakenURM,
+    KrakenWSProvider,
+)
+from laakhay.data.providers.okx import OKXProvider, OKXRESTProvider, OKXURM, OKXWSProvider
 
 
 def register_binance(registry: ProviderRegistry | None = None) -> None:
