@@ -8,7 +8,6 @@ from laakhay.data.core import (
     MarketType,
     SymbolResolutionError,
     URMRegistry,
-    UniversalRepresentationMapper,
     parse_urm_id,
     spec_to_urm_id,
     validate_urm_id,

@@ -1,7 +1,8 @@
 """Unit tests for Binance URM mapper."""
 
-import pytest
 from datetime import datetime
+
+import pytest
 
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
 from laakhay.data.providers.binance.urm import BinanceURM

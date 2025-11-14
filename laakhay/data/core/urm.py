@@ -17,6 +17,7 @@ Examples:
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from datetime import datetime, timedelta
 from typing import Protocol
 
@@ -151,9 +152,8 @@ class URMRegistry:
 
         # Check cache
         cache_key = (exchange_lower, exchange_symbol.upper(), market_type)
-        if cache_key in self._cache:
-            if self._is_cache_valid(cache_key):
-                return self._cache[cache_key]
+        if cache_key in self._cache and self._is_cache_valid(cache_key):
+            return self._cache[cache_key]
 
         # Use mapper
         mapper = self._mappers[exchange_lower]
@@ -316,18 +316,14 @@ def parse_urm_id(urm_id: str) -> InstrumentSpec:
         for part in parts:
             # Try to parse as date (YYYYMMDD)
             if len(part) == 8 and part.isdigit():
-                try:
+                with suppress(ValueError):
                     expiry = datetime.strptime(part, "%Y%m%d")
-                except ValueError:
-                    pass
             # Try to parse as option (C:35000 or P:35000)
             elif ":" in part and len(part) > 2 and part[0] in ("C", "P"):
                 option_type, strike_str = part.split(":", 1)
                 metadata["option_type"] = option_type
-                try:
+                with suppress(ValueError):
                     strike = float(strike_str)
-                except ValueError:
-                    pass
 
     spec = InstrumentSpec(
         base=base.upper(),

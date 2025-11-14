@@ -7,7 +7,6 @@ Handles Binance-specific symbol formats:
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 
 from ...core import InstrumentSpec, InstrumentType, MarketType
