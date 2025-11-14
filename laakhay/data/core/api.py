@@ -96,9 +96,7 @@ class DataAPI:
             return self._default_market_type
         raise ValueError("market_type must be provided (no default set)")
 
-    def _resolve_instrument_type(
-        self, instrument_type: InstrumentType | None
-    ) -> InstrumentType:
+    def _resolve_instrument_type(self, instrument_type: InstrumentType | None) -> InstrumentType:
         """Resolve instrument type parameter."""
         if instrument_type is not None:
             return instrument_type
@@ -688,4 +686,3 @@ class DataAPI:
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.close()
-
