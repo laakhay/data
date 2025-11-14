@@ -233,9 +233,10 @@ async def test_relay_max_retries_exceeded(relay):
         symbol="BTCUSDT",
     )
 
-    relay_task = asyncio.create_task(relay.relay(request))
+    task = asyncio.create_task(relay.relay(request))
     await asyncio.sleep(0.2)
     await relay.stop()
+    await task
 
     # Should have failed after retries
     assert relay.get_metrics().events_failed > 0
