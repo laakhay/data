@@ -36,7 +36,16 @@ from .exceptions import (
     InvalidSymbolError,
     ProviderError,
     RateLimitError,
+    SymbolResolutionError,
     ValidationError,
+)
+from .urm import (
+    UniversalRepresentationMapper,
+    URMRegistry,
+    get_urm_registry,
+    parse_urm_id,
+    spec_to_urm_id,
+    validate_urm_id,
 )
 
 __all__ = [
@@ -54,8 +63,16 @@ __all__ = [
     "InvalidIntervalError",
     "ValidationError",
     "CapabilityError",
+    "SymbolResolutionError",
     "RESTProvider",
     "WSProvider",
+    # URM API
+    "UniversalRepresentationMapper",
+    "URMRegistry",
+    "get_urm_registry",
+    "parse_urm_id",
+    "spec_to_urm_id",
+    "validate_urm_id",
     # Capabilities API
     "EXCHANGE_METADATA",
     "CapabilityKey",
