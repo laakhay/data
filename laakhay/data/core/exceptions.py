@@ -1,5 +1,12 @@
 """Custom exception hierarchy."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .capabilities import CapabilityKey, CapabilityStatus, FallbackOption
+
 
 class DataError(Exception):
     """Base exception for all library errors."""
@@ -17,9 +24,9 @@ class CapabilityError(DataError):
     def __init__(
         self,
         message: str,
-        key: "CapabilityKey | None" = None,  # type: ignore[name-defined]
-        status: "CapabilityStatus | None" = None,  # type: ignore[name-defined]
-        recommendations: list["FallbackOption"] | None = None,  # type: ignore[name-defined]
+        key: CapabilityKey | None = None,
+        status: CapabilityStatus | None = None,
+        recommendations: list[FallbackOption] | None = None,
     ) -> None:
         super().__init__(message)
         self.key = key

@@ -259,7 +259,7 @@ def get_all_supported_market_types() -> list[str]:
     all_types = set()
     for capability in EXCHANGE_METADATA.values():
         all_types.update(capability["supported_market_types"])
-    return sorted(list(all_types))
+    return sorted(all_types)
 
 
 def is_exchange_supported(exchange: str) -> bool:
@@ -313,7 +313,10 @@ def supports_data_type(exchange: str, data_type: str, method: str = "rest") -> b
 # New hierarchical capability registry
 # Structure: exchange -> market_type -> instrument_type -> feature -> transport -> CapabilityStatus
 _CAPABILITY_REGISTRY: dict[
-    str, dict[MarketType, dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]]]
+    str,
+    dict[
+        MarketType, dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]]
+    ],
 ] = {}
 
 
@@ -342,12 +345,15 @@ def _build_capability_registry() -> None:
 
     for exchange_name, capability in EXCHANGE_METADATA.items():
         exchange_registry: dict[
-            MarketType, dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]]
+            MarketType,
+            dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]],
         ] = {}
 
         for market_type_str in capability["supported_market_types"]:
             market_type = MarketType(market_type_str)
-            instrument_type_map: dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]] = {}
+            instrument_type_map: dict[
+                InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]
+            ] = {}
 
             # Determine instrument types based on market type
             if market_type == MarketType.SPOT:
@@ -372,10 +378,17 @@ def _build_capability_registry() -> None:
 
                         # Determine if this feature/instrument combo makes sense
                         # e.g., liquidations only for futures/perpetuals
-                        if feature == DataFeature.LIQUIDATIONS and instrument_type == InstrumentType.SPOT:
+                        if (
+                            feature == DataFeature.LIQUIDATIONS
+                            and instrument_type == InstrumentType.SPOT
+                        ):
                             supported = False
                             reason = "Liquidations are only available for futures/perpetual markets"
-                        elif feature in (DataFeature.OPEN_INTEREST, DataFeature.FUNDING_RATE, DataFeature.MARK_PRICE):
+                        elif feature in (
+                            DataFeature.OPEN_INTEREST,
+                            DataFeature.FUNDING_RATE,
+                            DataFeature.MARK_PRICE,
+                        ):
                             if instrument_type == InstrumentType.SPOT:
                                 supported = False
                                 reason = f"{feature.value} is only available for futures/perpetual markets"
@@ -393,7 +406,9 @@ def _build_capability_registry() -> None:
                             stream_metadata["symbol_scope"] = "symbol"
                         elif feature == DataFeature.LIQUIDATIONS:
                             # Binance has global liquidations, others are symbol-scoped
-                            stream_metadata["symbol_scope"] = "global" if exchange_name == "binance" else "symbol"
+                            stream_metadata["symbol_scope"] = (
+                                "global" if exchange_name == "binance" else "symbol"
+                            )
                         elif feature == DataFeature.ORDER_BOOK:
                             stream_metadata["symbol_scope"] = "symbol"
                             stream_metadata["max_depth"] = 500  # Example constraint
@@ -529,4 +544,3 @@ def list_features(
         return {}
 
     return instrument_data[instrument_type].copy()
-
