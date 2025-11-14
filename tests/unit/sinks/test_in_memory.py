@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from laakhay.data.sinks.in_memory import InMemorySink

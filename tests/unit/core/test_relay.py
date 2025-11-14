@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
 from laakhay.data.core.enums import DataFeature, MarketType, Timeframe, TransportKind
-from laakhay.data.core.exceptions import RelayError
-from laakhay.data.core.relay import RelayMetrics, StreamRelay
+from laakhay.data.core.relay import StreamRelay
 from laakhay.data.core.request import DataRequest
 from laakhay.data.core.router import DataRouter
 from laakhay.data.sinks.in_memory import InMemorySink
@@ -187,7 +185,7 @@ async def test_relay_retry_on_failure(relay):
     failing_sink = MockSink(fail_count=2)
     relay.add_sink(failing_sink)
 
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         yield {"symbol": "BTCUSDT", "price": 50000}
 
     relay._router.route_stream = mock_stream
@@ -221,7 +219,7 @@ async def test_relay_max_retries_exceeded(relay):
     )
     relay.add_sink(always_failing_sink)
 
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         yield {"symbol": "BTCUSDT", "price": 50000}
 
     relay._router.route_stream = mock_stream
@@ -276,7 +274,7 @@ async def test_relay_context_manager(relay, in_memory_sink):
     """Test relay as async context manager."""
     relay.add_sink(in_memory_sink)
 
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         yield {"symbol": "BTCUSDT", "price": 50000}
 
     relay._router.route_stream = mock_stream
@@ -305,7 +303,7 @@ async def test_relay_temporary_sink(relay, in_memory_sink):
     # No sinks registered initially
     assert len(relay._sinks) == 0
 
-    async def mock_stream() -> AsyncIterator[dict]:
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
         yield {"symbol": "BTCUSDT", "price": 50000}
 
     relay._router.route_stream = mock_stream
