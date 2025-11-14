@@ -4,6 +4,10 @@ from ..io import RESTProvider, WSProvider
 from .base import BaseProvider
 from .capabilities import (
     EXCHANGE_METADATA,
+    CapabilityKey,
+    CapabilityStatus,
+    FallbackOption,
+    describe_exchange,
     get_all_capabilities,
     get_all_exchanges,
     get_all_supported_market_types,
@@ -12,11 +16,21 @@ from .capabilities import (
     get_supported_market_types,
     get_supported_timeframes,
     is_exchange_supported,
+    list_features,
+    supports,
     supports_data_type,
     supports_market_type,
 )
-from .enums import MarketType, Timeframe
+from .enums import (
+    DataFeature,
+    InstrumentSpec,
+    InstrumentType,
+    MarketType,
+    Timeframe,
+    TransportKind,
+)
 from .exceptions import (
+    CapabilityError,
     DataError,
     InvalidIntervalError,
     InvalidSymbolError,
@@ -29,16 +43,24 @@ __all__ = [
     "BaseProvider",
     "Timeframe",
     "MarketType",
+    "DataFeature",
+    "TransportKind",
+    "InstrumentType",
+    "InstrumentSpec",
     "DataError",
     "ProviderError",
     "RateLimitError",
     "InvalidSymbolError",
     "InvalidIntervalError",
     "ValidationError",
+    "CapabilityError",
     "RESTProvider",
     "WSProvider",
     # Capabilities API
     "EXCHANGE_METADATA",
+    "CapabilityKey",
+    "CapabilityStatus",
+    "FallbackOption",
     "get_all_exchanges",
     "get_exchange_capability",
     "get_all_capabilities",
@@ -49,4 +71,7 @@ __all__ = [
     "is_exchange_supported",
     "supports_market_type",
     "supports_data_type",
+    "supports",
+    "describe_exchange",
+    "list_features",
 ]
