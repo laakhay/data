@@ -93,3 +93,18 @@ class SymbolResolutionError(DataError):
         self.value = value
         self.market_type = market_type
         self.known_aliases = known_aliases or {}
+
+
+class RelayError(DataError):
+    """Error emitted by StreamRelay when a sink fails repeatedly."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        sink_name: str | None = None,
+        consecutive_failures: int = 0,
+    ) -> None:
+        super().__init__(message)
+        self.sink_name = sink_name
+        self.consecutive_failures = consecutive_failures
