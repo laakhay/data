@@ -402,16 +402,56 @@ def _build_capability_registry() -> None:
                         if feature == DataFeature.OHLCV:
                             stream_metadata["symbol_scope"] = "symbol"
                             stream_metadata["timeframe_options"] = [tf.value for tf in Timeframe]
+                            stream_metadata["combo"] = []  # OHLCV doesn't support combos
+                            stream_metadata["combo_exchanges"] = []
                         elif feature == DataFeature.TRADES:
                             stream_metadata["symbol_scope"] = "symbol"
+                            # Some exchanges support trades+liquidations combo
+                            if exchange_name in ("binance", "bybit", "okx"):
+                                stream_metadata["combo"] = ["trades", "liquidations"]
+                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
+                            else:
+                                stream_metadata["combo"] = []
+                                stream_metadata["combo_exchanges"] = []
                         elif feature == DataFeature.LIQUIDATIONS:
                             # Binance has global liquidations, others are symbol-scoped
                             stream_metadata["symbol_scope"] = (
                                 "global" if exchange_name == "binance" else "symbol"
                             )
+                            # Liquidations can be combined with trades on some exchanges
+                            if exchange_name in ("binance", "bybit", "okx"):
+                                stream_metadata["combo"] = ["trades", "liquidations"]
+                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
+                            else:
+                                stream_metadata["combo"] = []
+                                stream_metadata["combo_exchanges"] = []
                         elif feature == DataFeature.ORDER_BOOK:
                             stream_metadata["symbol_scope"] = "symbol"
                             stream_metadata["max_depth"] = 500  # Example constraint
+                            stream_metadata["combo"] = []
+                            stream_metadata["combo_exchanges"] = []
+                        elif feature in (
+                            DataFeature.OPEN_INTEREST,
+                            DataFeature.FUNDING_RATE,
+                            DataFeature.MARK_PRICE,
+                        ):
+                            # These can sometimes be combined
+                            stream_metadata["symbol_scope"] = "symbol"
+                            if exchange_name in ("binance", "bybit", "okx"):
+                                stream_metadata["combo"] = [
+                                    "open_interest",
+                                    "funding_rates",
+                                    "mark_price",
+                                ]
+                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
+                            else:
+                                stream_metadata["combo"] = []
+                                stream_metadata["combo_exchanges"] = []
+                        else:
+                            # Default metadata
+                            stream_metadata["symbol_scope"] = "symbol"
+                            stream_metadata["combo"] = []
+                            stream_metadata["combo_exchanges"] = []
 
                         status = CapabilityStatus(
                             supported=supported,
