@@ -43,7 +43,7 @@ class TestStreamRunner:
             combined_supported=False,
             max_streams_per_connection=1,
             build_stream_name=lambda s, p: f"stream_{s}",
-            build_combined_url=lambda names: f"wss://example.com/combined",
+            build_combined_url=lambda names: "wss://example.com/combined",
             build_single_url=lambda name: f"wss://example.com/{name}",
         )
 
@@ -55,7 +55,7 @@ class TestStreamRunner:
             combined_supported=True,
             max_streams_per_connection=10,
             build_stream_name=lambda s, p: f"stream_{s}",
-            build_combined_url=lambda names: f"wss://example.com/combined",
+            build_combined_url=lambda names: "wss://example.com/combined",
             build_single_url=lambda name: f"wss://example.com/{name}",
         )
 
@@ -100,7 +100,7 @@ class TestStreamRunner:
         mock_adapter.parse = MagicMock(return_value=[MagicMock(symbol="BTC/USDT")])
 
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=single_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT"],
@@ -139,7 +139,7 @@ class TestStreamRunner:
         mock_adapter.parse = MagicMock(side_effect=[[obj1], [obj2]])
 
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=single_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT"],
@@ -175,7 +175,7 @@ class TestStreamRunner:
         mock_adapter.parse = MagicMock(return_value=[obj])
 
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=single_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT"],
@@ -217,7 +217,7 @@ class TestStreamRunner:
         mock_adapter.parse = MagicMock(side_effect=[[obj1], [obj2]])
 
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=single_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT"],
@@ -265,13 +265,13 @@ class TestStreamRunner:
             combined_supported=True,
             max_streams_per_connection=2,  # Will create 2 chunks for 3 symbols
             build_stream_name=lambda s, p: f"stream_{s}",
-            build_combined_url=lambda names: f"wss://example.com/combined",
+            build_combined_url=lambda names: "wss://example.com/combined",
             build_single_url=lambda name: f"wss://example.com/{name}",
         )
 
         # Run briefly then cancel to avoid hanging
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=chunking_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT", "ETH/USDT", "SOL/USDT"],
@@ -304,7 +304,7 @@ class TestStreamRunner:
         mock_transport.stream = MagicMock(return_value=MessageIterator())
 
         count = 0
-        async for msg in runner._stream_chunk(
+        async for _msg in runner._stream_chunk(
             spec=combined_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT", "ETH/USDT"],
@@ -340,7 +340,7 @@ class TestStreamRunner:
         mock_transport.stream = MagicMock(return_value=MessageIterator())
 
         count = 0
-        async for msg in runner._stream_chunk(
+        async for _msg in runner._stream_chunk(
             spec=single_stream_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT"],
@@ -382,13 +382,13 @@ class TestStreamRunner:
             combined_supported=True,
             max_streams_per_connection=1,
             build_stream_name=lambda s, p: f"stream_{s}",
-            build_combined_url=lambda names: f"wss://example.com/combined",
+            build_combined_url=lambda names: "wss://example.com/combined",
             build_single_url=lambda name: f"wss://example.com/{name}",
         )
 
         # Start stream - should complete quickly
         count = 0
-        async for obj in runner.run(
+        async for _obj in runner.run(
             spec=chunking_spec,
             adapter=mock_adapter,
             symbols=["BTC/USDT", "ETH/USDT"],
