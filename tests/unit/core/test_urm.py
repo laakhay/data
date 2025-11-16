@@ -316,3 +316,96 @@ def test_validate_urm_id():
     assert validate_urm_id("urm://*:btc/usdt:perpetual") is True
     assert validate_urm_id("invalid") is False
     assert validate_urm_id("urm://binance:btc/usdt") is False
+
+
+def test_urm_registry_mapper_exception_handling():
+    """Test that mapper exceptions are wrapped in SymbolResolutionError."""
+    registry = URMRegistry()
+    mapper = MockMapper("binance")
+
+    # Make mapper raise an exception
+    def failing_to_spec(exchange_symbol, *, market_type):
+        raise ValueError("Mapper error")
+
+    mapper.to_spec = failing_to_spec
+    registry.register("binance", mapper)
+
+    with pytest.raises(SymbolResolutionError) as exc_info:
+        registry.urm_to_spec("INVALID", exchange="binance", market_type=MarketType.SPOT)
+
+    assert "Failed to resolve symbol" in str(exc_info.value)
+    assert exc_info.value.exchange == "binance"
+
+
+def test_urm_registry_exchange_symbol_exception_handling():
+    """Test that mapper exceptions in to_exchange_symbol are wrapped."""
+    registry = URMRegistry()
+    mapper = MockMapper("binance")
+    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.SPOT)
+
+    # Make mapper raise an exception
+    def failing_to_exchange_symbol(spec, *, market_type):
+        raise ValueError("Conversion error")
+
+    mapper.to_exchange_symbol = failing_to_exchange_symbol
+    registry.register("binance", mapper)
+
+    with pytest.raises(SymbolResolutionError) as exc_info:
+        registry.urm_to_exchange_symbol(spec, exchange="binance", market_type=MarketType.SPOT)
+
+    assert "Failed to convert spec" in str(exc_info.value)
+    assert exc_info.value.exchange == "binance"
+
+
+def test_urm_registry_urm_to_exchange_symbol_unregistered():
+    """Test error when exchange not registered for urm_to_exchange_symbol."""
+    registry = URMRegistry()
+    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.SPOT)
+
+    with pytest.raises(SymbolResolutionError, match="No mapper registered"):
+        registry.urm_to_exchange_symbol(spec, exchange="nonexistent", market_type=MarketType.SPOT)
+
+
+def test_urm_registry_cache_invalid_missing_timestamp():
+    """Test cache validation when timestamp is missing."""
+    registry = URMRegistry()
+    cache_key = ("binance", "BTCUSDT", MarketType.SPOT)
+
+    # Cache entry without timestamp
+    registry._cache[cache_key] = InstrumentSpec(
+        base="BTC", quote="USDT", instrument_type=InstrumentType.SPOT
+    )
+
+    # Should return False (cache invalid)
+    assert registry._is_cache_valid(cache_key) is False
+
+
+def test_parse_urm_id_invalid_exchange():
+    """Test parsing URM ID with invalid exchange name."""
+    with pytest.raises(SymbolResolutionError, match="Invalid exchange"):
+        parse_urm_id("urm://invalid-exchange!:btc/usdt:spot")
+
+
+def test_parse_urm_id_option_basic():
+    """Test parsing URM ID with option instrument type."""
+    spec = parse_urm_id("urm://deribit:btc/usd:option")
+    assert spec.base == "BTC"
+    assert spec.quote == "USD"
+    assert spec.instrument_type == InstrumentType.OPTION
+
+
+def test_spec_to_urm_id_with_option():
+    """Test converting spec with option to URM ID."""
+    from datetime import datetime
+
+    spec = InstrumentSpec(
+        base="BTC",
+        quote="USD",
+        instrument_type=InstrumentType.OPTION,
+        strike=35000.0,
+        expiry=datetime(2024, 6, 28),
+        metadata={"option_type": "C"},
+    )
+    urm_id = spec_to_urm_id(spec, exchange="deribit")
+    assert "C:35000" in urm_id
+    assert "20240628" in urm_id
