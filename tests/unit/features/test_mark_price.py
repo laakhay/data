@@ -342,8 +342,35 @@ def test_edge_cases():
     assert mp_no_index.mark_index_spread is None
     assert mp_no_index.mark_index_spread_bps is None
     assert mp_no_index.is_premium is None
+    assert mp_no_index.is_discount is None  # Line 68
+    assert mp_no_index.is_high_spread is False  # Line 75
     assert mp_no_index.spread_severity == "unknown"
 
-    # Zero index price (shouldn't happen but handle gracefully)
     comparison = mp_no_index.compare_to_exchange_spot(Decimal("50000.00"))
     assert "error" in comparison or comparison["index_price"] is None
+
+
+def test_next_funding_time_ms_none():
+    """Test next_funding_time_ms when next_funding_time is None."""
+    mp = MarkPrice(
+        symbol="BTCUSDT",
+        mark_price=Decimal("50000.00"),
+        timestamp=datetime.now(UTC),
+    )
+    assert mp.next_funding_time is None
+    assert mp.next_funding_time_ms is None  # Lines 105-107
+    assert mp.seconds_to_funding is None  # Line 113
+
+
+def test_categorize_spread_edge_cases():
+    """Test _categorize_spread static method with various spread values."""
+    # Test all categories in _categorize_spread
+    assert MarkPrice._categorize_spread(Decimal("5")) == "normal"  # < 10
+    assert MarkPrice._categorize_spread(Decimal("15")) == "moderate"  # 10-30
+    assert MarkPrice._categorize_spread(Decimal("40")) == "high"  # 30-50
+    assert MarkPrice._categorize_spread(Decimal("75")) == "severe"  # 50-100
+    assert MarkPrice._categorize_spread(Decimal("150")) == "extreme"  # > 100
+
+    # Test negative spreads (absolute value used)
+    assert MarkPrice._categorize_spread(Decimal("-15")) == "moderate"
+    assert MarkPrice._categorize_spread(Decimal("-150")) == "extreme"

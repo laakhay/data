@@ -323,3 +323,235 @@ async def test_build_method_args_streaming(router):
     assert args["only_closed"] is True
     assert args["throttle_ms"] == 100
     assert args["dedupe_same_candle"] is True
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_rejects_urm_id(router, mock_provider_registry):
+    """Test that URM IDs are rejected (must use Laakhay format)."""
+    from laakhay.data.core.exceptions import SymbolResolutionError
+
+    mock_mapper = MagicMock()
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="urm://*:btc/usdt:spot",  # URM ID format
+        timeframe=Timeframe.H1,
+    )
+
+    with pytest.raises(SymbolResolutionError, match="URM IDs are not accepted"):
+        router._resolve_symbols(request)
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_rejects_exchange_format(router, mock_provider_registry):
+    """Test that exchange-native format is rejected (must use Laakhay format)."""
+    from laakhay.data.core.exceptions import SymbolResolutionError
+
+    mock_mapper = MagicMock()
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",  # Exchange format, missing "/"
+        timeframe=Timeframe.H1,
+    )
+
+    with pytest.raises(SymbolResolutionError, match="Symbol must be in Laakhay format"):
+        router._resolve_symbols(request)
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_invalid_format(router, mock_provider_registry):
+    """Test that invalid symbol format raises error."""
+    from laakhay.data.core.exceptions import SymbolResolutionError
+
+    mock_mapper = MagicMock()
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="INVALID",  # Invalid format (no "/")
+        timeframe=Timeframe.H1,
+    )
+
+    with pytest.raises(SymbolResolutionError, match="Symbol must be in Laakhay format"):
+        router._resolve_symbols(request)
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_malformed_format(router, mock_provider_registry):
+    """Test that malformed symbol format (with / but invalid) raises error."""
+    from laakhay.data.core.exceptions import SymbolResolutionError
+
+    mock_mapper = MagicMock()
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="/",  # Has "/" but malformed
+        timeframe=Timeframe.H1,
+    )
+
+    with pytest.raises(SymbolResolutionError, match="Invalid symbol format"):
+        router._resolve_symbols(request)
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_auto_corrects_futures_instrument_type(
+    router, mock_provider_registry
+):
+    """Test that SPOT instrument_type is auto-corrected to PERPETUAL for futures."""
+    mock_mapper = MagicMock()
+    mock_mapper.to_exchange_symbol = MagicMock(return_value="BTCUSDT")
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.FUTURES,
+        instrument_type=InstrumentType.SPOT,  # Will be auto-corrected
+        symbol="BTC/USDT",
+        timeframe=Timeframe.H1,
+    )
+
+    router._resolve_symbols(request)
+
+    # Verify mapper was called with PERPETUAL, not SPOT
+    call_args = mock_mapper.to_exchange_symbol.call_args[0][0]
+    assert call_args.instrument_type == InstrumentType.PERPETUAL
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_no_symbols_returns_empty_list(router, mock_provider_registry):
+    """Test that requests without symbols return empty list when no URM mapper."""
+    mock_provider_registry.get_urm_mapper.return_value = None
+
+    request = DataRequest(
+        feature=DataFeature.LIQUIDATIONS,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.FUTURES,
+        # No symbol or symbols
+    )
+
+    result = router._resolve_symbols(request)
+    assert result == []  # Returns empty list, not None
+
+
+@pytest.mark.asyncio
+async def test_resolve_symbols_no_symbols_with_urm_returns_none(router, mock_provider_registry):
+    """Test that requests without symbols return None when URM mapper exists."""
+    mock_mapper = MagicMock()
+    mock_provider_registry.get_urm_mapper.return_value = mock_mapper
+
+    request = DataRequest(
+        feature=DataFeature.LIQUIDATIONS,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.FUTURES,
+        # No symbol or symbols
+    )
+
+    result = router._resolve_symbols(request)
+    assert result is None  # Returns None when URM mapper exists
+
+
+@pytest.mark.asyncio
+async def test_build_method_args_single_item_list(router):
+    """Test that single-item symbol list becomes single symbol arg."""
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTC/USDT",
+        timeframe=Timeframe.H1,
+    )
+
+    # Single-item list should become single symbol
+    args = router._build_method_args(request, ["BTCUSDT"])
+
+    assert args["symbol"] == "BTCUSDT"
+    assert "symbols" not in args
+
+
+@pytest.mark.asyncio
+async def test_build_method_args_multiple_symbols(router):
+    """Test that multiple symbols are passed as list."""
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbols=["BTC/USDT", "ETH/USDT"],
+        timeframe=Timeframe.H1,
+    )
+
+    args = router._build_method_args(request, ["BTCUSDT", "ETHUSDT"])
+
+    assert args["symbols"] == ["BTCUSDT", "ETHUSDT"]
+    assert "symbol" not in args
+
+
+@pytest.mark.asyncio
+async def test_build_method_args_all_optional_params(router):
+    """Test building args with all optional parameters."""
+    from datetime import datetime
+
+    request = DataRequest(
+        feature=DataFeature.OPEN_INTEREST,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.FUTURES,
+        symbol="BTC/USDT",
+        period="5m",
+        historical=True,
+        start_time=datetime(2024, 1, 1),
+        end_time=datetime(2024, 1, 2),
+        limit=100,
+        max_chunks=5,
+        update_speed="1s",
+    )
+
+    args = router._build_method_args(request, "BTCUSDT")
+
+    assert args["symbol"] == "BTCUSDT"
+    assert args["period"] == "5m"
+    assert args["historical"] is True
+    assert args["start_time"] == datetime(2024, 1, 1)
+    assert args["end_time"] == datetime(2024, 1, 2)
+    assert args["limit"] == 100
+    assert args["max_chunks"] == 5
+    assert args["update_speed"] == "1s"
+
+
+@pytest.mark.asyncio
+async def test_route_stream_no_handler_error(router, mock_provider_registry):
+    """Test route_stream raises error when no handler found."""
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTC/USDT",
+    )
+
+    mock_provider_registry.get_feature_handler.return_value = None
+
+    with pytest.raises(ProviderError, match="No handler found"):
+        async for _ in router.route_stream(request):
+            pass

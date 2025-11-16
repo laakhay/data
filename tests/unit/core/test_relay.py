@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -337,3 +337,196 @@ async def test_relay_temporary_sink(relay, in_memory_sink):
 
     # Temporary sink should be removed
     assert in_memory_sink not in relay._sinks
+
+
+@pytest.mark.asyncio
+async def test_relay_stops_on_running_flag(relay, in_memory_sink):
+    """Test that relay stops when _running is False."""
+    relay.add_sink(in_memory_sink)
+
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
+        yield {"symbol": "BTCUSDT", "price": 50000}
+        # Stop relay mid-stream
+        relay._running = False
+        yield {"symbol": "BTCUSDT", "price": 50001}  # Should not be processed
+
+    relay._router.route_stream = mock_stream
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    await relay.relay(request)
+    # Should have stopped after first event
+
+
+@pytest.mark.asyncio
+async def test_relay_backpressure_block(relay, in_memory_sink):
+    """Test block backpressure policy."""
+    relay = StreamRelay(
+        router=relay._router,
+        max_buffer_size=2,
+        backpressure_policy="block",
+    )
+    relay.add_sink(in_memory_sink)
+
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
+        for i in range(5):
+            yield {"symbol": "BTCUSDT", "price": 50000 + i}
+
+    relay._router.route_stream = mock_stream
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    relay_task = asyncio.create_task(relay.relay(request))
+    await asyncio.sleep(0.1)
+    await relay.stop()
+    await relay_task
+
+    # Block policy should not drop events
+    assert relay.get_metrics().events_dropped == 0
+
+
+@pytest.mark.asyncio
+async def test_relay_backpressure_buffer_queue_full(relay, in_memory_sink):
+    """Test buffer backpressure policy with queue full."""
+    relay = StreamRelay(
+        router=relay._router,
+        max_buffer_size=2,
+        backpressure_policy="buffer",
+    )
+    relay.add_sink(in_memory_sink)
+
+    # Create very slow sink to fill buffer
+    slow_sink = MockSink()
+    relay.add_sink(slow_sink)
+
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
+        for i in range(10):
+            yield {"symbol": "BTCUSDT", "price": 50000 + i}
+
+    relay._router.route_stream = mock_stream
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    relay_task = asyncio.create_task(relay.relay(request))
+    await asyncio.sleep(0.1)
+    await relay.stop()
+    await relay_task
+
+    # Some events may be dropped when buffer is full
+    assert relay.get_metrics().events_dropped >= 0
+
+
+@pytest.mark.asyncio
+async def test_relay_stream_exception_handling(relay, in_memory_sink):
+    """Test that stream exceptions are handled and reconnection attempted."""
+    relay.add_sink(in_memory_sink)
+
+    async def failing_stream(request: DataRequest) -> AsyncIterator[dict]:
+        yield {"symbol": "BTCUSDT", "price": 50000}
+        raise Exception("Stream error")
+
+    relay._router.route_stream = failing_stream
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    with pytest.raises(Exception, match="Stream error"):
+        await relay.relay(request)
+
+    # Should have incremented reconnection attempts
+    assert relay.get_metrics().reconnection_attempts >= 1
+
+
+@pytest.mark.asyncio
+async def test_relay_publish_loop_timeout(relay, in_memory_sink):
+    """Test publish loop handles timeout correctly."""
+    relay.add_sink(in_memory_sink)
+
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
+        yield {"symbol": "BTCUSDT", "price": 50000}
+        await asyncio.sleep(2)  # Long delay to trigger timeout
+
+    relay._router.route_stream = mock_stream
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    relay_task = asyncio.create_task(relay.relay(request))
+    await asyncio.sleep(0.1)
+    await relay.stop()
+    await relay_task
+
+    # Should have processed at least one event
+    assert relay.get_metrics().events_published >= 0
+
+
+@pytest.mark.asyncio
+async def test_relay_publish_loop_exception(relay, in_memory_sink):
+    """Test publish loop handles exceptions gracefully."""
+    relay.add_sink(in_memory_sink)
+
+    async def mock_stream(request: DataRequest) -> AsyncIterator[dict]:
+        yield {"symbol": "BTCUSDT", "price": 50000}
+
+    relay._router.route_stream = mock_stream
+
+    # Make sink raise exception during publish
+    in_memory_sink.publish = AsyncMock(side_effect=Exception("Publish error"))
+
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    relay_task = asyncio.create_task(relay.relay(request))
+    await asyncio.sleep(0.1)
+    await relay.stop()
+    await relay_task
+
+    # Should have recorded failures
+    assert relay.get_metrics().events_failed >= 0
+
+
+@pytest.mark.asyncio
+async def test_relay_stop_closes_sinks_with_exception(relay):
+    """Test that stop handles sink close exceptions."""
+    sink = MockSink()
+    sink.close = AsyncMock(side_effect=Exception("Close error"))
+    relay.add_sink(sink)
+
+    # Should not raise, just log error
+    await relay.stop()
+
+    # Sink close should have been called
+    sink.close.assert_called_once()

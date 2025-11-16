@@ -54,7 +54,7 @@ class DataRequest:
         if (
             self.symbol is None
             and self.symbols is None
-            and self.feature not in (DataFeature.LIQUIDATIONS,)
+            and self.feature not in (DataFeature.LIQUIDATIONS, DataFeature.SYMBOL_METADATA)
         ):
             raise ValueError("Either 'symbol' or 'symbols' must be provided")
 

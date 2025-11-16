@@ -1,50 +1,41 @@
-"""Unit tests for exception hierarchy."""
+"""Precise unit tests for exception hierarchy.
+
+Tests focus on meaningful behavior, not just field access.
+"""
 
 from laakhay.data.core import (
     DataError,
-    InvalidIntervalError,
-    InvalidSymbolError,
     ProviderError,
     RateLimitError,
-    ValidationError,
+    SymbolResolutionError,
 )
 
 
-def test_data_error():
-    """Test DataError base exception."""
-    error = DataError("test")
-    assert str(error) == "test"
+def test_rate_limit_error_with_retry_after():
+    """Test RateLimitError with retry_after (meaningful behavior)."""
+    error = RateLimitError("rate limit", retry_after=120)
+    assert error.status_code == 429
+    assert error.retry_after == 120
+    assert isinstance(error, ProviderError)
+    assert isinstance(error, DataError)
 
 
-def test_provider_error():
-    """Test ProviderError."""
+def test_provider_error_with_status_code():
+    """Test ProviderError with status_code (meaningful behavior)."""
     error = ProviderError("error", status_code=400)
     assert str(error) == "error"
     assert error.status_code == 400
     assert isinstance(error, DataError)
 
 
-def test_rate_limit_error():
-    """Test RateLimitError."""
-    error = RateLimitError("rate limit", retry_after=120)
-    assert error.status_code == 429
-    assert error.retry_after == 120
-    assert isinstance(error, ProviderError)
-
-
-def test_invalid_symbol_error():
-    """Test InvalidSymbolError."""
-    error = InvalidSymbolError("invalid")
-    assert isinstance(error, ProviderError)
-
-
-def test_invalid_interval_error():
-    """Test InvalidIntervalError."""
-    error = InvalidIntervalError("invalid")
-    assert isinstance(error, ProviderError)
-
-
-def test_validation_error():
-    """Test ValidationError."""
-    error = ValidationError("invalid")
+def test_symbol_resolution_error_with_context():
+    """Test SymbolResolutionError with exchange context."""
+    error = SymbolResolutionError(
+        "Symbol not found",
+        exchange="binance",
+        value="INVALID",
+        market_type="spot",
+    )
+    assert error.exchange == "binance"
+    assert error.value == "INVALID"
     assert isinstance(error, DataError)
