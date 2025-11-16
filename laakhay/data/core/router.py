@@ -232,6 +232,11 @@ class DataRouter:
     def _resolve_symbols(self, request: DataRequest) -> str | list[str] | None:
         """Resolve symbol(s) via URM to exchange-native format.
 
+        Handles multiple symbol formats:
+        - URM IDs: urm://*:btc/usdt:perpetual
+        - Normalized symbols: BTC/USDT (Laakhay convention)
+        - Exchange-native symbols: BTCUSDT (fallback)
+
         Args:
             request: DataRequest containing symbol information
 
@@ -241,6 +246,8 @@ class DataRouter:
         Raises:
             SymbolResolutionError: If symbol cannot be resolved
         """
+        from .urm import parse_urm_id
+
         # Get URM mapper for the exchange
         mapper = self._provider_registry.get_urm_mapper(request.exchange)
         if mapper is None:
@@ -251,20 +258,63 @@ class DataRouter:
                 return request.symbols
             return []
 
+        def resolve_single_symbol(symbol: str) -> str:
+            """Resolve a single symbol to exchange-native format.
+            
+            Only accepts Laakhay normalized format (BASE/QUOTE, e.g., BTC/USDT).
+            Rejects exchange-native formats and URM IDs.
+            """
+            from .enums import InstrumentSpec, InstrumentType, MarketType
+            from .exceptions import SymbolResolutionError
+            
+            # Check if it's a URM ID - reject it, require Laakhay format
+            if symbol.startswith("urm://"):
+                raise SymbolResolutionError(
+                    f"URM IDs are not accepted. Use Laakhay format (BASE/QUOTE, e.g., BTC/USDT). Got: {symbol}",
+                    exchange=request.exchange,
+                    value=symbol,
+                    market_type=request.market_type,
+                )
+
+            # Require normalized format (BASE/QUOTE) - Laakhay convention
+            if "/" not in symbol:
+                raise SymbolResolutionError(
+                    f"Symbol must be in Laakhay format (BASE/QUOTE, e.g., BTC/USDT). Got: {symbol}",
+                    exchange=request.exchange,
+                    value=symbol,
+                    market_type=request.market_type,
+                )
+            
+            # Parse normalized symbol to InstrumentSpec
+            parts = symbol.upper().split("/", 1)
+            if len(parts) != 2 or not parts[0] or not parts[1]:
+                raise SymbolResolutionError(
+                    f"Invalid symbol format '{symbol}'. Expected BASE/QUOTE (e.g., BTC/USDT)",
+                    exchange=request.exchange,
+                    value=symbol,
+                    market_type=request.market_type,
+                )
+            
+            # Use request's instrument_type or default based on market_type
+            instrument_type = request.instrument_type
+            # If instrument_type is SPOT (default) but market_type is FUTURES, use PERPETUAL
+            if instrument_type == InstrumentType.SPOT and request.market_type == MarketType.FUTURES:
+                instrument_type = InstrumentType.PERPETUAL
+            
+            spec = InstrumentSpec(
+                base=parts[0],
+                quote=parts[1],
+                instrument_type=instrument_type,
+            )
+            return mapper.to_exchange_symbol(spec, market_type=request.market_type)
+
         # Resolve single symbol
         if request.symbol:
-            spec = mapper.to_spec(request.symbol, market_type=request.market_type)
-            exchange_symbol = mapper.to_exchange_symbol(spec, market_type=request.market_type)
-            return exchange_symbol
+            return resolve_single_symbol(request.symbol)
 
         # Resolve multiple symbols
         if request.symbols:
-            exchange_symbols = []
-            for symbol in request.symbols:
-                spec = mapper.to_spec(symbol, market_type=request.market_type)
-                exchange_symbol = mapper.to_exchange_symbol(spec, market_type=request.market_type)
-                exchange_symbols.append(exchange_symbol)
-            return exchange_symbols
+            return [resolve_single_symbol(symbol) for symbol in request.symbols]
 
         # No symbols required (e.g., global liquidations)
         return None
