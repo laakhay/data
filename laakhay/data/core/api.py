@@ -472,6 +472,148 @@ class DataAPI:
         async for item in self._router.route_stream(request):
             yield item
 
+    async def stream_ohlcv_multi(
+        self,
+        symbols: list[str],
+        timeframe: Timeframe,
+        *,
+        only_closed: bool = False,
+        throttle_ms: int | None = None,
+        dedupe_same_candle: bool = False,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> AsyncIterator[Any]:  # StreamingBar
+        """Stream real-time OHLCV updates for multiple symbols.
+
+        Args:
+            symbols: List of symbol identifiers
+            timeframe: Timeframe for bars
+            only_closed: Only emit closed candles
+            throttle_ms: Throttle updates (milliseconds)
+            dedupe_same_candle: Deduplicate same candle updates
+            exchange: Exchange name (uses default if set)
+            market_type: Market type (uses default if set)
+            instrument_type: Instrument type (default: SPOT)
+
+        Yields:
+            StreamingBar updates (may be from different symbols)
+
+        Raises:
+            CapabilityError: If OHLCV WS is not supported
+            SymbolResolutionError: If symbols cannot be resolved
+            ProviderError: If provider doesn't support multi-symbol streaming
+        """
+        exchange_name = self._resolve_exchange(exchange)
+        market_type_resolved = self._resolve_market_type(market_type)
+        instrument_type_resolved = self._resolve_instrument_type(instrument_type)
+
+        # Ensure provider is registered before accessing
+        registry = self._router._provider_registry
+        if not registry.is_registered(exchange_name):
+            from ..providers import register_all
+
+            register_all(registry)
+
+        # Get provider directly for multi-symbol streaming
+        provider = await registry.get_provider(
+            exchange_name,
+            market_type_resolved,
+        )
+
+        # Validate capability for first symbol (all should have same capability)
+        if symbols:
+            request = DataRequest(
+                feature=DataFeature.OHLCV,
+                transport=TransportKind.WS,
+                exchange=exchange_name,
+                market_type=market_type_resolved,
+                instrument_type=instrument_type_resolved,
+                symbol=symbols[0],
+                timeframe=timeframe,
+            )
+            self._router._capability_service.validate_request(request)
+
+        logger.debug(
+            "Streaming OHLCV multi",
+            extra={
+                "exchange": exchange_name,
+                "symbols": symbols,
+                "timeframe": str(timeframe),
+            },
+        )
+
+        async for item in provider.stream_ohlcv_multi(
+            symbols=symbols,
+            timeframe=timeframe,
+            only_closed=only_closed,
+            throttle_ms=throttle_ms,
+            dedupe_same_candle=dedupe_same_candle,
+            instrument_type=instrument_type_resolved,
+        ):
+            yield item
+
+    async def stream_trades_multi(
+        self,
+        symbols: list[str],
+        *,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> AsyncIterator[Trade]:
+        """Stream real-time trades for multiple symbols.
+
+        Args:
+            symbols: List of symbol identifiers
+            exchange: Exchange name (uses default if set)
+            market_type: Market type (uses default if set)
+            instrument_type: Instrument type (default: SPOT)
+
+        Yields:
+            Trade updates (may be from different symbols)
+
+        Raises:
+            CapabilityError: If trades WS is not supported
+            SymbolResolutionError: If symbols cannot be resolved
+            ProviderError: If provider doesn't support multi-symbol streaming
+        """
+        exchange_name = self._resolve_exchange(exchange)
+        market_type_resolved = self._resolve_market_type(market_type)
+        instrument_type_resolved = self._resolve_instrument_type(instrument_type)
+
+        # Ensure provider is registered before accessing
+        registry = self._router._provider_registry
+        if not registry.is_registered(exchange_name):
+            from ..providers import register_all
+
+            register_all(registry)
+
+        # Get provider directly for multi-symbol streaming
+        provider = await registry.get_provider(
+            exchange_name,
+            market_type_resolved,
+        )
+
+        # Validate capability for first symbol (all should have same capability)
+        if symbols:
+            request = DataRequest(
+                feature=DataFeature.TRADES,
+                transport=TransportKind.WS,
+                exchange=exchange_name,
+                market_type=market_type_resolved,
+                instrument_type=instrument_type_resolved,
+                symbol=symbols[0],
+            )
+            self._router._capability_service.validate_request(request)
+
+        logger.debug(
+            "Streaming trades multi",
+            extra={"exchange": exchange_name, "symbols": symbols},
+        )
+
+        async for trade in provider.stream_trades_multi(symbols=symbols):
+            yield trade
+
     async def stream_order_book(
         self,
         symbol: str,
