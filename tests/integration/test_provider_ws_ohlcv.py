@@ -38,7 +38,7 @@ class TestWSOHLCVIntegration:
                 count = 0
                 async for bar in provider.stream_ohlcv(
                     symbol=symbol,
-                    interval=Timeframe.M1,
+                    timeframe=Timeframe.M1,
                 ):
                     assert bar.symbol == symbol or symbol.upper()
                     assert bar.open > 0
@@ -87,7 +87,7 @@ class TestWSOHLCVIntegration:
 
                 async for bar in provider.stream_ohlcv_multi(
                     symbols=symbols,
-                    interval=Timeframe.M1,
+                    timeframe=Timeframe.M1,
                 ):
                     assert bar.symbol in symbols or bar.symbol.upper() in [
                         s.upper() for s in symbols
@@ -119,7 +119,7 @@ class TestWSOHLCVIntegration:
                 count = 0
                 async for bar in provider.stream_ohlcv(
                     symbol=symbol,
-                    interval=Timeframe.M1,
+                    timeframe=Timeframe.M1,
                     only_closed=True,
                 ):
                     assert bar.is_closed is True
@@ -149,7 +149,7 @@ class TestWSOHLCVIntegration:
                 async with asyncio.timeout(5):  # 5 second timeout
                     async for _bar in provider.stream_ohlcv(
                         symbol=symbol,
-                        interval=Timeframe.M1,
+                        timeframe=Timeframe.M1,
                     ):
                         count += 1
                         if count >= 3:

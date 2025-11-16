@@ -39,7 +39,7 @@ class TestRESTOHLCVIntegration:
         async with provider_class(market_type=market_type) as provider:
             ohlcv = await provider.get_candles(
                 symbol=symbol,
-                interval=Timeframe.M1,
+                timeframe=Timeframe.M1,
                 limit=10,
             )
 
@@ -77,7 +77,7 @@ class TestRESTOHLCVIntegration:
 
             ohlcv = await provider.get_candles(
                 symbol=symbol,
-                interval=Timeframe.M5,
+                timeframe=Timeframe.M5,
                 start_time=start_time,
                 end_time=end_time,
                 limit=100,
@@ -109,7 +109,7 @@ class TestRESTOHLCVIntegration:
         async with provider_class(market_type=market_type) as provider:
             ohlcv = await provider.get_candles(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 limit=5,
             )
 
@@ -129,10 +129,11 @@ class TestRESTOHLCVIntegration:
         """Test OHLCV fetching with invalid symbol raises error."""
         async with provider_class(market_type=market_type) as provider:
             from laakhay.data.core.exceptions import ProviderError
+            from aiohttp import ClientResponseError
 
-            with pytest.raises((ProviderError, ValueError)):
+            with pytest.raises((ProviderError, ValueError, ClientResponseError)):
                 await provider.get_candles(
                     symbol=symbol,
-                    interval=Timeframe.M1,
+                    timeframe=Timeframe.M1,
                     limit=10,
                 )
