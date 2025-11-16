@@ -246,7 +246,6 @@ class DataRouter:
         Raises:
             SymbolResolutionError: If symbol cannot be resolved
         """
-        from .urm import parse_urm_id
 
         # Get URM mapper for the exchange
         mapper = self._provider_registry.get_urm_mapper(request.exchange)
@@ -260,13 +259,13 @@ class DataRouter:
 
         def resolve_single_symbol(symbol: str) -> str:
             """Resolve a single symbol to exchange-native format.
-            
+
             Only accepts Laakhay normalized format (BASE/QUOTE, e.g., BTC/USDT).
             Rejects exchange-native formats and URM IDs.
             """
             from .enums import InstrumentSpec, InstrumentType, MarketType
             from .exceptions import SymbolResolutionError
-            
+
             # Check if it's a URM ID - reject it, require Laakhay format
             if symbol.startswith("urm://"):
                 raise SymbolResolutionError(
@@ -284,7 +283,7 @@ class DataRouter:
                     value=symbol,
                     market_type=request.market_type,
                 )
-            
+
             # Parse normalized symbol to InstrumentSpec
             parts = symbol.upper().split("/", 1)
             if len(parts) != 2 or not parts[0] or not parts[1]:
@@ -294,13 +293,13 @@ class DataRouter:
                     value=symbol,
                     market_type=request.market_type,
                 )
-            
+
             # Use request's instrument_type or default based on market_type
             instrument_type = request.instrument_type
             # If instrument_type is SPOT (default) but market_type is FUTURES, use PERPETUAL
             if instrument_type == InstrumentType.SPOT and request.market_type == MarketType.FUTURES:
                 instrument_type = InstrumentType.PERPETUAL
-            
+
             spec = InstrumentSpec(
                 base=parts[0],
                 quote=parts[1],

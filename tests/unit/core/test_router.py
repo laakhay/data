@@ -209,13 +209,12 @@ async def test_resolve_symbols_with_urm(router, mock_provider_registry):
         transport=TransportKind.REST,
         exchange="binance",
         market_type=MarketType.SPOT,
-        symbol="BTCUSDT",  # This will be normalized
+        symbol="BTC/USDT",
         timeframe=Timeframe.H1,
     )
 
     exchange_symbol = router._resolve_symbols(request)
     assert exchange_symbol == "BTCUSDT"
-    mock_mapper.to_spec.assert_called_once_with("BTCUSDT", market_type=MarketType.SPOT)
     mock_mapper.to_exchange_symbol.assert_called_once()
 
 
@@ -253,13 +252,12 @@ async def test_resolve_multiple_symbols(router, mock_provider_registry):
         transport=TransportKind.REST,
         exchange="binance",
         market_type=MarketType.SPOT,
-        symbols=["BTCUSDT", "ETHUSDT"],
+        symbols=["BTC/USDT", "ETH/USDT"],  # Laakhay normalized format
         timeframe=Timeframe.H1,
     )
 
     exchange_symbols = router._resolve_symbols(request)
     assert exchange_symbols == ["BTCUSDT", "ETHUSDT"]
-    assert mock_mapper.to_spec.call_count == 2
     assert mock_mapper.to_exchange_symbol.call_count == 2
 
 
