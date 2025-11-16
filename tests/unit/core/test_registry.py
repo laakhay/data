@@ -241,3 +241,169 @@ async def test_registry_get_provider_after_close():
 
     with pytest.raises(ProviderError, match="closed"):
         await registry.get_provider("test_exchange", MarketType.SPOT)
+
+
+@pytest.mark.asyncio
+async def test_registry_get_provider_removes_closed_provider():
+    """Test that closed providers are removed from pool and recreated."""
+    registry = ProviderRegistry()
+
+    registry.register("test_exchange", MockProvider, market_types=[MarketType.SPOT])
+
+    provider1 = await registry.get_provider("test_exchange", MarketType.SPOT)
+    await provider1.close()  # Close the provider
+
+    # Should create a new provider instance
+    provider2 = await registry.get_provider("test_exchange", MarketType.SPOT)
+
+    assert provider1 is not provider2
+    assert provider1._closed is True  # First one is closed
+    assert provider2._closed is False  # New one is open
+
+
+@pytest.mark.asyncio
+async def test_registry_get_provider_with_credentials():
+    """Test getting provider with API credentials."""
+    registry = ProviderRegistry()
+
+    registry.register("test_exchange", MockProvider, market_types=[MarketType.SPOT])
+
+    provider = await registry.get_provider(
+        "test_exchange", MarketType.SPOT, api_key="key123", api_secret="secret456"
+    )
+
+    assert provider.api_key == "key123"
+    assert provider.api_secret == "secret456"
+
+
+@pytest.mark.asyncio
+async def test_registry_get_feature_handler_unregistered_exchange():
+    """Test getting feature handler for unregistered exchange returns None."""
+    registry = ProviderRegistry()
+
+    handler = registry.get_feature_handler("unknown", DataFeature.OHLCV, TransportKind.REST)
+    assert handler is None
+
+
+@pytest.mark.asyncio
+async def test_registry_get_urm_mapper():
+    """Test getting URM mapper."""
+    from unittest.mock import MagicMock
+
+    registry = ProviderRegistry()
+    mock_mapper = MagicMock()
+
+    registry.register(
+        "test_exchange",
+        MockProvider,
+        market_types=[MarketType.SPOT],
+        urm_mapper=mock_mapper,
+    )
+
+    mapper = registry.get_urm_mapper("test_exchange")
+    assert mapper is mock_mapper
+
+
+@pytest.mark.asyncio
+async def test_registry_get_urm_mapper_unregistered():
+    """Test getting URM mapper for unregistered exchange returns None."""
+    registry = ProviderRegistry()
+
+    mapper = registry.get_urm_mapper("unknown")
+    assert mapper is None
+
+
+@pytest.mark.asyncio
+async def test_registry_close_all_idempotent():
+    """Test that close_all can be called multiple times safely."""
+    registry = ProviderRegistry()
+
+    registry.register("test_exchange", MockProvider, market_types=[MarketType.SPOT])
+    await registry.get_provider("test_exchange", MarketType.SPOT)
+
+    await registry.close_all()
+    await registry.close_all()  # Should not raise error
+
+    assert registry._closed
+
+
+@pytest.mark.asyncio
+async def test_get_provider_registry_singleton():
+    """Test that get_provider_registry returns singleton."""
+    from laakhay.data.core.registry import get_provider_registry
+
+    registry1 = get_provider_registry()
+    registry2 = get_provider_registry()
+
+    assert registry1 is registry2
+
+
+@pytest.mark.asyncio
+async def test_register_feature_handler_decorator():
+    """Test register_feature_handler decorator."""
+    from laakhay.data.core.registry import register_feature_handler
+
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
+    async def test_method(self, symbol: str):
+        """Test method."""
+        return symbol
+
+    assert hasattr(test_method, "_feature_handlers")
+    assert len(test_method._feature_handlers) == 1
+    assert test_method._feature_handlers[0]["feature"] == DataFeature.OHLCV
+    assert test_method._feature_handlers[0]["transport"] == TransportKind.REST
+
+
+@pytest.mark.asyncio
+async def test_register_feature_handler_with_constraints():
+    """Test register_feature_handler with constraints."""
+    from laakhay.data.core.registry import register_feature_handler
+
+    @register_feature_handler(
+        DataFeature.OHLCV, TransportKind.REST, constraints={"max_limit": 1000}
+    )
+    async def test_method(self, symbol: str):
+        """Test method."""
+        return symbol
+
+    assert test_method._feature_handlers[0]["constraints"] == {"max_limit": 1000}
+
+
+@pytest.mark.asyncio
+async def test_collect_feature_handlers():
+    """Test collecting feature handlers from provider class."""
+    from laakhay.data.core.registry import (
+        collect_feature_handlers,
+        register_feature_handler,
+    )
+
+    class TestProvider(BaseProvider):
+        """Test provider with decorated methods."""
+
+        def __init__(self):
+            super().__init__(name="test")
+
+        @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
+        async def get_candles(self, symbol: str):
+            """Get candles."""
+            return symbol
+
+        @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
+        async def stream_trades(self, symbol: str):
+            """Stream trades."""
+            return symbol
+
+        async def regular_method(self):
+            """Regular method without decorator."""
+            pass
+
+    handlers = collect_feature_handlers(TestProvider)
+
+    assert len(handlers) == 2
+    assert (DataFeature.OHLCV, TransportKind.REST) in handlers
+    assert (DataFeature.TRADES, TransportKind.WS) in handlers
+
+    ohlcv_handler = handlers[(DataFeature.OHLCV, TransportKind.REST)]
+    assert ohlcv_handler.method_name == "get_candles"
+    assert ohlcv_handler.feature == DataFeature.OHLCV
+    assert ohlcv_handler.transport == TransportKind.REST
