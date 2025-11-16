@@ -1,10 +1,13 @@
-"""Unit tests for capability primitives and registry."""
+"""Precise unit tests for capability system.
+
+Tests focus on actual behavior, edge cases, and business logic.
+Trivial enum/dataclass tests removed - focus on meaningful functionality.
+"""
 
 from datetime import datetime
 
 from laakhay.data.core import (
     CapabilityError,
-    CapabilityKey,
     CapabilityStatus,
     DataFeature,
     FallbackOption,
@@ -13,166 +16,38 @@ from laakhay.data.core import (
     MarketType,
     TransportKind,
     describe_exchange,
+    get_all_capabilities,
+    get_all_exchanges,
+    get_all_supported_market_types,
+    get_exchange_capability,
+    get_supported_data_types,
+    get_supported_market_types,
+    get_supported_timeframes,
+    is_exchange_supported,
     list_features,
     supports,
+    supports_data_type,
+    supports_market_type,
 )
 
 
-def test_data_feature_enum():
-    """Test DataFeature enum values."""
-    assert DataFeature.OHLCV == "ohlcv"
-    assert DataFeature.TRADES == "trades"
-    assert DataFeature.LIQUIDATIONS == "liquidations"
-    assert str(DataFeature.ORDER_BOOK) == "order_book"
-
-
-def test_transport_kind_enum():
-    """Test TransportKind enum values."""
-    assert TransportKind.REST == "rest"
-    assert TransportKind.WS == "ws"
-    assert str(TransportKind.REST) == "rest"
-
-
-def test_instrument_type_enum():
-    """Test InstrumentType enum values."""
-    assert InstrumentType.SPOT == "spot"
-    assert InstrumentType.PERPETUAL == "perpetual"
-    assert InstrumentType.FUTURE == "future"
-    assert str(InstrumentType.OPTION) == "option"
-
-
-def test_instrument_spec():
-    """Test InstrumentSpec dataclass."""
-    spec = InstrumentSpec(
-        base="BTC",
-        quote="USDT",
-        instrument_type=InstrumentType.SPOT,
-    )
-    assert spec.base == "BTC"
-    assert spec.quote == "USDT"
-    assert spec.instrument_type == InstrumentType.SPOT
-    assert spec.expiry is None
-    assert spec.strike is None
-
-    # Test with expiry and strike
+def test_instrument_spec_with_optional_fields():
+    """Test InstrumentSpec with optional fields (expiry, strike)."""
     expiry = datetime(2024, 6, 28)
-    spec2 = InstrumentSpec(
+    spec = InstrumentSpec(
         base="BTC",
         quote="USD",
         instrument_type=InstrumentType.OPTION,
         expiry=expiry,
         strike=35000.0,
     )
-    assert spec2.expiry == expiry
-    assert spec2.strike == 35000.0
-    assert "BTC/USD" in str(spec2)
-
-
-def test_capability_key():
-    """Test CapabilityKey dataclass."""
-    key = CapabilityKey(
-        exchange="binance",
-        market_type=MarketType.SPOT,
-        instrument_type=InstrumentType.SPOT,
-        feature=DataFeature.OHLCV,
-        transport=TransportKind.REST,
-    )
-    assert key.exchange == "binance"
-    assert key.market_type == MarketType.SPOT
-    assert key.feature == DataFeature.OHLCV
-    assert key.transport == TransportKind.REST
-    assert key.stream_variant is None
-
-    # Test with stream variant
-    key2 = CapabilityKey(
-        exchange="binance",
-        market_type=MarketType.FUTURES,
-        instrument_type=InstrumentType.PERPETUAL,
-        feature=DataFeature.LIQUIDATIONS,
-        transport=TransportKind.WS,
-        stream_variant="global",
-    )
-    assert key2.stream_variant == "global"
-
-
-def test_capability_status():
-    """Test CapabilityStatus dataclass."""
-    status = CapabilityStatus(
-        supported=True,
-        reason=None,
-        source="static",
-    )
-    assert status.supported is True
-    assert status.reason is None
-    assert status.source == "static"
-    assert status.constraints == {}
-    assert status.recommendations == []
-    assert status.stream_metadata == {}
-
-    # Test with all fields
-    fallback = FallbackOption(
-        exchange="bybit",
-        market_type=MarketType.FUTURES,
-        instrument_type=InstrumentType.PERPETUAL,
-        feature=DataFeature.LIQUIDATIONS,
-        transport=TransportKind.WS,
-        note="Try Bybit instead",
-    )
-    status2 = CapabilityStatus(
-        supported=False,
-        reason="Not supported on this exchange",
-        constraints={"max_depth": 500},
-        recommendations=[fallback],
-        source="runtime",
-        last_verified_at=datetime.now(),
-        stream_metadata={"symbol_scope": "symbol"},
-    )
-    assert status2.supported is False
-    assert len(status2.recommendations) == 1
-    assert status2.stream_metadata["symbol_scope"] == "symbol"
-
-
-def test_fallback_option():
-    """Test FallbackOption dataclass."""
-    fallback = FallbackOption(
-        exchange="bybit",
-        market_type=MarketType.FUTURES,
-        instrument_type=InstrumentType.PERPETUAL,
-        feature=DataFeature.OHLCV,
-        transport=TransportKind.REST,
-        note="Alternative exchange",
-    )
-    assert fallback.exchange == "bybit"
-    assert fallback.market_type == MarketType.FUTURES
-    assert fallback.note == "Alternative exchange"
-
-
-def test_capability_error():
-    """Test CapabilityError exception."""
-    key = CapabilityKey(
-        exchange="coinbase",
-        market_type=MarketType.SPOT,
-        instrument_type=InstrumentType.SPOT,
-        feature=DataFeature.LIQUIDATIONS,
-        transport=TransportKind.WS,
-    )
-    status = CapabilityStatus(
-        supported=False,
-        reason="Liquidations are only available for futures/perpetual markets",
-        source="static",
-    )
-    error = CapabilityError(
-        "Capability not supported",
-        key=key,
-        status=status,
-    )
-    assert error.key == key
-    assert error.status == status
-    assert str(error) == "Capability not supported"
+    assert spec.expiry == expiry
+    assert spec.strike == 35000.0
+    assert "BTC/USD" in str(spec)
 
 
 def test_supports_function():
-    """Test supports() function."""
+    """Test supports() function with various scenarios."""
     # Test supported capability
     status = supports(
         feature=DataFeature.OHLCV,
@@ -207,42 +82,6 @@ def test_supports_function():
     assert "not found" in status3.reason.lower()
 
 
-def test_describe_exchange():
-    """Test describe_exchange() function."""
-    capability = describe_exchange("binance")
-    assert capability is not None
-    assert capability["name"] == "binance"
-    assert "spot" in capability["supported_market_types"]
-
-    # Test non-existent exchange
-    assert describe_exchange("nonexistent") is None
-
-
-def test_list_features():
-    """Test list_features() function."""
-    features = list_features(
-        exchange="binance",
-        market_type=MarketType.SPOT,
-        instrument_type=InstrumentType.SPOT,
-    )
-    assert len(features) > 0
-    assert DataFeature.OHLCV in features
-    assert DataFeature.TRADES in features
-
-    # Check that each feature has transport capabilities
-    ohlcv_caps = features[DataFeature.OHLCV]
-    assert TransportKind.REST in ohlcv_caps
-    assert TransportKind.WS in ohlcv_caps
-
-    # Test non-existent exchange
-    features2 = list_features(
-        exchange="nonexistent",
-        market_type=MarketType.SPOT,
-        instrument_type=InstrumentType.SPOT,
-    )
-    assert len(features2) == 0
-
-
 def test_supports_futures_features():
     """Test that futures-specific features work correctly."""
     # Test liquidations on futures/perpetual
@@ -274,3 +113,222 @@ def test_supports_futures_features():
         instrument_type=InstrumentType.SPOT,
     )
     assert status3.supported is False
+
+
+def test_describe_exchange():
+    """Test describe_exchange() function."""
+    capability = describe_exchange("binance")
+    assert capability is not None
+    assert capability["name"] == "binance"
+    assert "spot" in capability["supported_market_types"]
+
+    # Test non-existent exchange
+    assert describe_exchange("nonexistent") is None
+
+    # Test case-insensitive
+    capability2 = describe_exchange("BINANCE")
+    assert capability2 is not None
+
+
+def test_list_features():
+    """Test list_features() function."""
+    features = list_features(
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        instrument_type=InstrumentType.SPOT,
+    )
+    assert len(features) > 0
+    assert DataFeature.OHLCV in features
+    assert DataFeature.TRADES in features
+
+    # Check that each feature has transport capabilities
+    ohlcv_caps = features[DataFeature.OHLCV]
+    assert TransportKind.REST in ohlcv_caps
+    assert TransportKind.WS in ohlcv_caps
+
+    # Test non-existent exchange
+    features2 = list_features(
+        exchange="nonexistent",
+        market_type=MarketType.SPOT,
+        instrument_type=InstrumentType.SPOT,
+    )
+    assert len(features2) == 0
+
+
+def test_get_all_exchanges():
+    """Test get_all_exchanges() returns all supported exchanges."""
+    exchanges = get_all_exchanges()
+    assert len(exchanges) > 0
+    assert "binance" in exchanges
+    assert "bybit" in exchanges
+    assert isinstance(exchanges, list)
+
+
+def test_get_exchange_capability():
+    """Test get_exchange_capability() with various inputs."""
+    # Test existing exchange
+    capability = get_exchange_capability("binance")
+    assert capability is not None
+    assert capability["name"] == "binance"
+
+    # Test non-existent exchange
+    assert get_exchange_capability("nonexistent") is None
+
+    # Test case-insensitive
+    capability2 = get_exchange_capability("BINANCE")
+    assert capability2 is not None
+
+
+def test_get_all_capabilities():
+    """Test get_all_capabilities() returns all exchange capabilities."""
+    all_caps = get_all_capabilities()
+    assert len(all_caps) > 0
+    assert "binance" in all_caps
+    assert isinstance(all_caps, dict)
+    # Should be a copy, not the original
+    all_caps["test"] = "value"
+    all_caps2 = get_all_capabilities()
+    assert "test" not in all_caps2
+
+
+def test_get_supported_market_types():
+    """Test get_supported_market_types() for various exchanges."""
+    # Test exchange with both spot and futures
+    market_types = get_supported_market_types("binance")
+    assert market_types is not None
+    assert "spot" in market_types
+    assert "futures" in market_types
+
+    # Test exchange with only spot
+    market_types2 = get_supported_market_types("coinbase")
+    assert market_types2 is not None
+    assert "spot" in market_types2
+
+    # Test non-existent exchange
+    assert get_supported_market_types("nonexistent") is None
+
+
+def test_get_supported_timeframes():
+    """Test get_supported_timeframes() function."""
+    # Test without exchange (returns all)
+    timeframes = get_supported_timeframes()
+    assert len(timeframes) > 0
+    assert "1m" in timeframes
+    assert "1h" in timeframes
+
+    # Test with exchange (currently same for all)
+    timeframes2 = get_supported_timeframes("binance")
+    assert len(timeframes2) > 0
+
+
+def test_get_supported_data_types():
+    """Test get_supported_data_types() function."""
+    data_types = get_supported_data_types("binance")
+    assert data_types is not None
+    assert "ohlcv" in data_types
+    assert "trades" in data_types
+    assert data_types["ohlcv"]["rest"] is True
+    assert data_types["ohlcv"]["ws"] is True
+
+    # Test non-existent exchange
+    assert get_supported_data_types("nonexistent") is None
+
+
+def test_get_all_supported_market_types():
+    """Test get_all_supported_market_types() returns unique market types."""
+    market_types = get_all_supported_market_types()
+    assert len(market_types) > 0
+    assert "spot" in market_types
+    assert "futures" in market_types
+    assert isinstance(market_types, list)
+    # Should be sorted
+    assert market_types == sorted(market_types)
+
+
+def test_is_exchange_supported():
+    """Test is_exchange_supported() function."""
+    assert is_exchange_supported("binance") is True
+    assert is_exchange_supported("bybit") is True
+    assert is_exchange_supported("nonexistent") is False
+    # Test case-insensitive
+    assert is_exchange_supported("BINANCE") is True
+
+
+def test_supports_market_type():
+    """Test supports_market_type() function."""
+    assert supports_market_type("binance", "spot") is True
+    assert supports_market_type("binance", "futures") is True
+    assert supports_market_type("coinbase", "spot") is True
+    assert supports_market_type("coinbase", "futures") is False
+    assert supports_market_type("nonexistent", "spot") is False
+
+
+def test_supports_data_type():
+    """Test supports_data_type() function."""
+    assert supports_data_type("binance", "ohlcv", "rest") is True
+    assert supports_data_type("binance", "ohlcv", "ws") is True
+    assert supports_data_type("binance", "nonexistent", "rest") is False
+    assert supports_data_type("nonexistent", "ohlcv", "rest") is False
+
+    # Test case-insensitive exchange
+    assert supports_data_type("BINANCE", "ohlcv", "rest") is True
+
+
+def test_capability_status_with_recommendations():
+    """Test CapabilityStatus with recommendations (meaningful behavior)."""
+    fallback = FallbackOption(
+        exchange="bybit",
+        market_type=MarketType.FUTURES,
+        instrument_type=InstrumentType.PERPETUAL,
+        feature=DataFeature.LIQUIDATIONS,
+        transport=TransportKind.WS,
+        note="Try Bybit instead",
+    )
+    status = CapabilityStatus(
+        supported=False,
+        reason="Not supported on this exchange",
+        constraints={"max_depth": 500},
+        recommendations=[fallback],
+        source="runtime",
+        last_verified_at=datetime.now(),
+        stream_metadata={"symbol_scope": "symbol"},
+    )
+    assert status.supported is False
+    assert len(status.recommendations) == 1
+    assert status.recommendations[0].exchange == "bybit"
+    assert status.stream_metadata["symbol_scope"] == "symbol"
+
+
+def test_capability_error_with_context():
+    """Test CapabilityError with full context (meaningful behavior)."""
+    from laakhay.data.core import CapabilityKey
+
+    key = CapabilityKey(
+        exchange="coinbase",
+        market_type=MarketType.SPOT,
+        instrument_type=InstrumentType.SPOT,
+        feature=DataFeature.LIQUIDATIONS,
+        transport=TransportKind.WS,
+    )
+    status = CapabilityStatus(
+        supported=False,
+        reason="Liquidations are only available for futures/perpetual markets",
+        source="static",
+    )
+    error = CapabilityError(
+        "Capability not supported",
+        key=key,
+        status=status,
+        recommendations=[FallbackOption(
+            exchange="binance",
+            market_type=MarketType.FUTURES,
+            instrument_type=InstrumentType.PERPETUAL,
+            feature=DataFeature.LIQUIDATIONS,
+            transport=TransportKind.WS,
+            note="Use Binance futures",
+        )],
+    )
+    assert error.key == key
+    assert error.status == status
+    assert len(error.recommendations) == 1
+    assert str(error) == "Capability not supported"
