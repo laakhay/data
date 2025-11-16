@@ -10,12 +10,12 @@ interface for laakhay-data. Tests focus on:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from laakhay.data.core.api import DataAPI
 from laakhay.data.core.enums import (
     DataFeature,
     InstrumentType,
@@ -32,7 +32,6 @@ from laakhay.data.core.exceptions import (
 )
 from laakhay.data.core.request import DataRequest
 from laakhay.data.core.router import DataRouter
-from laakhay.data.core.api import DataAPI
 
 
 @pytest.fixture
@@ -47,10 +46,10 @@ def mock_router():
 @pytest.fixture
 def mock_ohlcv():
     """Create a mock OHLCV response."""
-    from laakhay.data.models.ohlcv import OHLCV
     from laakhay.data.models.bar import Bar
+    from laakhay.data.models.ohlcv import OHLCV
     from laakhay.data.models.series_meta import SeriesMeta
-    
+
     bars = [
         Bar(
             symbol="BTC/USDT",
@@ -76,8 +75,9 @@ def mock_ohlcv():
 def mock_order_book():
     """Create a mock OrderBook response."""
     from decimal import Decimal
+
     from laakhay.data.models.order_book import OrderBook
-    
+
     return OrderBook(
         symbol="BTC/USDT",
         last_update_id=123456,
@@ -91,8 +91,9 @@ def mock_order_book():
 def mock_trade():
     """Create a mock Trade response."""
     from decimal import Decimal
+
     from laakhay.data.models.trade import Trade
-    
+
     return Trade(
         symbol="BTC/USDT",
         trade_id=12345,
@@ -147,7 +148,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_exchange_with_default(self, mock_router, mock_ohlcv):
         """Test exchange resolution uses default when not provided."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_exchange="binance", router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -156,7 +157,7 @@ class TestDataAPIParameterResolution:
                 market_type=MarketType.SPOT,
                 # exchange not provided, should use default
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.exchange == "binance"
 
@@ -164,7 +165,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_exchange_with_override(self, mock_router, mock_ohlcv):
         """Test exchange resolution uses provided value over default."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_exchange="binance", router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -173,7 +174,7 @@ class TestDataAPIParameterResolution:
                 exchange="bybit",  # Override default
                 market_type=MarketType.SPOT,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.exchange == "bybit"
 
@@ -193,7 +194,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_market_type_with_default(self, mock_router, mock_ohlcv):
         """Test market type resolution uses default when not provided."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_market_type=MarketType.SPOT, router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -202,7 +203,7 @@ class TestDataAPIParameterResolution:
                 exchange="binance",
                 # market_type not provided, should use default
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.market_type == MarketType.SPOT
 
@@ -210,7 +211,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_market_type_with_override(self, mock_router, mock_ohlcv):
         """Test market type resolution uses provided value over default."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_market_type=MarketType.SPOT, router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -219,7 +220,7 @@ class TestDataAPIParameterResolution:
                 exchange="binance",
                 market_type=MarketType.FUTURES,  # Override default
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.market_type == MarketType.FUTURES
 
@@ -227,7 +228,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_instrument_type_with_default(self, mock_router, mock_ohlcv):
         """Test instrument type resolution uses default when not provided."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_instrument_type=InstrumentType.SPOT, router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -237,7 +238,7 @@ class TestDataAPIParameterResolution:
                 market_type=MarketType.SPOT,
                 # instrument_type not provided, should use default
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.instrument_type == InstrumentType.SPOT
 
@@ -245,7 +246,7 @@ class TestDataAPIParameterResolution:
     async def test_resolve_instrument_type_with_override(self, mock_router, mock_ohlcv):
         """Test instrument type resolution uses provided value over default."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(default_instrument_type=InstrumentType.SPOT, router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -255,7 +256,7 @@ class TestDataAPIParameterResolution:
                 market_type=MarketType.FUTURES,
                 instrument_type=InstrumentType.PERPETUAL,  # Override default
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.instrument_type == InstrumentType.PERPETUAL
 
@@ -267,7 +268,7 @@ class TestDataAPIFetchOHLCV:
     async def test_fetch_ohlcv_success(self, mock_router, mock_ohlcv):
         """Test successful OHLCV fetch."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_ohlcv(
@@ -277,7 +278,7 @@ class TestDataAPIFetchOHLCV:
                 market_type=MarketType.SPOT,
                 limit=100,
             )
-        
+
         assert result == mock_ohlcv
         mock_router.route.assert_called_once()
         call_args = mock_router.route.call_args[0][0]
@@ -292,10 +293,10 @@ class TestDataAPIFetchOHLCV:
     async def test_fetch_ohlcv_with_time_range(self, mock_router, mock_ohlcv):
         """Test OHLCV fetch with time range."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         start_time = datetime.now() - timedelta(days=7)
         end_time = datetime.now()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -306,7 +307,7 @@ class TestDataAPIFetchOHLCV:
                 start_time=start_time,
                 end_time=end_time,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.start_time == start_time
         assert call_args.end_time == end_time
@@ -315,7 +316,7 @@ class TestDataAPIFetchOHLCV:
     async def test_fetch_ohlcv_with_pagination(self, mock_router, mock_ohlcv):
         """Test OHLCV fetch with pagination limits."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_ohlcv(
@@ -326,7 +327,7 @@ class TestDataAPIFetchOHLCV:
                 limit=1000,
                 max_chunks=5,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.limit == 1000
         assert call_args.max_chunks == 5
@@ -339,7 +340,7 @@ class TestDataAPIFetchOHLCV:
             key=MagicMock(),
             status=MagicMock(),
         )
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             with pytest.raises(CapabilityError):
@@ -359,7 +360,7 @@ class TestDataAPIFetchOHLCV:
             value="INVALID/USDT",
             market_type=MarketType.SPOT,
         )
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             with pytest.raises(SymbolResolutionError):
@@ -374,7 +375,7 @@ class TestDataAPIFetchOHLCV:
     async def test_fetch_ohlcv_all_timeframes(self, mock_router, mock_ohlcv):
         """Test OHLCV fetch works with all supported timeframes."""
         mock_router.route.return_value = mock_ohlcv
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             for timeframe in Timeframe:
@@ -384,7 +385,7 @@ class TestDataAPIFetchOHLCV:
                     exchange="binance",
                     market_type=MarketType.SPOT,
                 )
-        
+
         # Should be called once per timeframe
         assert mock_router.route.call_count == len(Timeframe)
 
@@ -396,7 +397,7 @@ class TestDataAPIFetchOrderBook:
     async def test_fetch_order_book_success(self, mock_router, mock_order_book):
         """Test successful order book fetch."""
         mock_router.route.return_value = mock_order_book
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_order_book(
@@ -405,7 +406,7 @@ class TestDataAPIFetchOrderBook:
                 market_type=MarketType.SPOT,
                 depth=20,
             )
-        
+
         assert result == mock_order_book
         call_args = mock_router.route.call_args[0][0]
         assert call_args.feature == DataFeature.ORDER_BOOK
@@ -416,7 +417,7 @@ class TestDataAPIFetchOrderBook:
     async def test_fetch_order_book_default_depth(self, mock_router, mock_order_book):
         """Test order book fetch uses default depth."""
         mock_router.route.return_value = mock_order_book
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_order_book(
@@ -425,7 +426,7 @@ class TestDataAPIFetchOrderBook:
                 market_type=MarketType.SPOT,
                 # depth not provided, should use default 100
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.depth == 100
 
@@ -433,7 +434,7 @@ class TestDataAPIFetchOrderBook:
     async def test_fetch_order_book_custom_depth(self, mock_router, mock_order_book):
         """Test order book fetch with custom depth."""
         mock_router.route.return_value = mock_order_book
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_order_book(
@@ -442,7 +443,7 @@ class TestDataAPIFetchOrderBook:
                 market_type=MarketType.SPOT,
                 depth=500,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.depth == 500
 
@@ -454,7 +455,7 @@ class TestDataAPIFetchTrades:
     async def test_fetch_recent_trades_success(self, mock_router, mock_trade):
         """Test successful recent trades fetch."""
         mock_router.route.return_value = [mock_trade]
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_recent_trades(
@@ -463,7 +464,7 @@ class TestDataAPIFetchTrades:
                 market_type=MarketType.SPOT,
                 limit=10,
             )
-        
+
         assert result == [mock_trade]
         call_args = mock_router.route.call_args[0][0]
         assert call_args.feature == DataFeature.TRADES
@@ -474,7 +475,7 @@ class TestDataAPIFetchTrades:
     async def test_fetch_recent_trades_default_limit(self, mock_router, mock_trade):
         """Test recent trades fetch uses default limit."""
         mock_router.route.return_value = [mock_trade]
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_recent_trades(
@@ -483,7 +484,7 @@ class TestDataAPIFetchTrades:
                 market_type=MarketType.SPOT,
                 # limit not provided, should use default 500
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.limit == 500
 
@@ -495,7 +496,7 @@ class TestDataAPIFetchSymbols:
     async def test_fetch_symbols_success(self, mock_router):
         """Test successful symbols fetch."""
         from laakhay.data.models.symbol import Symbol
-        
+
         mock_symbols = [
             Symbol(
                 symbol="BTCUSDT",
@@ -504,14 +505,14 @@ class TestDataAPIFetchSymbols:
             )
         ]
         mock_router.route.return_value = mock_symbols
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_symbols(
                 exchange="binance",
                 market_type=MarketType.SPOT,
             )
-        
+
         assert result == mock_symbols
         call_args = mock_router.route.call_args[0][0]
         assert call_args.feature == DataFeature.SYMBOL_METADATA
@@ -521,7 +522,7 @@ class TestDataAPIFetchSymbols:
     async def test_fetch_symbols_with_quote_filter(self, mock_router):
         """Test symbols fetch with quote asset filter."""
         from laakhay.data.models.symbol import Symbol
-        
+
         mock_symbols = [
             Symbol(
                 symbol="BTCUSDT",
@@ -530,7 +531,7 @@ class TestDataAPIFetchSymbols:
             )
         ]
         mock_router.route.return_value = mock_symbols
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_symbols(
@@ -538,7 +539,7 @@ class TestDataAPIFetchSymbols:
                 market_type=MarketType.SPOT,
                 quote_asset="USDT",
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.extra_params["quote_asset"] == "USDT"
 
@@ -549,15 +550,16 @@ class TestDataAPIStreaming:
     @pytest.mark.asyncio
     async def test_stream_ohlcv(self, mock_router, mock_ohlcv):
         """Test OHLCV streaming."""
+
         async def mock_stream():
             yield mock_ohlcv.bars[0]
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for bar in api.stream_ohlcv(
+            async for _bar in api.stream_ohlcv(
                 symbol="BTC/USDT",
                 timeframe=Timeframe.M1,
                 exchange="binance",
@@ -566,7 +568,7 @@ class TestDataAPIStreaming:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         mock_router.route_stream.assert_called_once()
         call_args = mock_router.route_stream.call_args[0][0]
@@ -576,15 +578,16 @@ class TestDataAPIStreaming:
     @pytest.mark.asyncio
     async def test_stream_trades(self, mock_router, mock_trade):
         """Test trades streaming."""
+
         async def mock_stream():
             yield mock_trade
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for trade in api.stream_trades(
+            async for _trade in api.stream_trades(
                 symbol="BTC/USDT",
                 exchange="binance",
                 market_type=MarketType.SPOT,
@@ -592,7 +595,7 @@ class TestDataAPIStreaming:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.TRADES
@@ -605,9 +608,10 @@ class TestDataAPIFuturesMethods:
     @pytest.mark.asyncio
     async def test_fetch_open_interest_success(self, mock_router):
         """Test successful open interest fetch."""
-        from laakhay.data.models.open_interest import OpenInterest
         from decimal import Decimal
-        
+
+        from laakhay.data.models.open_interest import OpenInterest
+
         mock_oi = [
             OpenInterest(
                 symbol="BTC/USDT",
@@ -618,7 +622,7 @@ class TestDataAPIFuturesMethods:
             )
         ]
         mock_router.route.return_value = mock_oi
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_open_interest(
@@ -627,7 +631,7 @@ class TestDataAPIFuturesMethods:
                 market_type=MarketType.FUTURES,
                 historical=False,
             )
-        
+
         assert result == mock_oi
         call_args = mock_router.route.call_args[0][0]
         assert call_args.feature == DataFeature.OPEN_INTEREST
@@ -637,9 +641,10 @@ class TestDataAPIFuturesMethods:
     @pytest.mark.asyncio
     async def test_fetch_open_interest_historical(self, mock_router):
         """Test historical open interest fetch."""
-        from laakhay.data.models.open_interest import OpenInterest
         from decimal import Decimal
-        
+
+        from laakhay.data.models.open_interest import OpenInterest
+
         mock_oi = [
             OpenInterest(
                 symbol="BTC/USDT",
@@ -650,10 +655,10 @@ class TestDataAPIFuturesMethods:
             )
         ]
         mock_router.route.return_value = mock_oi
-        
+
         start_time = datetime.now() - timedelta(days=7)
         end_time = datetime.now()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_open_interest(
@@ -666,7 +671,7 @@ class TestDataAPIFuturesMethods:
                 period="1h",
                 limit=100,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.historical is True
         assert call_args.start_time == start_time
@@ -677,10 +682,11 @@ class TestDataAPIFuturesMethods:
     @pytest.mark.asyncio
     async def test_fetch_funding_rates_success(self, mock_router):
         """Test successful funding rates fetch."""
-        from laakhay.data.models.funding_rate import FundingRate
-        from decimal import Decimal
         from datetime import UTC
-        
+        from decimal import Decimal
+
+        from laakhay.data.models.funding_rate import FundingRate
+
         mock_rates = [
             FundingRate(
                 symbol="BTC/USDT",
@@ -689,7 +695,7 @@ class TestDataAPIFuturesMethods:
             )
         ]
         mock_router.route.return_value = mock_rates
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             result = await api.fetch_funding_rates(
@@ -698,7 +704,7 @@ class TestDataAPIFuturesMethods:
                 market_type=MarketType.FUTURES,
                 limit=50,
             )
-        
+
         assert result == mock_rates
         call_args = mock_router.route.call_args[0][0]
         assert call_args.feature == DataFeature.FUNDING_RATE
@@ -708,10 +714,11 @@ class TestDataAPIFuturesMethods:
     @pytest.mark.asyncio
     async def test_fetch_funding_rates_historical(self, mock_router):
         """Test historical funding rates fetch."""
-        from laakhay.data.models.funding_rate import FundingRate
-        from decimal import Decimal
         from datetime import UTC
-        
+        from decimal import Decimal
+
+        from laakhay.data.models.funding_rate import FundingRate
+
         mock_rates = [
             FundingRate(
                 symbol="BTC/USDT",
@@ -720,10 +727,10 @@ class TestDataAPIFuturesMethods:
             )
         ]
         mock_router.route.return_value = mock_rates
-        
+
         start_time = datetime.now() - timedelta(days=30)
         end_time = datetime.now()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             await api.fetch_funding_rates(
@@ -734,7 +741,7 @@ class TestDataAPIFuturesMethods:
                 end_time=end_time,
                 limit=200,
             )
-        
+
         call_args = mock_router.route.call_args[0][0]
         assert call_args.start_time == start_time
         assert call_args.end_time == end_time
@@ -748,7 +755,7 @@ class TestDataAPIErrorHandling:
     async def test_provider_error_propagation(self, mock_router):
         """Test that ProviderError is propagated correctly."""
         mock_router.route.side_effect = ProviderError("Provider error")
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             with pytest.raises(ProviderError, match="Provider error"):
@@ -766,7 +773,7 @@ class TestDataAPIErrorHandling:
             "Rate limit exceeded",
             retry_after=60,
         )
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             with pytest.raises(RateLimitError) as exc_info:
@@ -782,7 +789,7 @@ class TestDataAPIErrorHandling:
     async def test_invalid_symbol_error_propagation(self, mock_router):
         """Test that InvalidSymbolError is propagated correctly."""
         mock_router.route.side_effect = InvalidSymbolError("Invalid symbol")
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             with pytest.raises(InvalidSymbolError):
@@ -801,24 +808,24 @@ class TestDataAPIStreamingMethods:
     async def test_stream_ohlcv_multi(self, mock_router, mock_ohlcv):
         """Test multi-symbol OHLCV streaming."""
         from unittest.mock import AsyncMock, MagicMock
-        
+
         # Mock provider registry and provider
         async def mock_stream(*args, **kwargs):
             yield mock_ohlcv.bars[0]
-        
+
         mock_provider = AsyncMock()
         mock_provider.stream_ohlcv_multi = mock_stream  # Direct function, not AsyncMock
-        
+
         mock_registry = MagicMock()
         mock_registry.is_registered.return_value = True
         mock_registry.get_provider = AsyncMock(return_value=mock_provider)
         mock_router._provider_registry = mock_registry
         mock_router._capability_service = MagicMock()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for bar in api.stream_ohlcv_multi(
+            async for _bar in api.stream_ohlcv_multi(
                 symbols=["BTC/USDT", "ETH/USDT"],
                 timeframe=Timeframe.M1,
                 exchange="binance",
@@ -827,7 +834,7 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         mock_registry.get_provider.assert_called_once()
 
@@ -835,23 +842,23 @@ class TestDataAPIStreamingMethods:
     async def test_stream_trades_multi(self, mock_router, mock_trade):
         """Test multi-symbol trades streaming."""
         from unittest.mock import AsyncMock, MagicMock
-        
+
         async def mock_stream(*args, **kwargs):
             yield mock_trade
-        
+
         mock_provider = AsyncMock()
         mock_provider.stream_trades_multi = mock_stream  # Direct function, not AsyncMock
-        
+
         mock_registry = MagicMock()
         mock_registry.is_registered.return_value = True
         mock_registry.get_provider = AsyncMock(return_value=mock_provider)
         mock_router._provider_registry = mock_registry
         mock_router._capability_service = MagicMock()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for trade in api.stream_trades_multi(
+            async for _trade in api.stream_trades_multi(
                 symbols=["BTC/USDT", "ETH/USDT"],
                 exchange="binance",
                 market_type=MarketType.SPOT,
@@ -859,21 +866,22 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
 
     @pytest.mark.asyncio
     async def test_stream_order_book(self, mock_router, mock_order_book):
         """Test order book streaming."""
+
         async def mock_stream():
             yield mock_order_book
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for ob in api.stream_order_book(
+            async for _ob in api.stream_order_book(
                 symbol="BTC/USDT",
                 exchange="binance",
                 market_type=MarketType.SPOT,
@@ -882,7 +890,7 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.ORDER_BOOK
@@ -892,10 +900,11 @@ class TestDataAPIStreamingMethods:
     @pytest.mark.asyncio
     async def test_stream_liquidations(self, mock_router):
         """Test liquidations streaming."""
-        from laakhay.data.models.liquidation import Liquidation
-        from decimal import Decimal
         from datetime import UTC
-        
+        from decimal import Decimal
+
+        from laakhay.data.models.liquidation import Liquidation
+
         mock_liq = Liquidation(
             symbol="BTC/USDT",
             timestamp=datetime.now(UTC),
@@ -909,23 +918,23 @@ class TestDataAPIStreamingMethods:
             last_filled_quantity=Decimal("1.0"),
             accumulated_quantity=Decimal("1.0"),
         )
-        
+
         async def mock_stream():
             yield mock_liq
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for liq in api.stream_liquidations(
+            async for _liq in api.stream_liquidations(
                 exchange="binance",
                 market_type=MarketType.FUTURES,
             ):
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.LIQUIDATIONS
@@ -934,9 +943,10 @@ class TestDataAPIStreamingMethods:
     @pytest.mark.asyncio
     async def test_stream_open_interest(self, mock_router):
         """Test open interest streaming."""
-        from laakhay.data.models.open_interest import OpenInterest
         from decimal import Decimal
-        
+
+        from laakhay.data.models.open_interest import OpenInterest
+
         mock_oi = OpenInterest(
             symbol="BTC/USDT",
             exchange="binance",
@@ -944,16 +954,16 @@ class TestDataAPIStreamingMethods:
             timestamp=datetime.now(),
             open_interest=Decimal("1000.5"),
         )
-        
+
         async def mock_stream():
             yield mock_oi
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for oi in api.stream_open_interest(
+            async for _oi in api.stream_open_interest(
                 symbols=["BTC/USDT"],
                 exchange="binance",
                 market_type=MarketType.FUTURES,
@@ -962,7 +972,7 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.OPEN_INTEREST
@@ -971,25 +981,26 @@ class TestDataAPIStreamingMethods:
     @pytest.mark.asyncio
     async def test_stream_funding_rates(self, mock_router):
         """Test funding rates streaming."""
-        from laakhay.data.models.funding_rate import FundingRate
-        from decimal import Decimal
         from datetime import UTC
-        
+        from decimal import Decimal
+
+        from laakhay.data.models.funding_rate import FundingRate
+
         mock_rate = FundingRate(
             symbol="BTC/USDT",
             funding_time=datetime.now(UTC),
             funding_rate=Decimal("0.0001"),
         )
-        
+
         async def mock_stream():
             yield mock_rate
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for rate in api.stream_funding_rates(
+            async for _rate in api.stream_funding_rates(
                 symbols=["BTC/USDT"],
                 exchange="binance",
                 market_type=MarketType.FUTURES,
@@ -997,7 +1008,7 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.FUNDING_RATE
@@ -1006,9 +1017,10 @@ class TestDataAPIStreamingMethods:
     @pytest.mark.asyncio
     async def test_stream_mark_price(self, mock_router):
         """Test mark price streaming."""
-        from laakhay.data.models.mark_price import MarkPrice
         from decimal import Decimal
-        
+
+        from laakhay.data.models.mark_price import MarkPrice
+
         mock_mark = MarkPrice(
             symbol="BTC/USDT",
             exchange="binance",
@@ -1016,16 +1028,16 @@ class TestDataAPIStreamingMethods:
             timestamp=datetime.now(),
             mark_price=Decimal("50000.0"),
         )
-        
+
         async def mock_stream():
             yield mock_mark
-        
+
         mock_router.route_stream.return_value = mock_stream()
-        
+
         api = DataAPI(router=mock_router)
         async with api:
             count = 0
-            async for mark in api.stream_mark_price(
+            async for _mark in api.stream_mark_price(
                 symbols=["BTC/USDT"],
                 exchange="binance",
                 market_type=MarketType.FUTURES,
@@ -1033,9 +1045,8 @@ class TestDataAPIStreamingMethods:
                 count += 1
                 if count >= 1:
                     break
-        
+
         assert count == 1
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.MARK_PRICE
         assert call_args.transport == TransportKind.WS
-
