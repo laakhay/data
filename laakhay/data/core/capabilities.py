@@ -487,7 +487,7 @@ def supports(
     *,
     exchange: str,
     market_type: MarketType,
-    instrument_type: InstrumentType,
+    instrument_type: InstrumentType | None = None,
     stream_variant: str | None = None,
 ) -> CapabilityStatus:
     """Check if a capability is supported.
@@ -520,12 +520,21 @@ def supports(
         )
 
     instrument_data = exchange_data[market_type]
-    if instrument_type not in instrument_data:
+    if instrument_type is not None and instrument_type not in instrument_data:
         return CapabilityStatus(
             supported=False,
             reason=f"Instrument type '{instrument_type.value}' not supported for {exchange}/{market_type.value}",
             source="static",
         )
+    # If instrument_type is None, use the first available instrument type
+    if instrument_type is None:
+        if not instrument_data:
+            return CapabilityStatus(
+                supported=False,
+                reason=f"No instrument types available for {exchange}/{market_type.value}",
+                source="static",
+            )
+        instrument_type = next(iter(instrument_data.keys()))
 
     feature_data = instrument_data[instrument_type]
     if feature not in feature_data:

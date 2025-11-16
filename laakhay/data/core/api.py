@@ -508,8 +508,15 @@ class DataAPI:
         market_type_resolved = self._resolve_market_type(market_type)
         instrument_type_resolved = self._resolve_instrument_type(instrument_type)
 
+        # Ensure provider is registered before accessing
+        registry = self._router._provider_registry
+        if not registry.is_registered(exchange_name):
+            from ..providers import register_all
+
+            register_all(registry)
+
         # Get provider directly for multi-symbol streaming
-        provider = await self._router._provider_registry.get_provider(
+        provider = await registry.get_provider(
             exchange_name,
             market_type_resolved,
         )
@@ -574,8 +581,15 @@ class DataAPI:
         market_type_resolved = self._resolve_market_type(market_type)
         instrument_type_resolved = self._resolve_instrument_type(instrument_type)
 
+        # Ensure provider is registered before accessing
+        registry = self._router._provider_registry
+        if not registry.is_registered(exchange_name):
+            from ..providers import register_all
+
+            register_all(registry)
+
         # Get provider directly for multi-symbol streaming
-        provider = await self._router._provider_registry.get_provider(
+        provider = await registry.get_provider(
             exchange_name,
             market_type_resolved,
         )
