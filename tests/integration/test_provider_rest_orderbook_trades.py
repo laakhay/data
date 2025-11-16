@@ -1,5 +1,7 @@
 """Integration tests for REST order book and trades across all providers."""
 
+import os
+
 import pytest
 
 from laakhay.data.core import MarketType
@@ -9,6 +11,11 @@ from laakhay.data.providers import (
     CoinbaseProvider,
     KrakenProvider,
     OKXProvider,
+)
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to test REST order book and trades",
 )
 
 

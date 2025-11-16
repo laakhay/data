@@ -62,6 +62,7 @@ class TestStreamRunner:
     @pytest.mark.asyncio
     async def test_run_empty_symbols(self, runner, mock_adapter, single_stream_spec):
         """Test run() with empty symbols list returns immediately."""
+
         async def gen():
             async for _ in runner.run(
                 spec=single_stream_spec,
@@ -78,8 +79,11 @@ class TestStreamRunner:
         mock_adapter.parse.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_run_single_chunk_single_symbol(self, runner, mock_transport, mock_adapter, single_stream_spec):
+    async def test_run_single_chunk_single_symbol(
+        self, runner, mock_transport, mock_adapter, single_stream_spec
+    ):
         """Test run() with single symbol uses fast path."""
+
         # Create async iterator that yields one message
         class MessageIterator:
             def __init__(self):
@@ -113,8 +117,11 @@ class TestStreamRunner:
         mock_adapter.parse.assert_called()
 
     @pytest.mark.asyncio
-    async def test_run_single_chunk_with_throttle(self, runner, mock_transport, mock_adapter, single_stream_spec):
+    async def test_run_single_chunk_with_throttle(
+        self, runner, mock_transport, mock_adapter, single_stream_spec
+    ):
         """Test run() respects throttle_ms parameter."""
+
         class MessageIterator:
             def __init__(self):
                 self._messages = [
@@ -153,8 +160,11 @@ class TestStreamRunner:
         assert count >= 0
 
     @pytest.mark.asyncio
-    async def test_run_single_chunk_with_only_closed(self, runner, mock_transport, mock_adapter, single_stream_spec):
+    async def test_run_single_chunk_with_only_closed(
+        self, runner, mock_transport, mock_adapter, single_stream_spec
+    ):
         """Test run() filters by only_closed parameter."""
+
         class MessageIterator:
             def __init__(self):
                 self._messages = [{"type": "test"}]
@@ -187,8 +197,11 @@ class TestStreamRunner:
         assert count == 0
 
     @pytest.mark.asyncio
-    async def test_run_single_chunk_with_dedupe(self, runner, mock_transport, mock_adapter, single_stream_spec):
+    async def test_run_single_chunk_with_dedupe(
+        self, runner, mock_transport, mock_adapter, single_stream_spec
+    ):
         """Test run() deduplicates using dedupe_key."""
+
         class MessageIterator:
             def __init__(self):
                 self._messages = [
@@ -231,8 +244,11 @@ class TestStreamRunner:
         assert count >= 0
 
     @pytest.mark.asyncio
-    async def test_run_multi_chunk_fan_in(self, runner, mock_transport, mock_adapter, combined_stream_spec):
+    async def test_run_multi_chunk_fan_in(
+        self, runner, mock_transport, mock_adapter, combined_stream_spec
+    ):
         """Test run() handles multiple chunks with fan-in."""
+
         # Create message iterator that yields and stops
         class MessageIterator:
             def __init__(self):
@@ -284,8 +300,11 @@ class TestStreamRunner:
         assert call_count >= 0
 
     @pytest.mark.asyncio
-    async def test_stream_chunk_combined(self, runner, mock_transport, mock_adapter, combined_stream_spec):
+    async def test_stream_chunk_combined(
+        self, runner, mock_transport, mock_adapter, combined_stream_spec
+    ):
         """Test _stream_chunk uses combined URL for multiple symbols."""
+
         class MessageIterator:
             def __init__(self):
                 self._messages = [{"type": "test"}]
@@ -320,8 +339,11 @@ class TestStreamRunner:
         assert "combined" in call_args
 
     @pytest.mark.asyncio
-    async def test_stream_chunk_single(self, runner, mock_transport, mock_adapter, single_stream_spec):
+    async def test_stream_chunk_single(
+        self, runner, mock_transport, mock_adapter, single_stream_spec
+    ):
         """Test _stream_chunk uses single URLs when combined not supported."""
+
         class MessageIterator:
             def __init__(self):
                 self._messages = [{"type": "test"}]
@@ -356,8 +378,11 @@ class TestStreamRunner:
         assert "stream_BTC/USDT" in call_args
 
     @pytest.mark.asyncio
-    async def test_run_cancels_tasks_on_exit(self, runner, mock_transport, mock_adapter, combined_stream_spec):
+    async def test_run_cancels_tasks_on_exit(
+        self, runner, mock_transport, mock_adapter, combined_stream_spec
+    ):
         """Test run() properly cancels tasks in finally block."""
+
         # Create iterator that yields once then stops
         class MessageIterator:
             def __init__(self):
@@ -413,4 +438,3 @@ class TestMessageAdapter:
         """Test parse() defaults to empty list."""
         adapter = MessageAdapter()
         assert adapter.parse({"type": "test"}) == []
-

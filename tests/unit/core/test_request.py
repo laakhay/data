@@ -384,4 +384,3 @@ class TestRequestFactory:
             timeframe=Timeframe.H1,
         )
         assert req.symbols == ["BTC/USDT", "ETH/USDT"]
-

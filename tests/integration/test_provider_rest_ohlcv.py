@@ -1,5 +1,6 @@
 """Integration tests for REST OHLCV across all providers."""
 
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -12,6 +13,11 @@ from laakhay.data.providers import (
     HyperliquidProvider,
     KrakenProvider,
     OKXProvider,
+)
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to test REST OHLCV",
 )
 
 
@@ -128,8 +134,9 @@ class TestRESTOHLCVIntegration:
     async def test_fetch_ohlcv_invalid_symbol(self, provider_class, exchange, symbol, market_type):
         """Test OHLCV fetching with invalid symbol raises error."""
         async with provider_class(market_type=market_type) as provider:
-            from laakhay.data.core.exceptions import ProviderError
             from aiohttp import ClientResponseError
+
+            from laakhay.data.core.exceptions import ProviderError
 
             with pytest.raises((ProviderError, ValueError, ClientResponseError)):
                 await provider.get_candles(

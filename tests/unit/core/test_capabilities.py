@@ -319,14 +319,16 @@ def test_capability_error_with_context():
         "Capability not supported",
         key=key,
         status=status,
-        recommendations=[FallbackOption(
-            exchange="binance",
-            market_type=MarketType.FUTURES,
-            instrument_type=InstrumentType.PERPETUAL,
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-            note="Use Binance futures",
-        )],
+        recommendations=[
+            FallbackOption(
+                exchange="binance",
+                market_type=MarketType.FUTURES,
+                instrument_type=InstrumentType.PERPETUAL,
+                feature=DataFeature.LIQUIDATIONS,
+                transport=TransportKind.WS,
+                note="Use Binance futures",
+            )
+        ],
     )
     assert error.key == key
     assert error.status == status

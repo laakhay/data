@@ -1,5 +1,7 @@
 """Integration tests for REST symbol metadata across all providers."""
 
+import os
+
 import pytest
 
 from laakhay.data.core import MarketType
@@ -10,6 +12,11 @@ from laakhay.data.providers import (
     HyperliquidProvider,
     KrakenProvider,
     OKXProvider,
+)
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to test REST symbols",
 )
 
 

@@ -1,6 +1,7 @@
 """Integration tests for WebSocket OHLCV streaming across all providers."""
 
 import asyncio
+import os
 
 import pytest
 
@@ -11,6 +12,11 @@ from laakhay.data.providers import (
     CoinbaseProvider,
     KrakenProvider,
     OKXProvider,
+)
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
+    reason="Requires network access to test WebSocket OHLCV",
 )
 
 

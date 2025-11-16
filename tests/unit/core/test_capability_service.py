@@ -233,4 +233,3 @@ class TestCapabilityServiceGetCapabilityKey:
         assert key.market_type == MarketType.FUTURES
         assert key.instrument_type == InstrumentType.PERPETUAL
         assert key.feature == DataFeature.FUNDING_RATE
-
