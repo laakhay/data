@@ -187,6 +187,12 @@ class BinanceWSProvider(WSProvider):
         async for obj in self.stream("order_book", [symbol], {"update_speed": update_speed}):
             yield obj
 
+    async def stream_order_book_multi(
+        self, symbols: list[str], update_speed: str = "100ms"
+    ) -> AsyncIterator[OrderBook]:
+        async for obj in self.stream("order_book", symbols, {"update_speed": update_speed}):
+            yield obj
+
     # --- Liquidations (Futures) ---
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         async for obj in self.stream("liquidations", ["!forceOrder@arr"], {}):
