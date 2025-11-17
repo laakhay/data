@@ -658,6 +658,78 @@ class DataAPI:
         async for item in self._router.route_stream(request):
             yield item
 
+    async def stream_order_book_multi(
+        self,
+        symbols: list[str],
+        *,
+        depth: int | None = None,
+        update_speed: str = "100ms",
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> AsyncIterator[OrderBook]:
+        """Stream order book updates for multiple symbols.
+
+        Args:
+            symbols: List of symbol identifiers
+            depth: Order book depth
+            update_speed: Update speed (default: "100ms")
+            exchange: Exchange name (uses default if set)
+            market_type: Market type (uses default if set)
+            instrument_type: Instrument type (default: SPOT)
+
+        Yields:
+            OrderBook updates (may be from different symbols)
+
+        Raises:
+            CapabilityError: If order book WS is not supported
+            SymbolResolutionError: If symbols cannot be resolved
+            ProviderError: If provider doesn't support multi-symbol streaming
+        """
+        exchange_name = self._resolve_exchange(exchange)
+        market_type_resolved = self._resolve_market_type(market_type)
+        instrument_type_resolved = self._resolve_instrument_type(instrument_type)
+
+        # Ensure provider is registered before accessing
+        registry = self._router._provider_registry
+        if not registry.is_registered(exchange_name):
+            from ..providers import register_all
+
+            register_all(registry)
+
+        # Get provider directly for multi-symbol streaming
+        provider = await registry.get_provider(
+            exchange_name,
+            market_type_resolved,
+        )
+
+        # Validate capability for first symbol (all should have same capability)
+        if symbols:
+            request = DataRequest(
+                feature=DataFeature.ORDER_BOOK,
+                transport=TransportKind.WS,
+                exchange=exchange_name,
+                market_type=market_type_resolved,
+                instrument_type=instrument_type_resolved,
+                symbol=symbols[0],
+                update_speed=update_speed,
+            )
+            self._router._capability_service.validate_request(request)
+
+        logger.debug(
+            "Streaming order book multi",
+            extra={
+                "exchange": exchange_name,
+                "symbols": symbols,
+            },
+        )
+
+        async for item in provider.stream_order_book_multi(
+            symbols=symbols,
+            update_speed=update_speed,
+        ):
+            yield item
+
     async def stream_liquidations(
         self,
         *,
