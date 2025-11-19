@@ -110,12 +110,12 @@ order_book: OrderBook = await api.fetch_order_book(
 
 **Returns:** `OrderBook` with bids, asks, and computed metrics
 
-#### fetch_trades
+#### fetch_recent_trades
 
 Fetch recent trades.
 
 ```python
-trades: list[Trade] = await api.fetch_trades(
+trades: list[Trade] = await api.fetch_recent_trades(
     symbol: str,
     *,
     exchange: str | None = None,
@@ -133,6 +133,32 @@ trades: list[Trade] = await api.fetch_trades(
 - `limit`: Maximum number of trades (default: 500)
 
 **Returns:** List of `Trade` objects
+
+#### fetch_historical_trades
+
+Fetch historical trades with exchange-level pagination controls.
+
+```python
+trades: list[Trade] = await api.fetch_historical_trades(
+    symbol: str,
+    *,
+    exchange: str | None = None,
+    market_type: MarketType | None = None,
+    instrument_type: InstrumentType | None = None,
+    limit: int | None = None,
+    from_id: int | None = None,
+) -> list[Trade]
+```
+
+**Parameters:**
+- `symbol`: Symbol in any format
+- `exchange`: Exchange name (uses default if None)
+- `market_type`: Market type (uses default if None)
+- `instrument_type`: Instrument type (uses default if None)
+- `limit`: Maximum number of trades (respects exchange limits)
+- `from_id`: Exchange trade ID to resume from
+
+**Returns:** List of `Trade` objects ordered oldest → newest
 
 #### stream_ohlcv
 

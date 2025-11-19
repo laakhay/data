@@ -300,6 +300,38 @@ class DataAPI:
         )
         return await self._router.route(request)
 
+    async def fetch_historical_trades(
+        self,
+        symbol: str,
+        *,
+        limit: int | None = None,
+        from_id: int | None = None,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> list[Trade]:
+        """Fetch historical trades with exchange pagination support."""
+        request = DataRequest(
+            feature=DataFeature.HISTORICAL_TRADES,
+            transport=TransportKind.REST,
+            exchange=self._resolve_exchange(exchange),
+            market_type=self._resolve_market_type(market_type),
+            instrument_type=self._resolve_instrument_type(instrument_type),
+            symbol=symbol,
+            limit=limit,
+            from_id=from_id,
+        )
+        logger.debug(
+            "Fetching historical trades",
+            extra={
+                "exchange": request.exchange,
+                "symbol": symbol,
+                "limit": limit,
+                "from_id": from_id,
+            },
+        )
+        return await self._router.route(request)
+
     async def fetch_symbols(
         self,
         *,

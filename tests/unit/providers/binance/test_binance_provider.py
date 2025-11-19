@@ -4,6 +4,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -96,6 +97,53 @@ async def test_binance_rest_fetch_health_futures(monkeypatch):
     result = await provider.fetch_health()
     assert called == ["/fapi/v1/ping"]
     assert result["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_binance_rest_fetch_historical_trades_requires_api_key():
+    provider = BinanceRESTProvider()
+    with pytest.raises(ValueError):
+        await provider.fetch_historical_trades("BTCUSDT")
+
+
+@pytest.mark.asyncio
+async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
+    provider = BinanceRESTProvider(api_key="ABC123")
+    captured: dict[str, Any] = {}
+
+    async def fake_fetch(endpoint: str, params: dict[str, Any]) -> list[Any]:
+        captured["endpoint"] = endpoint
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(provider, "fetch", fake_fetch)
+
+    result = await provider.fetch_historical_trades("BTCUSDT", limit=200, from_id=42)
+    assert result == []
+    assert captured["endpoint"] == "historical_trades"
+    assert captured["params"]["symbol"] == "BTCUSDT"
+    assert captured["params"]["from_id"] == 42
+    assert captured["params"]["limit"] == 200
+    assert captured["params"]["api_key"] == "ABC123"
+
+
+@pytest.mark.asyncio
+async def test_binance_rest_fetch_historical_trades_spot_only():
+    provider = BinanceRESTProvider(market_type=MarketType.FUTURES, api_key="KEY")
+    with pytest.raises(ValueError):
+        await provider.fetch_historical_trades("BTCUSDT")
+
+
+@pytest.mark.asyncio
+async def test_binance_provider_fetch_historical_trades():
+    rest = MagicMock()
+    rest.fetch_historical_trades = AsyncMock(return_value=["trade"])
+    ws = MagicMock()
+
+    provider = BinanceProvider(rest_provider=rest, ws_provider=ws)
+    result = await provider.fetch_historical_trades("BTCUSDT", limit=100, from_id=20)
+    assert result == ["trade"]
+    rest.fetch_historical_trades.assert_awaited_once_with(symbol="BTCUSDT", limit=100, from_id=20)
 
 
 @pytest.mark.asyncio

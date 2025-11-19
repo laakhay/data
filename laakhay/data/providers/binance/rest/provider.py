@@ -36,6 +36,7 @@ from .endpoints import (
     exchange_info_raw_spec,
     exchange_info_spec,
     funding_rate_spec,
+    historical_trades_spec,
     open_interest_current_spec,
     open_interest_hist_spec,
     order_book_spec,
@@ -54,6 +55,7 @@ class BinanceRESTProvider(RESTProvider):
         api_secret: str | None = None,
     ) -> None:
         self.market_type = market_type
+        self._api_key = api_key
         from ..constants import BASE_URLS
 
         self._transport = RESTTransport(base_url=BASE_URLS[market_type])
@@ -66,6 +68,7 @@ class BinanceRESTProvider(RESTProvider):
             "open_interest_current": (open_interest_current_spec, OpenInterestCurrentAdapter),
             "open_interest_hist": (open_interest_hist_spec, OpenInterestHistAdapter),
             "recent_trades": (recent_trades_spec, RecentTradesAdapter),
+            "historical_trades": (historical_trades_spec, RecentTradesAdapter),
             "funding_rate": (funding_rate_spec, FundingRateAdapter),
             "exchange_info_raw": (exchange_info_raw_spec, ExchangeInfoSymbolsAdapter),
         }
@@ -232,6 +235,28 @@ class BinanceRESTProvider(RESTProvider):
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
         data = await self.fetch("recent_trades", params)
+        return list(data)
+
+    async def fetch_historical_trades(
+        self,
+        symbol: str,
+        *,
+        limit: int | None = None,
+        from_id: int | None = None,
+    ) -> list[Trade]:
+        if self.market_type != MarketType.SPOT:
+            raise ValueError("Historical trades are only available for Spot on Binance")
+        if not self._api_key:
+            raise ValueError("api_key is required to use Binance historical trades endpoint")
+
+        params = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "limit": limit,
+            "from_id": from_id,
+            "api_key": self._api_key,
+        }
+        data = await self.fetch("historical_trades", params)
         return list(data)
 
     async def get_funding_rate(

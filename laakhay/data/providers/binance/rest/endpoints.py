@@ -149,6 +149,37 @@ def recent_trades_spec() -> RestEndpointSpec:
     )
 
 
+def historical_trades_spec() -> RestEndpointSpec:
+    def build_path(params: dict[str, Any]) -> str:
+        market: MarketType = params["market_type"]
+        if market != MarketType.SPOT:
+            raise ValueError("Historical trades endpoint is Spot-only on Binance")
+        return "/api/v3/historicalTrades"
+
+    def build_query(params: dict[str, Any]) -> dict[str, Any]:
+        q: dict[str, Any] = {"symbol": params["symbol"].upper()}
+        if params.get("limit") is not None:
+            limit = int(params["limit"])
+            q["limit"] = max(1, min(limit, 1000))
+        if params.get("from_id") is not None:
+            q["fromId"] = int(params["from_id"])
+        return q
+
+    def build_headers(params: dict[str, Any]) -> dict[str, str]:
+        api_key = params.get("api_key")
+        if not api_key:
+            raise ValueError("API key required for Binance historical trades endpoint")
+        return {"X-MBX-APIKEY": api_key}
+
+    return RestEndpointSpec(
+        id="historical_trades",
+        method="GET",
+        build_path=build_path,
+        build_query=build_query,
+        build_headers=build_headers,
+    )
+
+
 def funding_rate_spec() -> RestEndpointSpec:
     def build_path(params: dict[str, Any]) -> str:
         market: MarketType = params["market_type"]

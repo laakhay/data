@@ -73,6 +73,7 @@ class DataRequest:
     dedupe_same_candle: bool = False
     historical: bool = False
     max_chunks: int | None = None
+    from_id: int | None = None
 
     # Additional parameters
     extra_params: dict[str, Any] = field(default_factory=dict)
@@ -156,6 +157,7 @@ class DataRequestBuilder:
         self._dedupe_same_candle: bool = False
         self._historical: bool = False
         self._max_chunks: int | None = None
+        self._from_id: int | None = None
         self._extra_params: dict[str, Any] = {}
 
     def feature(self, feature: DataFeature) -> DataRequestBuilder:
@@ -255,6 +257,11 @@ class DataRequestBuilder:
         self._max_chunks = max_chunks
         return self
 
+    def from_id(self, from_id: int) -> DataRequestBuilder:
+        """Set starting trade ID for historical trades."""
+        self._from_id = from_id
+        return self
+
     def extra_param(self, key: str, value: Any) -> DataRequestBuilder:
         """Add an extra parameter."""
         self._extra_params[key] = value
@@ -291,6 +298,7 @@ class DataRequestBuilder:
             dedupe_same_candle=self._dedupe_same_candle,
             historical=self._historical,
             max_chunks=self._max_chunks,
+            from_id=self._from_id,
             extra_params=self._extra_params,
         )
 

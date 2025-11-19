@@ -514,6 +514,46 @@ class TestDataAPIFetchTrades:
         assert call_args.limit == 500
 
 
+class TestDataAPIFetchHistoricalTrades:
+    """Test DataAPI.fetch_historical_trades method."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_historical_trades(self, mock_router, mock_trade):
+        mock_router.route.return_value = [mock_trade]
+
+        api = DataAPI(router=mock_router)
+        async with api:
+            result = await api.fetch_historical_trades(
+                symbol="BTC/USDT",
+                exchange="binance",
+                market_type=MarketType.SPOT,
+                limit=100,
+                from_id=1234,
+            )
+
+        assert result == [mock_trade]
+        call_args = mock_router.route.call_args[0][0]
+        assert call_args.feature == DataFeature.HISTORICAL_TRADES
+        assert call_args.limit == 100
+        assert call_args.from_id == 1234
+
+    @pytest.mark.asyncio
+    async def test_fetch_historical_trades_without_optional_args(self, mock_router, mock_trade):
+        mock_router.route.return_value = [mock_trade]
+
+        api = DataAPI(router=mock_router)
+        async with api:
+            await api.fetch_historical_trades(
+                symbol="BTC/USDT",
+                exchange="binance",
+                market_type=MarketType.SPOT,
+            )
+
+        call_args = mock_router.route.call_args[0][0]
+        assert call_args.limit is None
+        assert call_args.from_id is None
+
+
 class TestDataAPIFetchSymbols:
     """Test DataAPI.fetch_symbols method."""
 

@@ -97,6 +97,12 @@ class BinanceProvider(BaseProvider):
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
 
+    @register_feature_handler(DataFeature.HISTORICAL_TRADES, TransportKind.REST)
+    async def fetch_historical_trades(
+        self, symbol: str, *, limit: int | None = None, from_id: int | None = None
+    ) -> list[Trade]:
+        return await self._rest.fetch_historical_trades(symbol=symbol, limit=limit, from_id=from_id)
+
     @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.REST)
     async def get_funding_rate(
         self,

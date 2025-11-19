@@ -79,7 +79,7 @@ asyncio.run(fetch_order_book())
 ```python
 async def fetch_trades():
     async with DataAPI() as api:
-        trades = await api.fetch_trades(
+        trades = await api.fetch_recent_trades(
             symbol="BTCUSDT",
             exchange="binance",
             market_type=MarketType.SPOT,

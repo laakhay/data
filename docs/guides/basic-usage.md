@@ -63,7 +63,7 @@ print(f"Market Pressure: {order_book.market_pressure}")
 ## Fetching Trades
 
 ```python
-trades = await api.fetch_trades(
+trades = await api.fetch_recent_trades(
     symbol="BTCUSDT",
     exchange="binance",
     market_type=MarketType.SPOT,

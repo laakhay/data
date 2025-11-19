@@ -51,7 +51,9 @@ class TestRestRunner:
         )
 
         assert result == {"parsed": "data"}
-        mock_transport.get.assert_called_once_with("/test/123", params={"param": "value"})
+        mock_transport.get.assert_called_once_with(
+            "/test/123", params={"param": "value"}, headers=None
+        )
         mock_adapter.parse.assert_called_once()
 
     @pytest.mark.asyncio
@@ -67,7 +69,9 @@ class TestRestRunner:
         result = await runner.run(spec=spec, adapter=mock_adapter, params={"data": "value"})
 
         assert result == {"parsed": "data"}
-        mock_transport.post.assert_called_once_with("/test", json_body={"data": "value"})
+        mock_transport.post.assert_called_once_with(
+            "/test", json_body={"data": "value"}, headers=None
+        )
         mock_adapter.parse.assert_called_once()
 
     @pytest.mark.asyncio
@@ -82,7 +86,7 @@ class TestRestRunner:
 
         await runner.run(spec=spec, adapter=mock_adapter, params={})
 
-        mock_transport.get.assert_called_once_with("/test", params=None)
+        mock_transport.get.assert_called_once_with("/test", params=None, headers=None)
 
     @pytest.mark.asyncio
     async def test_run_without_body_builder(self, runner, mock_transport, mock_adapter):
@@ -96,7 +100,7 @@ class TestRestRunner:
 
         await runner.run(spec=spec, adapter=mock_adapter, params={})
 
-        mock_transport.post.assert_called_once_with("/test", json_body=None)
+        mock_transport.post.assert_called_once_with("/test", json_body=None, headers=None)
 
     @pytest.mark.asyncio
     async def test_adapter_receives_params(self, runner, mock_transport, mock_adapter):

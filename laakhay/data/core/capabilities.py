@@ -120,6 +120,7 @@ EXCHANGE_METADATA: dict[str, ExchangeCapability] = {
         "supported_timeframes": [tf.value for tf in Timeframe],
         "data_types": {
             "ohlcv": {"rest": True, "ws": True},
+            "historical_trades": {"rest": True, "ws": False},
             "order_book": {"rest": True, "ws": True},
             "trades": {"rest": True, "ws": True},
             "liquidations": {"rest": False, "ws": True},
@@ -375,6 +376,7 @@ def _build_capability_registry() -> None:
         "health": DataFeature.HEALTH,
         "order_book": DataFeature.ORDER_BOOK,
         "trades": DataFeature.TRADES,
+        "historical_trades": DataFeature.HISTORICAL_TRADES,
         "liquidations": DataFeature.LIQUIDATIONS,
         "open_interest": DataFeature.OPEN_INTEREST,
         "funding_rates": DataFeature.FUNDING_RATE,

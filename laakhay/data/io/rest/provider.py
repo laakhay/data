@@ -66,6 +66,16 @@ class RESTProvider(ABC):
         """Fetch recent trades. Optional; implement if provider supports it."""
         raise NotImplementedError
 
+    async def fetch_historical_trades(
+        self,
+        symbol: str,
+        *,
+        limit: int | None = None,
+        from_id: int | None = None,
+    ) -> list[Trade]:  # pragma: no cover
+        """Fetch historical trades if provider supports it."""
+        raise NotImplementedError
+
     async def get_funding_rate(
         self,
         symbol: str,

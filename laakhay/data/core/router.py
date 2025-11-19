@@ -456,6 +456,9 @@ class DataRouter:
         if request.max_chunks is not None:
             args["max_chunks"] = request.max_chunks
 
+        if request.from_id is not None:
+            args["from_id"] = request.from_id
+
         # Add any extra parameters
         args.update(request.extra_params)
 

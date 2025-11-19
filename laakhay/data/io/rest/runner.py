@@ -16,6 +16,7 @@ class RestEndpointSpec:
     build_path: Callable[[dict[str, Any]], str]
     build_query: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     build_body: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    build_headers: Callable[[dict[str, Any]], dict[str, str]] | None = None
     next_cursor: Callable[[Any], dict[str, Any] | None] | None = None
 
 
@@ -34,11 +35,12 @@ class RestRunner:
         path = spec.build_path(params)
         query = spec.build_query(params) if spec.build_query else None
         body = spec.build_body(params) if spec.build_body else None
+        headers = spec.build_headers(params) if spec.build_headers else None
 
         if spec.method.upper() == "GET":
-            data = await self._t.get(path, params=query)
+            data = await self._t.get(path, params=query, headers=headers)
         else:
-            data = await self._t.post(path, json_body=body)
+            data = await self._t.post(path, json_body=body, headers=headers)
 
         # Simple non-paginated; pagination handler can be added later if needed
         return adapter.parse(data, params)

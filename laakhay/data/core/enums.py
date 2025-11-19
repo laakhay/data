@@ -128,6 +128,7 @@ class DataFeature(str, Enum):
     HEALTH = "health"
     ORDER_BOOK = "order_book"
     TRADES = "trades"
+    HISTORICAL_TRADES = "historical_trades"
     LIQUIDATIONS = "liquidations"
     OPEN_INTEREST = "open_interest"
     FUNDING_RATE = "funding_rates"

@@ -39,6 +39,12 @@ async def test_register_binance():
     assert ohlcv_rest is not None
     assert ohlcv_rest.method_name == "fetch_ohlcv"
 
+    hist_rest = registry.get_feature_handler(
+        "binance", DataFeature.HISTORICAL_TRADES, TransportKind.REST
+    )
+    assert hist_rest is not None
+    assert hist_rest.method_name == "fetch_historical_trades"
+
     health_rest = registry.get_feature_handler("binance", DataFeature.HEALTH, TransportKind.REST)
     assert health_rest is not None
     assert health_rest.method_name == "fetch_health"
