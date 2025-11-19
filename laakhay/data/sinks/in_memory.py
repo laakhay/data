@@ -2,6 +2,22 @@
 
 This sink stores events in an async queue that can be consumed by tests or
 simple applications.
+
+Architecture:
+    InMemorySink implements the StreamSink protocol for in-memory event storage.
+    It uses an asyncio.Queue to buffer events, making it ideal for testing
+    and simple applications that don't need persistent storage.
+
+Design Decisions:
+    - Async queue: Non-blocking event storage
+    - Bounded queue: Optional maxsize to prevent unbounded growth
+    - Stream interface: Supports async iteration over events
+    - Simple API: Easy to use for testing
+
+See Also:
+    - StreamSink: Protocol interface
+    - StreamRelay: Uses sinks for event forwarding
+    - RedisStreamSink: Persistent sink implementation
 """
 
 from __future__ import annotations

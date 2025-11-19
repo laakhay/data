@@ -2,6 +2,28 @@
 
 This sink publishes events to Redis Streams, enabling persistence and
 multi-consumer scenarios.
+
+Architecture:
+    RedisStreamSink implements the StreamSink protocol for persistent event
+    storage in Redis Streams. It supports batching for efficient publishing
+    and enables multi-consumer scenarios through Redis Streams.
+
+Design Decisions:
+    - Redis Streams: Persistent, ordered event storage
+    - Batching: Reduces Redis round-trips for better performance
+    - JSON serialization: Compatible with Pydantic models
+    - Configurable batching: Batch size and timeout for tuning
+
+Features:
+    - Automatic batching: Groups events before publishing
+    - Pydantic support: Automatic serialization of Pydantic models
+    - Multi-consumer: Redis Streams supports multiple consumers
+    - Persistence: Events survive application restarts
+
+See Also:
+    - StreamSink: Protocol interface
+    - StreamRelay: Uses sinks for event forwarding
+    - InMemorySink: In-memory sink for testing
 """
 
 from __future__ import annotations
