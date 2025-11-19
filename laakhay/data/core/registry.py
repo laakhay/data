@@ -2,6 +2,38 @@
 
 The ProviderRegistry centralizes provider instance management and maps
 (DataFeature, TransportKind) pairs to concrete provider methods.
+
+Architecture:
+    This module implements the Registry pattern to manage provider instances
+    and feature routing. Key responsibilities:
+    - Provider instance pooling (one per exchange + market_type)
+    - Feature handler mapping (decorator-based registration)
+    - URM mapper registration per exchange
+    - Async context lifecycle management
+
+Design Decisions:
+    - Instance pooling: Reuse providers to avoid expensive initialization
+    - Thread-safe pooling: Locks prevent race conditions in async context
+    - Decorator-based handlers: Self-documenting, type-safe feature mapping
+    - Singleton pattern: Global registry for convenience, injection for testing
+    - Lazy instantiation: Providers created on-demand, not at registration
+
+Pooling Strategy:
+    - Key: (exchange, market_type) tuple
+    - One instance per key (shared across requests)
+    - Instances entered into async context automatically
+    - Closed instances removed and recreated
+
+Feature Handler Registration:
+    - Decorators store metadata on methods
+    - collect_feature_handlers() scans provider class
+    - Handlers mapped to (DataFeature, TransportKind) tuples
+    - DataRouter uses handlers for dynamic method dispatch
+
+See Also:
+    - DataRouter: Uses registry for provider lookup and feature routing
+    - BaseProvider: Provider interface that all providers implement
+    - register_feature_handler: Decorator for registering feature handlers
 """
 
 from __future__ import annotations
@@ -56,9 +88,21 @@ class ProviderRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize the registry."""
+        """Initialize the registry.
+
+        Architecture:
+            Registry maintains three key data structures:
+            - _registrations: Provider class metadata and feature handlers
+            - _provider_pools: Cached provider instances (one per key)
+            - _pool_locks: Async locks for thread-safe instance creation
+        """
+        # Architecture: Registration metadata (class, handlers, URM mapper)
         self._registrations: dict[str, ProviderRegistration] = {}
+        # Architecture: Instance pool - key is (exchange, market_type)
+        # Performance: Reuse instances to avoid expensive initialization
         self._provider_pools: dict[tuple[str, MarketType], BaseProvider] = {}
+        # Architecture: Locks for thread-safe instance creation
+        # Prevents race conditions when multiple requests create same provider
         self._pool_locks: dict[tuple[str, MarketType], asyncio.Lock] = {}
         self._closed = False
 
@@ -96,7 +140,9 @@ class ProviderRegistry:
 
         self._registrations[exchange] = registration
 
-        # Initialize locks for each market type
+        # Architecture: Pre-initialize locks for each market type
+        # This ensures locks exist before any get_provider() calls
+        # Performance: Lock creation is cheap, avoids lazy initialization overhead
         for market_type in market_types:
             key = (exchange, market_type)
             if key not in self._pool_locks:
@@ -114,12 +160,15 @@ class ProviderRegistry:
         if exchange not in self._registrations:
             raise ProviderError(f"Exchange '{exchange}' is not registered")
 
-        # Close any active provider instances
+        # Architecture: Cleanup active provider instances
+        # Unregistering removes registration but must also close pooled instances
         keys_to_remove = [key for key in self._provider_pools if key[0] == exchange]
         for key in keys_to_remove:
             provider = self._provider_pools.pop(key, None)
             if provider:
-                # Schedule cleanup (don't await in sync method)
+                # Architecture: Async cleanup in sync method
+                # Schedule task but don't await (sync method can't await)
+                # Task will run in background and clean up resources
                 asyncio.create_task(provider.close())
 
         del self._registrations[exchange]
@@ -164,31 +213,40 @@ class ProviderRegistry:
 
         key = (exchange, market_type)
 
-        # Check pool first
+        # Architecture: Check pool first (fast path)
+        # Performance: Most requests hit cached instance, avoiding creation overhead
         if key in self._provider_pools:
             provider = self._provider_pools[key]
-            # Verify provider is still valid (not closed)
+            # Architecture: Validate provider is still alive
+            # Closed providers are removed and recreated
             if hasattr(provider, "_closed") and provider._closed:
                 # Remove closed provider and create new one
                 del self._provider_pools[key]
             else:
                 return provider
 
-        # Create new provider instance
+        # Architecture: Thread-safe instance creation
+        # Lock prevents multiple concurrent requests from creating duplicate instances
         async with self._pool_locks[key]:
-            # Double-check after acquiring lock
+            # Architecture: Double-check pattern (check-then-act)
+            # Another request may have created instance while we waited for lock
             if key in self._provider_pools:
                 return self._provider_pools[key]
 
-            # Instantiate provider
+            # Architecture: Lazy instantiation
+            # Provider created on-demand, not at registration time
+            # This defers expensive initialization until actually needed
             provider = registration.provider_class(
                 market_type=market_type, api_key=api_key, api_secret=api_secret
             )
 
-            # Enter async context
+            # Architecture: Enter async context automatically
+            # Providers are async context managers (HTTP sessions, WebSocket connections)
+            # Registry ensures proper initialization before returning instance
             provider = await provider.__aenter__()
 
-            # Store in pool
+            # Architecture: Cache instance in pool
+            # Future requests for same (exchange, market_type) will reuse this instance
             self._provider_pools[key] = provider
 
             return provider
@@ -208,11 +266,18 @@ class ProviderRegistry:
 
         Returns:
             FeatureHandler if found, None otherwise
+
+        Architecture:
+            Feature handlers are registered via @register_feature_handler decorators.
+            This method looks up the handler metadata, which DataRouter uses for
+            dynamic method dispatch. Returns None if handler not registered (should
+            be caught by capability validation).
         """
         if exchange not in self._registrations:
             return None
 
         registration = self._registrations[exchange]
+        # Architecture: O(1) lookup using (feature, transport) tuple as key
         return registration.feature_handlers.get((feature, transport))
 
     def get_urm_mapper(self, exchange: str) -> UniversalRepresentationMapper | None:
@@ -255,11 +320,15 @@ class ProviderRegistry:
 
         self._closed = True
 
-        # Close all providers
+        # Architecture: Cleanup all provider instances
+        # Called on registry shutdown (context manager exit)
+        # Suppress exceptions to ensure all providers are attempted to close
         for provider in self._provider_pools.values():
             with suppress(Exception):
                 await provider.__aexit__(None, None, None)
 
+        # Architecture: Clear all state
+        # Pools and locks cleared to allow registry reuse (if needed)
         self._provider_pools.clear()
         self._pool_locks.clear()
 
@@ -281,8 +350,15 @@ def get_provider_registry() -> ProviderRegistry:
 
     Returns:
         ProviderRegistry instance
+
+    Architecture:
+        Singleton pattern provides convenient global access to registry.
+        For testing, DataRouter accepts registry injection to use mocks.
+        Lazy initialization: registry created on first access.
     """
     global _default_registry
+    # Architecture: Lazy singleton initialization
+    # Registry created on first access, not at module import time
     if _default_registry is None:
         _default_registry = ProviderRegistry()
     return _default_registry
@@ -314,7 +390,9 @@ def register_feature_handler(
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        # Store metadata on the function for later registration
+        # Architecture: Store metadata on function for later collection
+        # Decorator attaches metadata without modifying function behavior
+        # collect_feature_handlers() scans class and collects all decorated methods
         if not hasattr(func, "_feature_handlers"):
             func._feature_handlers = []  # type: ignore[attr-defined]
 
@@ -327,11 +405,14 @@ def register_feature_handler(
 
         func._feature_handlers.append(handler_metadata)  # type: ignore[attr-defined]
 
+        # Architecture: Wrapper preserves function signature
+        # @wraps ensures metadata (docstring, annotations) preserved
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             return func(*args, **kwargs)
 
-        # Copy metadata to wrapper
+        # Architecture: Copy metadata to wrapper
+        # Wrapper needs metadata for collect_feature_handlers() to find it
         wrapper._feature_handlers = func._feature_handlers  # type: ignore[attr-defined]
 
         return wrapper
@@ -355,12 +436,15 @@ def collect_feature_handlers(
     """
     handlers: dict[tuple[DataFeature, TransportKind], FeatureHandler] = {}
 
+    # Architecture: Scan provider class for decorated methods
+    # Uses dir() to find all attributes, filters to callables with _feature_handlers
     for name in dir(provider_class):
         obj = getattr(provider_class, name)
         if not callable(obj):
             continue
 
-        # Check for decorated methods
+        # Architecture: Check for decorator metadata
+        # Methods decorated with @register_feature_handler have _feature_handlers attribute
         if hasattr(obj, "_feature_handlers"):
             for metadata in obj._feature_handlers:
                 feature = metadata["feature"]
@@ -368,9 +452,12 @@ def collect_feature_handlers(
                 method_name = metadata["method_name"]
                 constraints = metadata["constraints"]
 
-                # Get the actual method (handle both unbound and bound)
+                # Architecture: Get actual method from class
+                # Handles both unbound methods (from class) and bound methods (from instance)
                 method = getattr(provider_class, method_name, obj)
 
+                # Architecture: Build handler mapping
+                # Key is (feature, transport) tuple, value is FeatureHandler metadata
                 handlers[(feature, transport)] = FeatureHandler(
                     method_name=method_name,
                     method=method,
