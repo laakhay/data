@@ -31,7 +31,9 @@ Step-by-step guides for using the library.
 
 - [Getting Started](./guides/getting-started.md) - Quick start guide
 - [Basic Usage](./guides/basic-usage.md) - Basic usage examples
+- [Advanced Usage](./guides/advanced-usage.md) - Capability-driven and power-user patterns
 - [Error Handling](./guides/error-handling.md) - Error handling guide
+- [URM Guide](./guides/urm.md) - Symbol normalization best practices
 
 ### 📖 [API Reference](./api-reference/)
 Complete API documentation.
@@ -39,6 +41,7 @@ Complete API documentation.
 - [DataAPI](./api-reference/data-api.md) - DataAPI reference
 - [Models](./api-reference/models.md) - Data models reference
 - [Exceptions](./api-reference/exceptions.md) - Exception reference
+- [Capabilities & URM](./api-reference/capabilities.md) - Capability helpers and symbol utilities
 
 ### 💡 [Examples](./examples/)
 Real-world code examples.
@@ -60,4 +63,3 @@ Documentation for library developers and contributors.
 - [Main README](../README.md) - Library overview and installation
 - [API Documentation](./api.md) - API surface specification
 - [Contributing Guide](../CONTRIBUTING.md) - How to contribute
-

@@ -8,6 +8,7 @@ Complete index of all documentation for the Laakhay Data library.
 - **[Overview](./architecture/overview.md)** - High-level architecture, component interactions, and request flows
 - **[Design Decisions](./architecture/design-decisions.md)** - Architecture Decision Records (ADRs) covering major design choices
 - **[Models](./architecture/models.md)** - Data models architecture, immutability patterns, and usage
+- **[Provider System](./architecture/provider-system.md)** - Provider lifecycle and registration
 
 ### System Layers
 - **[I/O Layer](./architecture/io-layer.md)** - REST/WebSocket transport abstractions and provider interfaces
@@ -55,6 +56,7 @@ All core modules include comprehensive inline architectural comments:
 1. Start with [Architecture Overview](./architecture/overview.md)
 2. Read [Design Decisions](./architecture/design-decisions.md) for rationale
 3. Explore specific layers: [I/O](./architecture/io-layer.md), [Clients](./architecture/clients.md), [Models](./architecture/models.md)
+4. Dive into [Provider System](./architecture/provider-system.md) for exchange-specific details
 
 **Using the Library:**
 - See inline documentation in `core/api.py` for DataAPI usage
@@ -95,4 +97,3 @@ All core modules include comprehensive inline architectural comments:
 
 - [Main README](../README.md) - Library overview and installation
 - [Pydantic Documentation](https://docs.pydantic.dev/) - Data model framework
-
