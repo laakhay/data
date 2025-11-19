@@ -112,7 +112,7 @@ async with DataAPI(router=mock_router) as api:
     ...
 ```
 
-See [Testing guide](./testing.md) for more patterns.
+See [Testing guide](../internals/testing.md) for more patterns.
 
 ## 8. Error Recovery Strategies
 
@@ -133,4 +133,5 @@ async def safe_fetch(func, *args, retries=3):
             await asyncio.sleep(2 ** attempt)
 ```
 
-Refer back to [Error handling guide](./error-handling.md) for more detail.
+Refer back to [Error handling guide](./error-handling.md) for more detail, and
+see [Testing guidelines](../internals/testing.md) for additional patterns.

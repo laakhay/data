@@ -205,7 +205,11 @@ asyncio.run(with_metrics())
 
 ## See Also
 
-- [Stream Relay Architecture](../architecture/overview.md#stream-relay) - Architecture details
+- [Streaming Architecture](../architecture/streaming-architecture.md)
+- [Sinks Architecture](../architecture/sinks.md)
+
+## See Also
+
+- [Streaming Architecture](../architecture/streaming-architecture.md) - Architecture details
 - [Sinks Architecture](../architecture/sinks.md) - Sink implementations
 - [API Reference](../api-reference/data-api.md) - Complete API docs
-
