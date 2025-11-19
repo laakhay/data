@@ -2,6 +2,24 @@
 
 This module defines the DataRequest model that encapsulates all parameters
 needed to route a data request through the DataRouter.
+
+Architecture:
+    This module implements the Request Object pattern to encapsulate all
+    routing parameters in a single immutable model. Key features:
+    - Immutable dataclass: Prevents accidental modification
+    - Validation: __post_init__ validates required parameters
+    - Builder pattern: Fluent API for constructing requests
+    - Factory function: Convenience function for simple cases
+
+Design Decisions:
+    - Immutable model: Prevents request modification during routing
+    - Single model: All routing parameters in one place
+    - Builder pattern: Fluent API for complex requests
+    - Validation: Early error detection before routing
+
+See Also:
+    - DataRouter: Uses DataRequest for routing
+    - DataAPI: Builds DataRequest from method parameters
 """
 
 from __future__ import annotations
@@ -19,6 +37,16 @@ class DataRequest:
 
     This model is used by DataRouter to coordinate URM resolution,
     capability validation, and provider method invocation.
+
+    Architecture:
+        Immutable dataclass ensures request cannot be modified during routing.
+        All routing parameters (exchange, feature, transport, symbols, etc.)
+        are encapsulated in a single model, making the routing interface clean
+        and type-safe.
+
+    Design Decision:
+        Frozen dataclass prevents accidental modification. If request needs
+        modification, create a new instance (immutability pattern).
     """
 
     # Core routing parameters
@@ -50,7 +78,15 @@ class DataRequest:
     extra_params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate request parameters."""
+        """Validate request parameters.
+
+        Architecture:
+            Validation happens at request creation time, providing early error
+            detection. This catches invalid requests before routing, saving
+            unnecessary capability checks and provider lookups.
+        """
+        # Architecture: Validate symbol requirement
+        # Most features require symbols, but some (liquidations, symbol_metadata) don't
         if (
             self.symbol is None
             and self.symbols is None
@@ -58,10 +94,13 @@ class DataRequest:
         ):
             raise ValueError("Either 'symbol' or 'symbols' must be provided")
 
+        # Architecture: Mutually exclusive symbol parameters
+        # Prevents ambiguity about which symbol list to use
         if self.symbol is not None and self.symbols is not None:
             raise ValueError("Cannot specify both 'symbol' and 'symbols'")
 
-        # Validate timeframe for OHLCV
+        # Architecture: Feature-specific validation
+        # OHLCV REST requires timeframe (WebSocket can infer from subscription)
         if (
             self.feature == DataFeature.OHLCV
             and self.transport == TransportKind.REST
@@ -69,14 +108,31 @@ class DataRequest:
         ):
             raise ValueError("timeframe is required for OHLCV REST requests")
 
-        # Validate depth for order book
+        # Architecture: Default value for order book depth
+        # Uses object.__setattr__ because dataclass is frozen
         if self.feature == DataFeature.ORDER_BOOK and self.depth is None:
-            # Set default depth
             object.__setattr__(self, "depth", 100)
 
 
 class DataRequestBuilder:
-    """Builder for creating DataRequest instances with a fluent API."""
+    """Builder for creating DataRequest instances with a fluent API.
+
+    Architecture:
+        Builder pattern provides fluent API for constructing complex requests.
+        Useful when building requests programmatically or with many optional
+        parameters. Each method returns self for method chaining.
+
+    Example:
+        >>> request = (DataRequestBuilder()
+        ...     .feature(DataFeature.OHLCV)
+        ...     .transport(TransportKind.REST)
+        ...     .exchange("binance")
+        ...     .market_type(MarketType.SPOT)
+        ...     .symbol("BTC/USDT")
+        ...     .timeframe(Timeframe.H1)
+        ...     .limit(100)
+        ...     .build())
+    """
 
     def __init__(self) -> None:
         """Initialize builder with defaults."""
