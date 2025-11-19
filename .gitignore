@@ -19,7 +19,5 @@ demo*
 *.egg-info/
 dist/
 build/
-# Allow docs/ directory for documentation
-# docs/
 
 .coverage
