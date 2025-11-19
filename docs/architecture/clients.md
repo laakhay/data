@@ -146,4 +146,3 @@ Feeds wrap providers and add:
 - [I/O Layer](./io-layer.md) - Transport abstractions
 - [Provider System](./provider-system.md) - Exchange implementations
 - [Models](./models.md) - Data models
-

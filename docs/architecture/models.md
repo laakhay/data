@@ -170,6 +170,5 @@ All models support:
 ## See Also
 
 - [Pydantic Documentation](https://docs.pydantic.dev/)
-- [Core Enums](../core/enums.md) - InstrumentSpec, Timeframe, etc.
-- [API Usage](../usage/api.md) - Using models in DataAPI
-
+- [Core enums source](../../laakhay/data/core/enums.py) - InstrumentSpec, Timeframe, etc.
+- [API surface summary](../api.md) - Where models appear in the API

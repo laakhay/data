@@ -12,8 +12,9 @@ This document provides a quick reference to all architectural documentation for 
 
 ### Core Architecture
 - **[Overview](./architecture/overview.md)** - System architecture, components, and request flows
-- **[Design Decisions](./architecture/design-decisions.md)** - 9 ADRs covering major design choices
+- **[Design Decisions](./architecture/design-decisions.md)** - ADRs covering major design choices
 - **[Models](./architecture/models.md)** - Data models, immutability patterns, and usage
+- **[Provider System](./architecture/provider-system.md)** - Provider lifecycle and extensibility
 
 ### System Layers
 - **[I/O Layer](./architecture/io-layer.md)** - REST/WebSocket transport abstractions
@@ -95,4 +96,3 @@ The following design patterns are explained throughout the documentation:
 - [Documentation Index](./INDEX.md) - Complete navigation guide
 - [Documentation README](./README.md) - Documentation structure
 - [Main README](../README.md) - Library overview
-

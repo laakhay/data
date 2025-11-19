@@ -130,7 +130,6 @@ class CustomSink:
 
 ## See Also
 
-- [Stream Relay](./overview.md#stream-relay) - Uses sinks for forwarding
+- [Streaming Architecture](./streaming-architecture.md) - StreamRelay and feed flow
 - [I/O Layer](./io-layer.md) - Transport abstractions
 - [Models](./models.md) - Event data models
-

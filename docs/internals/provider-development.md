@@ -183,5 +183,4 @@ async def test_live_api():
 
 - [Architecture Overview](../architecture/overview.md) - System architecture
 - [I/O Layer](../architecture/io-layer.md) - Transport abstractions
-- [URM System](../architecture/overview.md#urm) - Symbol normalization
-
+- [URM System](../architecture/urm-system.md) - Symbol normalization
