@@ -2,6 +2,22 @@
 
 This module defines the minimal REST surface used across the data layer.
 It is intentionally decoupled from any WebSocket/streaming concepts.
+
+Architecture:
+    This module provides the RESTProvider abstract base class that all REST-based
+    data providers must implement. It defines a clean interface for synchronous
+    data fetching operations (OHLCV, order books, trades, etc.).
+
+Design Decisions:
+    - Pure REST interface: No streaming concepts, only request/response
+    - Optional methods: Some methods are optional (order_book, trades, etc.)
+    - Abstract base class: Enforces consistent interface across providers
+    - Async methods: All operations are async for non-blocking I/O
+
+See Also:
+    - WSProvider: WebSocket/streaming interface
+    - RESTTransport: HTTP transport abstraction
+    - Provider implementations: Exchange-specific REST providers
 """
 
 from __future__ import annotations
