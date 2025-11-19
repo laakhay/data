@@ -31,19 +31,14 @@ Step-by-step guides for using the library.
 
 - [Getting Started](./guides/getting-started.md) - Quick start guide
 - [Basic Usage](./guides/basic-usage.md) - Basic usage examples
-- [Advanced Usage](./guides/advanced-usage.md) - Advanced patterns
 - [Error Handling](./guides/error-handling.md) - Error handling guide
-- [Performance](./guides/performance.md) - Performance optimization
-- [Extending](./guides/extending.md) - How to add new providers
 
 ### 📖 [API Reference](./api-reference/)
 Complete API documentation.
 
 - [DataAPI](./api-reference/data-api.md) - DataAPI reference
-- [Providers](./api-reference/providers.md) - Provider reference
 - [Models](./api-reference/models.md) - Data models reference
 - [Exceptions](./api-reference/exceptions.md) - Exception reference
-- [Capabilities](./api-reference/capabilities.md) - Capability API reference
 
 ### 💡 [Examples](./examples/)
 Real-world code examples.
@@ -58,9 +53,7 @@ Real-world code examples.
 Documentation for library developers and contributors.
 
 - [Provider Development](./internals/provider-development.md) - Provider development guide
-- [Transport Layer](./internals/transport-layer.md) - Transport layer details
 - [Testing](./internals/testing.md) - Testing guidelines
-- [Contributing](./internals/contributing.md) - Contribution guidelines
 
 ## Quick Links
 
@@ -76,12 +69,16 @@ Documentation for library developers and contributors.
 - • Models layer documentation
 - • I/O layer documentation
 - • Clients layer documentation
+- • Sinks layer documentation
+- • API reference (DataAPI, Models, Exceptions)
+- • User guides (Getting Started, Basic Usage, Error Handling)
+- • Internals (Provider Development, Testing)
 - • Inline architectural comments throughout core modules
 
 **In Progress:**
-- 🔄 Usage guides and examples (planned)
-- 🔄 API reference documentation (planned)
-- 🔄 Provider-specific documentation (planned)
+- 🔄 Advanced usage guides (planned)
+- 🔄 Performance optimization guide (planned)
+- 🔄 Examples directory (planned)
 
 See [DOCUMENTATION_PLAN.md](../DOCUMENTATION_PLAN.md) for the full implementation plan.
 
