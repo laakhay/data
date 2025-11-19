@@ -113,7 +113,7 @@ class TestHTTPClientThrottling:
     async def test_get_respects_throttle(self):
         """Test get() waits for throttle before request."""
         import time
-        
+
         client = HTTPClient()
         client.set_throttle(0.05)  # 50ms throttle
 
