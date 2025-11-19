@@ -7,13 +7,24 @@ Welcome to the comprehensive documentation for the Laakhay Data library.
 ### 📐 [Architecture](./architecture/)
 Deep dive into the library's architecture, design decisions, and system components.
 
-- [Overview](./architecture/overview.md) - High-level architecture
+**Core Architecture:**
+- [Overview](./architecture/overview.md) - High-level architecture and component interactions
 - [Design Decisions](./architecture/design-decisions.md) - Architecture Decision Records (ADRs)
-- [Routing System](./architecture/routing-system.md) - DataRouter architecture
-- [Provider System](./architecture/provider-system.md) - Provider architecture
-- [URM System](./architecture/urm-system.md) - Universal Representation Mapping
-- [Capability System](./architecture/capability-system.md) - Capability discovery system
-- [Streaming Architecture](./architecture/streaming-architecture.md) - Streaming & feeds
+- [Models](./architecture/models.md) - Data models architecture and design patterns
+
+**System Layers:**
+- [I/O Layer](./architecture/io-layer.md) - REST/WebSocket transport abstractions
+- [Clients Layer](./architecture/clients.md) - High-level streaming feeds
+
+**Core Components (Documented in Code):**
+- `core/api.py` - DataAPI facade pattern
+- `core/router.py` - DataRouter coordination
+- `core/registry.py` - Provider registry and pooling
+- `core/capabilities.py` - Capability discovery system
+- `core/urm.py` - Universal Representation Mapping
+- `core/relay.py` - Stream relay pattern
+- `core/request.py` - Request object pattern
+- `core/capability_service.py` - Capability validation service
 
 ### 📚 [Guides](./guides/)
 Step-by-step guides for using the library.
@@ -59,9 +70,22 @@ Documentation for library developers and contributors.
 
 ## Documentation Status
 
-This documentation is actively being developed. See [DOCUMENTATION_PLAN.md](../DOCUMENTATION_PLAN.md) for the implementation plan.
+**Completed:**
+- ✅ Core architecture documentation (13 core files)
+- ✅ Architecture overview and ADRs
+- ✅ Models layer documentation
+- ✅ I/O layer documentation
+- ✅ Clients layer documentation
+- ✅ Inline architectural comments throughout core modules
+
+**In Progress:**
+- 🔄 Usage guides and examples (planned)
+- 🔄 API reference documentation (planned)
+- 🔄 Provider-specific documentation (planned)
+
+See [DOCUMENTATION_PLAN.md](../DOCUMENTATION_PLAN.md) for the full implementation plan.
 
 ---
 
-**Last Updated:** 2025-11-19
+**Last Updated:** 2025-01-27
 
