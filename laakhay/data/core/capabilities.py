@@ -372,6 +372,7 @@ def _build_capability_registry() -> None:
     # This allows EXCHANGE_METADATA to use string keys while registry uses enums
     feature_map = {
         "ohlcv": DataFeature.OHLCV,
+        "health": DataFeature.HEALTH,
         "order_book": DataFeature.ORDER_BOOK,
         "trades": DataFeature.TRADES,
         "liquidations": DataFeature.LIQUIDATIONS,
