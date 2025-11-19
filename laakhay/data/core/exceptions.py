@@ -1,4 +1,31 @@
-"""Custom exception hierarchy."""
+"""Custom exception hierarchy.
+
+Architecture:
+    This module defines a structured exception hierarchy for the library.
+    All exceptions inherit from DataError, allowing catch-all error handling.
+    Specific exceptions provide context (exchange, symbol, status codes, etc.)
+
+Exception Hierarchy:
+    DataError (base)
+    ├── CapabilityError (unsupported capabilities with recommendations)
+    ├── ProviderError (provider-specific errors)
+    │   ├── RateLimitError (rate limiting)
+    │   ├── InvalidSymbolError (invalid symbols)
+    │   └── InvalidIntervalError (unsupported timeframes)
+    ├── ValidationError (data validation failures)
+    ├── SymbolResolutionError (URM symbol resolution failures)
+    └── RelayError (stream relay sink failures)
+
+Design Decisions:
+    - Hierarchical structure: Allows catch-all or specific error handling
+    - Rich context: Exceptions include relevant context (exchange, symbol, etc.)
+    - Recommendations: CapabilityError includes alternative suggestions
+
+See Also:
+    - CapabilityService: Raises CapabilityError
+    - URM: Raises SymbolResolutionError
+    - StreamRelay: Raises RelayError
+"""
 
 from __future__ import annotations
 

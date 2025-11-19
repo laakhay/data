@@ -1,4 +1,26 @@
-"""Generic streaming feed scaffolding used by higher-level data feeds."""
+"""Generic streaming feed scaffolding used by higher-level data feeds.
+
+Architecture:
+    This module provides BaseStreamFeed, a reusable base class for building
+    high-level streaming feeds. It handles:
+    - Stream lifecycle management (start/stop/restart)
+    - Subscription management (subscribe/unsubscribe)
+    - Caching of latest values per key
+    - Staleness detection
+    - Background task management
+
+Design Decisions:
+    - Generic base class: TypeVar allows type-safe feeds for any data type
+    - Key-based caching: Latest value per key (e.g., symbol)
+    - Subscription pattern: Callbacks for feed updates
+    - Lifecycle management: Start/stop/restart with proper cleanup
+    - Staleness detection: Track last message time
+
+See Also:
+    - OHLCVFeed: OHLCV-specific feed implementation
+    - LiquidationFeed: Liquidation feed implementation
+    - SymbolStreamFeed: Symbol-keyed feed specialization
+"""
 
 from __future__ import annotations
 

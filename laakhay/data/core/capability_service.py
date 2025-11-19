@@ -2,6 +2,24 @@
 
 This module provides a service layer that wraps capability checks and
 ensures consistent error handling with recommendations.
+
+Architecture:
+    This module implements a service layer pattern that wraps the capability
+    registry. It provides:
+    - Request validation with structured errors
+    - Non-raising capability checks
+    - Capability key extraction
+
+Design Decisions:
+    - Service layer: Separates validation logic from routing
+    - Static methods: Stateless service, no instance needed
+    - Structured errors: CapabilityError includes recommendations
+    - Early validation: Fail fast before expensive operations
+
+See Also:
+    - capabilities: Underlying capability registry
+    - DataRouter: Uses this service for validation
+    - CapabilityError: Exception raised for unsupported capabilities
 """
 
 from __future__ import annotations
@@ -32,6 +50,8 @@ class CapabilityService:
         Raises:
             CapabilityError: If capability is unsupported, with recommendations
         """
+        # Architecture: Build capability key for error context
+        # Key identifies the exact capability combination being validated
         key = CapabilityKey(
             exchange=request.exchange,
             market_type=request.market_type,
@@ -41,6 +61,8 @@ class CapabilityService:
             stream_variant=None,  # Could be extracted from request if needed
         )
 
+        # Architecture: Check capability using hierarchical registry
+        # O(1) lookup in capability registry
         status = supports(
             feature=request.feature,
             transport=request.transport,
@@ -50,6 +72,8 @@ class CapabilityService:
         )
 
         if not status.supported:
+            # Architecture: Raise structured error with recommendations
+            # CapabilityError includes alternative suggestions for better UX
             raise CapabilityError(
                 message=(
                     f"Capability not supported: {request.feature.value} "

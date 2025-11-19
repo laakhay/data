@@ -3,6 +3,27 @@
 Defines the minimal streaming surface used by higher-level data feed
 components. This interface is transport-agnostic and does not prescribe
 implementation details.
+
+Architecture:
+    This module provides the WSProvider abstract base class for streaming
+    data providers. It defines async iterators for real-time data streams,
+    supporting both single-symbol and multi-symbol streaming.
+
+Design Decisions:
+    - AsyncIterator pattern: Clean async iteration over streaming data
+    - Multi-symbol support: stream_ohlcv_multi for efficient multiplexing
+    - Transport-agnostic: Interface doesn't prescribe WebSocket implementation
+    - Optional close: Providers may implement cleanup if needed
+
+Key Features:
+    - Single-symbol streaming: stream_ohlcv() for one symbol
+    - Multi-symbol streaming: stream_ohlcv_multi() for multiple symbols
+    - Configurable options: only_closed, throttle, dedupe
+
+See Also:
+    - RESTProvider: REST/HTTP interface
+    - WSClient: WebSocket client implementation
+    - OHLCVFeed: High-level feed built on WSProvider
 """
 
 from __future__ import annotations

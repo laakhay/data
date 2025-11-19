@@ -1,4 +1,27 @@
-"""High-level OHLCV feed built on top of SymbolStreamFeed."""
+"""High-level OHLCV feed built on top of SymbolStreamFeed.
+
+Architecture:
+    OHLCVFeed provides a high-level interface for real-time OHLCV streaming
+    with advanced features:
+    - Multi-symbol streaming with automatic chunking
+    - Bar history tracking
+    - Subscription management (bar updates, events)
+    - Connection event handling
+    - Warm-up from REST provider
+    - Deduplication and throttling
+
+Design Decisions:
+    - Built on SymbolStreamFeed: Reuses base feed infrastructure
+    - REST warm-up: Can fetch historical data before streaming
+    - Bar history: Maintains recent bar history per symbol
+    - Event system: Separate event callbacks for connection/data events
+    - Chunking: Automatically chunks symbols for multi-symbol streams
+
+See Also:
+    - SymbolStreamFeed: Base feed for symbol-keyed streams
+    - WSProvider: Underlying streaming provider
+    - RESTProvider: Optional REST provider for warm-up
+"""
 
 from __future__ import annotations
 

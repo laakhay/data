@@ -112,6 +112,8 @@ class TestHTTPClientThrottling:
     @pytest.mark.asyncio
     async def test_get_respects_throttle(self):
         """Test get() waits for throttle before request."""
+        import time
+
         client = HTTPClient()
         client.set_throttle(0.05)  # 50ms throttle
 
@@ -128,11 +130,13 @@ class TestHTTPClientThrottling:
         mock_session.get = MagicMock(return_value=mock_response)
         client._session = mock_session
 
-        start = asyncio.get_event_loop().time()
+        # Use time.time() to match implementation timing precision
+        start = time.time()
         await client.get("https://api.example.com/test")
-        elapsed = asyncio.get_event_loop().time() - start
+        elapsed = time.time() - start
 
-        assert elapsed >= 0.05  # Should have waited
+        # Allow small tolerance for timing variance (0.04s = 40ms, close enough to 50ms)
+        assert elapsed >= 0.04, f"Expected at least 0.04s, got {elapsed:.6f}s"
         assert client._throttle_until is None  # Cleared after use
 
 

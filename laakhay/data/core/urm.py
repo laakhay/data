@@ -3,6 +3,28 @@
 URM provides symbol normalization across exchanges. Each exchange implements
 a mapper that converts between exchange-native symbols and canonical InstrumentSpec.
 
+Architecture:
+    This module implements the URM system for symbol normalization:
+    - Protocol-based design: UniversalRepresentationMapper protocol
+    - Exchange-specific mappers: Each exchange implements the protocol
+    - Registry pattern: URMRegistry manages mappers per exchange
+    - Caching: Symbol resolution cached for performance (5-minute TTL)
+    - URM ID support: Standard format for cross-exchange symbol references
+
+Design Decisions:
+    - Protocol over inheritance: Flexible, allows any mapper implementation
+    - Canonical format: InstrumentSpec as intermediate representation
+    - Caching: Reduces repeated normalization overhead
+    - TTL-based cache: 5 minutes balances freshness vs performance
+    - Singleton registry: Shared across all router instances
+
+Symbol Normalization Flow:
+    1. User provides symbol in Laakhay format (BASE/QUOTE)
+    2. Router calls URMRegistry.urm_to_exchange_symbol()
+    3. Registry looks up exchange mapper
+    4. Mapper converts InstrumentSpec to exchange-native format
+    5. Result cached for future lookups
+
 URM ID Format:
     urm://{exchange|*}:{base}/{quote}:{instrument_type}[:qualifiers]
 
@@ -12,6 +34,11 @@ Examples:
     - urm://*:btc/usdt:perpetual
     - urm://okx:btc/usdt:future:20240329
     - urm://deribit:btc/usd:option:C:35000:20240628
+
+See Also:
+    - ADR-002: Architecture Decision Record for URM system
+    - DataRouter: Uses URM for symbol resolution
+    - Provider URM mappers: Exchange-specific implementations
 """
 
 from __future__ import annotations
@@ -30,6 +57,16 @@ class UniversalRepresentationMapper(Protocol):
 
     Each exchange implements this protocol to handle its unique symbol formats
     and naming conventions (e.g., XBT vs BTC, USDT vs USD, delivery dates).
+
+    Architecture:
+        Protocol-based design allows any class implementing these methods to be
+        used as a URM mapper. This provides flexibility while ensuring consistent
+        interface. Exchange-specific quirks (e.g., Kraken's XBT, Coinbase's BTC-USD)
+        are handled in mapper implementations.
+
+    Design Decision:
+        Protocol chosen over abstract base class for flexibility. Mappers can be
+        simple classes or more complex implementations without inheritance constraints.
     """
 
     def to_spec(
@@ -81,11 +118,25 @@ class URMRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize URM registry."""
+        """Initialize URM registry.
+
+        Architecture:
+            Registry maintains mapper instances and symbol resolution cache.
+            Cache key is (exchange, symbol, market_type) tuple for O(1) lookups.
+            TTL-based expiration ensures cache doesn't grow unbounded.
+        """
+        # Architecture: Exchange name -> mapper instance
+        # Each exchange has one mapper that handles all symbol conversions
         self._mappers: dict[str, UniversalRepresentationMapper] = {}
-        # Simple cache: (exchange, symbol, market_type) -> spec
+        # Architecture: Symbol resolution cache
+        # Key: (exchange, symbol, market_type) -> Value: InstrumentSpec
+        # Performance: Caching avoids repeated normalization for same symbols
         self._cache: dict[tuple[str, str, MarketType], InstrumentSpec] = {}
+        # Architecture: Cache timestamps for TTL expiration
+        # Separate dict allows efficient cache validation without modifying cached values
         self._cache_timestamps: dict[tuple[str, str, MarketType], datetime] = {}
+        # Architecture: 5-minute TTL balances freshness vs performance
+        # Symbols rarely change, so longer TTL is acceptable
         self._cache_ttl_seconds = 300  # 5 minutes default
 
     def register(
@@ -148,16 +199,20 @@ class URMRegistry:
                 market_type=market_type,
             )
 
-        # Check cache
+        # Architecture: Check cache before mapper lookup
+        # Performance: Cached lookups avoid mapper overhead
         cache_key = (exchange_lower, exchange_symbol.upper(), market_type)
         if cache_key in self._cache and self._is_cache_valid(cache_key):
             return self._cache[cache_key]
 
-        # Use mapper
+        # Architecture: Delegate to exchange-specific mapper
+        # Each exchange's mapper handles its unique symbol format quirks
         mapper = self._mappers[exchange_lower]
         try:
             spec = mapper.to_spec(exchange_symbol, market_type=market_type)
         except Exception as e:
+            # Architecture: Wrap mapper exceptions in SymbolResolutionError
+            # Provides consistent error interface with exchange context
             raise SymbolResolutionError(
                 f"Failed to resolve symbol '{exchange_symbol}' for {exchange}: {e}",
                 exchange=exchange,
@@ -165,7 +220,8 @@ class URMRegistry:
                 market_type=market_type,
             ) from e
 
-        # Cache the result
+        # Architecture: Cache successful resolution
+        # Future lookups for same symbol will use cached result
         self._cache[cache_key] = spec
         self._cache_timestamps[cache_key] = datetime.now()
 
@@ -231,10 +287,17 @@ class URMRegistry:
             self._cache_timestamps.clear()
 
     def _is_cache_valid(self, cache_key: tuple[str, str, MarketType]) -> bool:
-        """Check if cache entry is still valid."""
+        """Check if cache entry is still valid.
+
+        Architecture:
+            TTL-based expiration ensures cache doesn't serve stale data.
+            Timestamps stored separately to avoid modifying cached InstrumentSpec objects.
+        """
         if cache_key not in self._cache_timestamps:
             return False
 
+        # Architecture: Check if entry is within TTL window
+        # Current time - timestamp < TTL means entry is still valid
         timestamp = self._cache_timestamps[cache_key]
         return datetime.now() - timestamp < timedelta(seconds=self._cache_ttl_seconds)
 
@@ -244,8 +307,16 @@ _default_registry: URMRegistry | None = None
 
 
 def get_urm_registry() -> URMRegistry:
-    """Get the default global URM registry instance."""
+    """Get the default global URM registry instance.
+
+    Architecture:
+        Singleton pattern provides convenient global access to URM registry.
+        Shared registry ensures symbol cache is shared across all router instances,
+        maximizing cache hit rate. Lazy initialization: registry created on first access.
+    """
     global _default_registry
+    # Architecture: Lazy singleton initialization
+    # Registry created on first access, not at module import time
     if _default_registry is None:
         _default_registry = URMRegistry()
     return _default_registry
@@ -275,7 +346,9 @@ def parse_urm_id(urm_id: str) -> InstrumentSpec:
         >>> parse_urm_id("urm://okx:btc/usdt:future:20240329")
         InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.FUTURE, expiry=datetime(2024, 3, 29))
     """
-    # Validate format
+    # Architecture: Parse URM ID using regex
+    # Format: urm://{exchange|*}:{base}/{quote}:{instrument_type}[:qualifiers]
+    # Regex captures all components including optional qualifiers
     pattern = r"^urm://([^:]+):([^/]+)/([^:]+):([^:]+)(?::(.+))?$"
     match = re.match(pattern, urm_id)
     if not match:
@@ -286,7 +359,8 @@ def parse_urm_id(urm_id: str) -> InstrumentSpec:
 
     exchange, base, quote, instrument_type_str, qualifiers = match.groups()
 
-    # Validate exchange (can be * for wildcard or exchange name)
+    # Architecture: Validate exchange component
+    # Can be '*' for wildcard (any exchange) or alphanumeric exchange name
     if exchange != "*" and not exchange.isalnum():
         raise SymbolResolutionError(
             f"Invalid exchange in URM ID: {exchange}. Must be '*' or alphanumeric exchange name",
@@ -302,7 +376,9 @@ def parse_urm_id(urm_id: str) -> InstrumentSpec:
             value=urm_id,
         ) from e
 
-    # Parse qualifiers (expiry, strike, etc.)
+    # Architecture: Parse optional qualifiers
+    # Qualifiers support futures (expiry dates) and options (strike prices)
+    # Format is flexible to support various instrument types
     expiry: datetime | None = None
     strike: float | None = None
     metadata: dict[str, str] = {}
@@ -310,11 +386,13 @@ def parse_urm_id(urm_id: str) -> InstrumentSpec:
     if qualifiers:
         parts = qualifiers.split(":")
         for part in parts:
-            # Try to parse as date (YYYYMMDD)
+            # Architecture: Try to parse as expiry date (YYYYMMDD)
+            # Futures contracts have delivery dates
             if len(part) == 8 and part.isdigit():
                 with suppress(ValueError):
                     expiry = datetime.strptime(part, "%Y%m%d")
-            # Try to parse as option (C:35000 or P:35000)
+            # Architecture: Try to parse as option (C:35000 or P:35000)
+            # Options have strike prices and call/put type
             elif ":" in part and len(part) > 2 and part[0] in ("C", "P"):
                 option_type, strike_str = part.split(":", 1)
                 metadata["option_type"] = option_type

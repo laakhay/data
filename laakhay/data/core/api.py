@@ -3,6 +3,24 @@
 The DataAPI provides a high-level interface that wraps the DataRouter,
 offering convenient fetch_* and stream_* methods while maintaining
 backward compatibility with direct provider usage.
+
+Architecture:
+    This module implements the Facade pattern (GoF) to provide a simplified
+    interface to the complex routing system. DataAPI handles:
+    - Default parameter resolution (exchange, market_type, instrument_type)
+    - Request construction (DataRequest from method parameters)
+    - Delegation to DataRouter for actual routing
+    - Resource lifecycle management
+
+Design Decisions:
+    - Facade pattern chosen over direct router access for better UX
+    - Default parameters reduce boilerplate in common use cases
+    - Router injection allows testing with mock routers
+    - Context manager pattern ensures proper resource cleanup
+
+See Also:
+    - DataRouter: The underlying routing system
+    - DataRequest: Request model used for routing
 """
 
 from __future__ import annotations
@@ -73,15 +91,28 @@ class DataAPI:
             default_market_type: Default market type to use if not specified
             default_instrument_type: Default instrument type (default: SPOT)
             router: Optional DataRouter instance (creates new one if not provided)
+
+        Note:
+            Router injection allows dependency injection for testing. If not provided,
+            a new DataRouter is created, which uses the global ProviderRegistry singleton.
         """
         self._default_exchange = default_exchange
         self._default_market_type = default_market_type
         self._default_instrument_type = default_instrument_type
+        # Architecture: Router injection for testability (dependency injection pattern)
         self._router = router or DataRouter()
         self._closed = False
 
     def _resolve_exchange(self, exchange: str | None) -> str:
-        """Resolve exchange parameter."""
+        """Resolve exchange parameter.
+
+        Resolution order:
+            1. Explicit parameter (method argument)
+            2. Default from __init__
+            3. Raise error if neither provided
+
+        This pattern allows method-level overrides while supporting defaults.
+        """
         if exchange is not None:
             return exchange
         if self._default_exchange is not None:
@@ -137,6 +168,8 @@ class DataAPI:
             CapabilityError: If OHLCV REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
+        # Architecture: Build DataRequest from method parameters
+        # This encapsulates all routing parameters in a single immutable model
         request = DataRequest(
             feature=DataFeature.OHLCV,
             transport=TransportKind.REST,
@@ -158,6 +191,8 @@ class DataAPI:
                 "timeframe": str(timeframe),
             },
         )
+        # Architecture: Delegate to DataRouter for actual routing
+        # Router handles: capability validation, URM resolution, provider lookup
         return await self._router.route(request)
 
     async def fetch_order_book(
@@ -508,20 +543,25 @@ class DataAPI:
         market_type_resolved = self._resolve_market_type(market_type)
         instrument_type_resolved = self._resolve_instrument_type(instrument_type)
 
-        # Ensure provider is registered before accessing
+        # Architecture: Multi-symbol streaming bypasses router for performance
+        # Router's route_stream() handles single symbols, but multi-symbol requires
+        # direct provider access to leverage provider-optimized subscriptions
         registry = self._router._provider_registry
         if not registry.is_registered(exchange_name):
+            # Lazy registration: ensure provider is available
             from ..providers import register_all
 
             register_all(registry)
 
         # Get provider directly for multi-symbol streaming
+        # Performance: Direct provider access avoids router overhead for multi-symbol
         provider = await registry.get_provider(
             exchange_name,
             market_type_resolved,
         )
 
-        # Validate capability for first symbol (all should have same capability)
+        # Architecture: Validate capability using first symbol as representative
+        # All symbols should have the same capability for multi-symbol streams
         if symbols:
             request = DataRequest(
                 feature=DataFeature.OHLCV,

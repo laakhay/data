@@ -1,4 +1,27 @@
-"""Data models."""
+"""Data models for market data types.
+
+Architecture:
+    This module exports all Pydantic v2 data models used throughout the library.
+    All models are immutable (frozen=True) to ensure data integrity and prevent
+    accidental modification during processing.
+
+Design Decisions:
+    - Pydantic v2: Type validation, serialization, and immutable models
+    - Frozen models: Immutability prevents accidental data corruption
+    - Decimal for prices: Precision for financial calculations
+    - Computed properties: Derived metrics (spreads, imbalances, etc.)
+
+Model Categories:
+    - Market Data: Bar, OHLCV, OrderBook, Trade
+    - Derivatives: Liquidation, OpenInterest, FundingRate, MarkPrice
+    - Metadata: Symbol, SeriesMeta
+    - Events: DataEvent, ConnectionEvent
+    - Streaming: StreamingBar
+
+See Also:
+    - Pydantic documentation: https://docs.pydantic.dev/
+    - Core enums: InstrumentSpec, Timeframe, MarketType
+"""
 
 from .bar import Bar
 from .events import ConnectionEvent, ConnectionStatus, DataEvent, DataEventType
