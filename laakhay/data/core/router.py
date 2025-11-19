@@ -5,6 +5,32 @@ The DataRouter is the central coordinator that:
 2. Validates capabilities
 3. Looks up providers and feature handlers
 4. Invokes the appropriate provider methods
+
+Architecture:
+    This module implements the Router pattern to coordinate multiple concerns:
+    - Capability validation (early failure detection)
+    - Symbol normalization (URM resolution)
+    - Provider lookup and feature handler routing
+    - Method invocation with normalized parameters
+
+Design Decisions:
+    - Centralized routing avoids duplication across DataAPI methods
+    - Separation of concerns: router doesn't know about defaults/UX
+    - Dependency injection for testability (registry, capability service)
+    - URM resolution happens after capability validation (fail fast on capabilities)
+
+Request Flow:
+    1. Capability validation → fail fast if unsupported
+    2. URM resolution → normalize symbols to exchange format
+    3. Provider lookup → get or create provider instance
+    4. Feature handler lookup → map (feature, transport) to method
+    5. Method invocation → call provider method with normalized args
+
+See Also:
+    - DataAPI: High-level facade that uses this router
+    - ProviderRegistry: Manages provider instances and feature handlers
+    - CapabilityService: Validates request capabilities
+    - URM Registry: Symbol normalization system
 """
 
 from __future__ import annotations
@@ -44,11 +70,20 @@ class DataRouter:
         Args:
             provider_registry: Optional provider registry (defaults to global singleton)
             capability_service: Optional capability service (defaults to new instance)
+
+        Note:
+            Dependency injection pattern allows testing with mocks. Defaults use
+            singletons for normal operation. URM registry is always a singleton
+            (shared across all router instances).
         """
         from .registry import get_provider_registry
 
+        # Architecture: Dependency injection for testability
+        # Default to global singleton for normal operation
         self._provider_registry = provider_registry or get_provider_registry()
+        # CapabilityService is stateless, so new instance is fine
         self._capability_service = capability_service or CapabilityService()
+        # URM registry is always singleton (shared symbol cache)
         self._urm_registry = get_urm_registry()
 
     async def route(self, request: DataRequest) -> Any:
@@ -82,11 +117,15 @@ class DataRouter:
             },
         )
 
-        # Step 1: Validate capability
+        # Step 1: Validate capability (fail fast)
+        # Architecture: Validate before expensive operations (URM, provider lookup)
+        # This provides early error detection with helpful messages
         self._capability_service.validate_request(request)
         logger.debug("Capability validation passed")
 
         # Step 2: Resolve symbol(s) via URM
+        # Architecture: Symbol normalization happens after capability check
+        # This ensures we only resolve symbols for supported features
         exchange_symbols = self._resolve_symbols(request)
         logger.debug(
             "Symbol resolution complete",
@@ -94,6 +133,8 @@ class DataRouter:
         )
 
         # Step 3: Get provider instance
+        # Architecture: ProviderRegistry handles instance pooling and lifecycle
+        # Returns cached instance or creates new one, entered into async context
         provider = await self._provider_registry.get_provider(
             request.exchange,
             request.market_type,
@@ -101,6 +142,8 @@ class DataRouter:
         logger.debug("Provider instance retrieved", extra={"provider": provider.name})
 
         # Step 4: Get feature handler
+        # Architecture: Feature handlers are registered via decorators
+        # Maps (DataFeature, TransportKind) to provider method name
         handler = self._provider_registry.get_feature_handler(
             request.exchange,
             request.feature,
@@ -108,6 +151,8 @@ class DataRouter:
         )
 
         if handler is None:
+            # Architecture: Handler lookup failure indicates registration issue
+            # This should not happen if capabilities are correctly registered
             logger.error(
                 "No handler found",
                 extra={
@@ -127,9 +172,13 @@ class DataRouter:
         )
 
         # Step 5: Build method arguments from request
+        # Architecture: Transform DataRequest into provider method kwargs
+        # Handles symbol normalization, parameter mapping, and feature-specific params
         method_args = self._build_method_args(request, exchange_symbols)
 
         # Step 6: Invoke provider method
+        # Architecture: Dynamic method dispatch based on feature handler
+        # Provider methods are called with normalized exchange-native symbols
         logger.debug("Invoking provider method", extra={"method": handler.method_name})
         method = getattr(provider, handler.method_name)
         result = await method(**method_args)
@@ -216,11 +265,14 @@ class DataRouter:
         method_args = self._build_method_args(request, exchange_symbols)
 
         # Step 6: Invoke provider method and yield results
+        # Architecture: Streaming uses async iterator pattern
+        # Router yields items as they arrive, with progress logging
         logger.debug("Starting stream", extra={"method": handler.method_name})
         method = getattr(provider, handler.method_name)
         item_count = 0
         async for item in method(**method_args):
             item_count += 1
+            # Performance: Log progress every 100 items to avoid log spam
             if item_count % 100 == 0:
                 logger.debug(
                     "Stream progress",
@@ -247,10 +299,12 @@ class DataRouter:
             SymbolResolutionError: If symbol cannot be resolved
         """
 
-        # Get URM mapper for the exchange
+        # Architecture: Get URM mapper for symbol normalization
+        # Each exchange has a mapper that converts between canonical and exchange-native formats
         mapper = self._provider_registry.get_urm_mapper(request.exchange)
         if mapper is None:
-            # If no URM mapper, assume symbol is already in exchange format
+            # Architecture: Fallback for exchanges without URM mapper
+            # Assume symbol is already in exchange-native format (backward compatibility)
             if request.symbol:
                 return request.symbol
             if request.symbols:
@@ -262,11 +316,21 @@ class DataRouter:
 
             Only accepts Laakhay normalized format (BASE/QUOTE, e.g., BTC/USDT).
             Rejects exchange-native formats and URM IDs.
+
+            Architecture:
+                This function enforces Laakhay's canonical symbol format (BASE/QUOTE).
+                URM IDs are rejected to keep the API surface simple. Exchange-native
+                formats are rejected to ensure consistent normalization.
+
+            Design Decision:
+                Requiring BASE/QUOTE format ensures all symbols go through URM,
+                providing consistent behavior and better error messages.
             """
             from .enums import InstrumentSpec, InstrumentType, MarketType
             from .exceptions import SymbolResolutionError
 
-            # Check if it's a URM ID - reject it, require Laakhay format
+            # Architecture: Reject URM IDs - require Laakhay format for simplicity
+            # URM IDs add complexity without significant benefit for most users
             if symbol.startswith("urm://"):
                 raise SymbolResolutionError(
                     f"URM IDs are not accepted. Use Laakhay format (BASE/QUOTE, e.g., BTC/USDT). Got: {symbol}",
@@ -275,7 +339,8 @@ class DataRouter:
                     market_type=request.market_type,
                 )
 
-            # Require normalized format (BASE/QUOTE) - Laakhay convention
+            # Architecture: Require normalized format (BASE/QUOTE) - Laakhay convention
+            # This ensures all symbols go through URM normalization
             if "/" not in symbol:
                 raise SymbolResolutionError(
                     f"Symbol must be in Laakhay format (BASE/QUOTE, e.g., BTC/USDT). Got: {symbol}",
@@ -294,12 +359,14 @@ class DataRouter:
                     market_type=request.market_type,
                 )
 
-            # Use request's instrument_type or default based on market_type
+            # Architecture: Infer instrument_type from market_type if needed
+            # If user specifies SPOT but market_type is FUTURES, assume PERPETUAL
+            # This provides sensible defaults while allowing explicit overrides
             instrument_type = request.instrument_type
-            # If instrument_type is SPOT (default) but market_type is FUTURES, use PERPETUAL
             if instrument_type == InstrumentType.SPOT and request.market_type == MarketType.FUTURES:
                 instrument_type = InstrumentType.PERPETUAL
 
+            # Build InstrumentSpec and convert to exchange-native format
             spec = InstrumentSpec(
                 base=parts[0],
                 quote=parts[1],
@@ -356,7 +423,9 @@ class DataRouter:
             args["limit"] = request.limit
 
         if request.depth is not None:
-            args["limit"] = request.depth  # Order book uses 'limit' parameter
+            # Architecture: Map 'depth' to 'limit' for order book
+            # Provider methods use 'limit' parameter name for consistency
+            args["limit"] = request.depth
 
         if request.period is not None:
             args["period"] = request.period
