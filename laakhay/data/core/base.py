@@ -1,4 +1,29 @@
-"""Base provider abstract class."""
+"""Base provider abstract class.
+
+Architecture:
+    This module defines the BaseProvider abstract base class that all data
+    providers must implement. It provides:
+    - Abstract methods for core operations (get_candles, get_symbols, close)
+    - Validation hooks (validate_interval, validate_symbol)
+    - Capability discovery interface (describe_capabilities)
+    - Async context manager support
+
+Design Decisions:
+    - Abstract base class: Enforces consistent interface across providers
+    - Async context manager: Ensures proper resource cleanup
+    - Validation hooks: Allow providers to add custom validation
+    - Capability discovery: Optional runtime capability checking
+
+Note:
+    This is a minimal base class. Actual provider implementations may extend
+    this or use provider-specific base classes that implement the full routing
+    interface (feature handlers, URM mappers, etc.).
+
+See Also:
+    - ProviderRegistry: Manages provider instances
+    - DataRouter: Routes requests to providers
+    - register_feature_handler: Decorator for registering provider methods
+"""
 
 from __future__ import annotations
 
@@ -15,10 +40,28 @@ if TYPE_CHECKING:
 
 
 class BaseProvider(ABC):
-    """Abstract base class for all data providers."""
+    """Abstract base class for all data providers.
+
+    Architecture:
+        All providers must inherit from this class and implement abstract methods.
+        The class provides a minimal interface that ensures providers can be
+        managed by the ProviderRegistry and used by the DataRouter.
+
+    Design Decision:
+        Minimal interface allows flexibility for provider-specific implementations.
+        Providers can add additional methods beyond the abstract interface.
+    """
 
     def __init__(self, name: str) -> None:
+        """Initialize provider.
+
+        Architecture:
+            Providers are identified by name. Session management is left to
+            subclasses (HTTP sessions, WebSocket connections, etc.).
+        """
         self.name = name
+        # Architecture: Session storage for HTTP/WebSocket connections
+        # Subclasses manage their own session lifecycle
         self._session: object | None = None
 
     @abstractmethod
@@ -73,9 +116,15 @@ class BaseProvider(ABC):
 
         Returns:
             CapabilityStatus indicating support status and metadata
+
+        Architecture:
+            This method allows providers to discover capabilities at runtime
+            (e.g., by querying exchange API). Default implementation defers to
+            static capability registry. Providers can override to provide
+            dynamic capability discovery.
         """
-        # Default implementation: return None/unknown status
-        # Subclasses should override to provide runtime discovery
+        # Architecture: Default implementation defers to static registry
+        # Providers can override to provide runtime discovery (e.g., API queries)
         from .capabilities import CapabilityStatus
 
         return CapabilityStatus(

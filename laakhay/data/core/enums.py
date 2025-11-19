@@ -1,4 +1,28 @@
-"""Core enumerations for standardized types across all providers."""
+"""Core enumerations for standardized types across all providers.
+
+Architecture:
+    This module defines all standardized enums and types used throughout the
+    library. These enums provide type safety and ensure consistent values
+    across all providers and exchanges.
+
+Design Decisions:
+    - String enums: Allow easy serialization and exchange compatibility
+    - Frozen dataclass: InstrumentSpec is immutable for safety
+    - Standardized values: Normalize differences between exchanges
+
+Key Types:
+    - Timeframe: Standardized time intervals
+    - MarketType: Spot vs Futures markets
+    - DataFeature: Available data features
+    - TransportKind: REST vs WebSocket
+    - InstrumentType: Spot, Perpetual, Future, Option, etc.
+    - InstrumentSpec: Canonical instrument description
+
+See Also:
+    - URM: Uses InstrumentSpec for symbol normalization
+    - Capabilities: Uses enums for capability queries
+    - DataRouter: Uses enums for routing decisions
+"""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -26,7 +50,13 @@ _SECONDS_MAP = {
 
 
 class Timeframe(str, Enum):
-    """Standardized time intervals normalized across all exchanges."""
+    """Standardized time intervals normalized across all exchanges.
+
+    Architecture:
+        String enum allows easy conversion to/from exchange-specific formats.
+        Provides helper methods for time calculations (seconds, milliseconds).
+        All exchanges support a subset of these timeframes.
+    """
 
     # Minutes
     M1 = "1m"
@@ -140,6 +170,15 @@ class InstrumentSpec:
 
     Encodes base, quote, instrument type, and optional metadata
     (expiry, strike, contract size, etc.).
+
+    Architecture:
+        This is the canonical representation used by URM for symbol normalization.
+        Frozen dataclass ensures immutability. All exchange-specific symbols
+        are converted to/from InstrumentSpec via URM mappers.
+
+    Design Decision:
+        Frozen dataclass prevents accidental modification during routing.
+        Metadata dict allows extensibility for exchange-specific attributes.
     """
 
     base: str
