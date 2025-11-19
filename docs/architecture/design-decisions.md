@@ -15,7 +15,7 @@ Each ADR follows this structure:
 ## ADR-001: Provider-Agnostic Architecture
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -52,7 +52,7 @@ We implement a provider-agnostic architecture where:
 ## ADR-002: Universal Representation Mapping (URM)
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -96,7 +96,7 @@ We implement a Universal Representation Mapping (URM) system:
 ## ADR-003: Capability System
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -139,7 +139,7 @@ We implement a hierarchical capability system:
 ## ADR-004: DataRouter Pattern
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -183,7 +183,7 @@ DataAPI delegates to DataRouter for actual routing.
 ## ADR-005: Async-First Design
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -225,7 +225,7 @@ We design the library as async-first:
 ## ADR-006: Pydantic Models
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -268,7 +268,7 @@ We use Pydantic v2 for all data models:
 ## ADR-007: Stream Relay Pattern
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -311,7 +311,7 @@ We implement a `StreamRelay` that:
 ## ADR-008: Feature Handler Registration
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -350,7 +350,7 @@ We use decorator-based feature handler registration:
 ## ADR-009: Provider Instance Pooling
 
 **Status:** Accepted  
-**Date:** 2025-01-27
+**Date:** 2025-11-19
 
 ### Context
 
@@ -396,5 +396,5 @@ For more details on specific components, see:
 
 ---
 
-**Last Updated:** 2025-01-27
+**Last Updated:** 2025-11-19
 
