@@ -394,7 +394,4 @@ For more details on specific components, see:
 - [Capability System](./capability-system.md)
 - [Streaming Architecture](./streaming-architecture.md)
 
----
-
-**Last Updated:** 2025-11-19
 

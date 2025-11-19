@@ -350,7 +350,4 @@ User Code
 - [Capability System](./capability-system.md) - Capability discovery
 - [Streaming Architecture](./streaming-architecture.md) - Streaming & feeds
 
----
-
-**Last Updated:** 2025-11-19
 
