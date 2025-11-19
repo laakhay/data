@@ -320,17 +320,19 @@ class ProviderRegistry:
 
         self._closed = True
 
-        # Architecture: Cleanup all provider instances
-        # Called on registry shutdown (context manager exit)
-        # Suppress exceptions to ensure all providers are attempted to close
-        for provider in self._provider_pools.values():
+        await self.shutdown_instances()
+        self._pool_locks.clear()
+
+    async def shutdown_instances(self) -> None:
+        """Close all provider instances without tearing down the registry."""
+        if not self._provider_pools:
+            return
+
+        for provider in list(self._provider_pools.values()):
             with suppress(Exception):
                 await provider.__aexit__(None, None, None)
 
-        # Architecture: Clear all state
-        # Pools and locks cleared to allow registry reuse (if needed)
         self._provider_pools.clear()
-        self._pool_locks.clear()
 
     async def __aenter__(self) -> ProviderRegistry:
         """Async context manager entry."""

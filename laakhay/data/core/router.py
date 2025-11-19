@@ -85,6 +85,7 @@ class DataRouter:
         self._capability_service = capability_service or CapabilityService()
         # URM registry is always singleton (shared symbol cache)
         self._urm_registry = get_urm_registry()
+        self._closed = False
 
     async def route(self, request: DataRequest) -> Any:
         """Route a data request through the system.
@@ -280,6 +281,13 @@ class DataRouter:
                 )
             yield item
         logger.debug("Stream completed", extra={"total_items": item_count})
+
+    async def close(self) -> None:
+        """Close router resources (provider registry instances)."""
+        if self._closed:
+            return
+        self._closed = True
+        await self._provider_registry.shutdown_instances()
 
     def _resolve_symbols(self, request: DataRequest) -> str | list[str] | None:
         """Resolve symbol(s) via URM to exchange-native format.

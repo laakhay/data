@@ -100,6 +100,7 @@ class DataAPI:
         self._default_market_type = default_market_type
         self._default_instrument_type = default_instrument_type
         # Architecture: Router injection for testability (dependency injection pattern)
+        self._owns_router = router is None
         self._router = router or DataRouter()
         self._closed = False
 
@@ -956,6 +957,8 @@ class DataAPI:
             return
         self._closed = True
         logger.debug("Closing DataAPI")
+        if self._owns_router:
+            await self._router.close()
 
     async def __aenter__(self) -> DataAPI:
         """Async context manager entry."""
