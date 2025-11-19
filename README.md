@@ -420,6 +420,17 @@ Integration tests hit live exchange APIs and are skipped by default:
 RUN_LAAKHAY_NETWORK_TESTS=1 pytest tests/integration
 ```
 
+## Documentation
+
+Comprehensive architectural documentation is available in the [`docs/`](./docs/) directory:
+
+- **[Architecture Overview](./docs/architecture/overview.md)** - System architecture and component interactions
+- **[Design Decisions](./docs/architecture/design-decisions.md)** - Architecture Decision Records (ADRs)
+- **[Documentation Index](./docs/INDEX.md)** - Complete navigation guide
+- **[Architecture Summary](./docs/ARCHITECTURE_SUMMARY.md)** - Quick reference to all documentation
+
+All core modules include detailed inline architectural comments explaining design patterns, decisions, and request flows.
+
 ## Design Principles
 
 - **Async-first**: Built on `asyncio`, `aiohttp`, and `websockets`
