@@ -37,7 +37,7 @@ async def test_register_binance():
     # Check feature handlers
     ohlcv_rest = registry.get_feature_handler("binance", DataFeature.OHLCV, TransportKind.REST)
     assert ohlcv_rest is not None
-    assert ohlcv_rest.method_name == "get_candles"
+    assert ohlcv_rest.method_name == "fetch_ohlcv"
 
     ohlcv_ws = registry.get_feature_handler("binance", DataFeature.OHLCV, TransportKind.WS)
     assert ohlcv_ws is not None
@@ -67,7 +67,7 @@ async def test_register_bybit():
     # Check feature handlers
     ohlcv_rest = registry.get_feature_handler("bybit", DataFeature.OHLCV, TransportKind.REST)
     assert ohlcv_rest is not None
-    assert ohlcv_rest.method_name == "get_candles"
+    assert ohlcv_rest.method_name == "fetch_ohlcv"
 
     mark_price_ws = registry.get_feature_handler("bybit", DataFeature.MARK_PRICE, TransportKind.WS)
     assert mark_price_ws is not None
@@ -149,9 +149,9 @@ async def test_feature_handler_mapping():
 
     assert binance_ohlcv_rest is not None
     assert bybit_ohlcv_rest is not None
-    # Both should map to get_candles
-    assert binance_ohlcv_rest.method_name == "get_candles"
-    assert bybit_ohlcv_rest.method_name == "get_candles"
+    # Both should map to fetch_ohlcv
+    assert binance_ohlcv_rest.method_name == "fetch_ohlcv"
+    assert bybit_ohlcv_rest.method_name == "fetch_ohlcv"
 
     # Test WS handlers
     binance_trades_ws = registry.get_feature_handler(

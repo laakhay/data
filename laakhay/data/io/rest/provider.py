@@ -33,7 +33,7 @@ class RESTProvider(ABC):
     """Pure REST interface for market data providers."""
 
     @abstractmethod
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         interval: Timeframe,

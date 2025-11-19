@@ -1081,7 +1081,7 @@ def test_order_book_adapter_skips_invalid_changes():
 
 
 @pytest.mark.asyncio
-async def test_coinbase_rest_get_candles_chunking(monkeypatch):
+async def test_coinbase_rest_fetch_ohlcv_chunking(monkeypatch):
     """REST provider handles Coinbase's 300 candle limit with chunking."""
     provider = CoinbaseRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
@@ -1113,7 +1113,7 @@ async def test_coinbase_rest_get_candles_chunking(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch", fake_fetch)
 
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTCUSD",
         Timeframe.M1,
         start_time=base_time,
@@ -1132,7 +1132,7 @@ async def test_coinbase_rest_get_candles_chunking(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_coinbase_rest_get_candles_respects_max_chunks(monkeypatch):
+async def test_coinbase_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
     """REST provider respects max_chunks parameter."""
     provider = CoinbaseRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
@@ -1164,7 +1164,7 @@ async def test_coinbase_rest_get_candles_respects_max_chunks(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch", fake_fetch)
 
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTCUSD",
         Timeframe.M1,
         start_time=base_time,
@@ -1464,25 +1464,25 @@ def test_coinbase_rest_provider_fetch_unknown_endpoint():
     asyncio.run(run())
 
 
-def test_coinbase_rest_provider_get_candles_invalid_timeframe():
+def test_coinbase_rest_provider_fetch_ohlcv_invalid_timeframe():
     """REST provider raises ValueError for invalid timeframe."""
     provider = CoinbaseRESTProvider()
 
     async def run():
         with pytest.raises(ValueError, match="Invalid timeframe"):
             # Use a timeframe not in INTERVAL_MAP
-            await provider.get_candles("BTCUSD", "invalid_timeframe")
+            await provider.fetch_ohlcv("BTCUSD", "invalid_timeframe")
 
     asyncio.run(run())
 
 
-def test_coinbase_rest_provider_get_candles_invalid_max_chunks():
+def test_coinbase_rest_provider_fetch_ohlcv_invalid_max_chunks():
     """REST provider raises ValueError for invalid max_chunks."""
     provider = CoinbaseRESTProvider()
 
     async def run():
         with pytest.raises(ValueError, match="max_chunks must be None or a positive integer"):
-            await provider.get_candles(
+            await provider.fetch_ohlcv(
                 "BTCUSD",
                 Timeframe.M1,
                 limit=100,

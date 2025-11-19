@@ -28,7 +28,7 @@ The `io/` directory provides transport abstractions for REST (HTTP) and WebSocke
 Abstract base class for REST-based data providers.
 
 **Required Methods:**
-- `get_candles()`: Fetch OHLCV bars
+- `fetch_ohlcv()`: Fetch OHLCV bars
 - `get_symbols()`: List trading symbols
 - `close()`: Cleanup resources
 
@@ -103,8 +103,8 @@ class BinanceProvider:
         self._ws = BinanceWSProvider()
     
     # Implements RESTProvider interface
-    async def get_candles(...):
-        return await self._rest.get_candles(...)
+    async def fetch_ohlcv(...):
+        return await self._rest.fetch_ohlcv(...)
     
     # Implements WSProvider interface
     async def stream_ohlcv(...):

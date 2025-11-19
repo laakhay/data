@@ -376,7 +376,7 @@ def register_feature_handler(
 
     Usage:
         @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
-        async def get_candles(self, ...):
+        async def fetch_ohlcv(self, ...):
             ...
 
     Args:

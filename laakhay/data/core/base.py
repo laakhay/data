@@ -3,7 +3,7 @@
 Architecture:
     This module defines the BaseProvider abstract base class that all data
     providers must implement. It provides:
-    - Abstract methods for core operations (get_candles, get_symbols, close)
+    - Abstract methods for core operations (fetch_ohlcv, get_symbols, close)
     - Validation hooks (validate_interval, validate_symbol)
     - Capability discovery interface (describe_capabilities)
     - Async context manager support
@@ -65,7 +65,7 @@ class BaseProvider(ABC):
         self._session: object | None = None
 
     @abstractmethod
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         interval: Timeframe,

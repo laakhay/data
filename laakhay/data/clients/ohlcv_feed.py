@@ -312,7 +312,7 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
             return history[-count:] if count > 0 else []
         return history.copy()
 
-    def get_ohlcv(
+    def fetch_ohlcv(
         self, symbol: str, *, interval: Timeframe | None = None, count: int | None = None
     ) -> OHLCV:
         if interval is None:
@@ -523,12 +523,12 @@ class OHLCVFeed(SymbolStreamFeed[StreamingBar]):
         self, symbols: list[str], interval: Timeframe, limit: int | None
     ) -> None:
         rest_obj = self._rest
-        if rest_obj is None or not hasattr(rest_obj, "get_candles"):
+        if rest_obj is None or not hasattr(rest_obj, "fetch_ohlcv"):
             return
 
         async def _fetch(symbol: str):
             try:
-                return await rest_obj.get_candles(symbol, interval, limit=limit)
+                return await rest_obj.fetch_ohlcv(symbol, interval, limit=limit)
             except Exception:
                 return None
 

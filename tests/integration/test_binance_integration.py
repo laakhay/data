@@ -16,11 +16,11 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_binance_sync_wrapper():
-    """Test synchronous wrapper for get_candles."""
+    """Test synchronous wrapper for fetch_ohlcv."""
 
     async def fetch():
         async with BinanceProvider() as provider:
-            return await provider.get_candles(symbol="BTCUSDT", interval=Timeframe.M1, limit=2)
+            return await provider.fetch_ohlcv(symbol="BTCUSDT", interval=Timeframe.M1, limit=2)
 
     candles = asyncio.run(fetch())
     assert len(candles) == 2
@@ -50,7 +50,7 @@ def test_binance_fetch_with_timeframe_sync():
         start_time = end_time - timedelta(minutes=30)
 
         async with BinanceProvider() as provider:
-            return await provider.get_candles(
+            return await provider.fetch_ohlcv(
                 symbol="ETHUSDT",
                 interval=Timeframe.M5,
                 start_time=start_time,

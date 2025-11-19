@@ -138,9 +138,9 @@ DataRouter.route()
   ├─→ CapabilityService.validate_request()
   ├─→ URMRegistry.urm_to_exchange_symbol()
   ├─→ ProviderRegistry.get_provider()
-  └─→ Provider.get_candles()
+  └─→ Provider.fetch_ohlcv()
       ↓
-  RESTProvider.get_candles()
+  RESTProvider.fetch_ohlcv()
       ↓
   HTTPTransport.request()
       ↓

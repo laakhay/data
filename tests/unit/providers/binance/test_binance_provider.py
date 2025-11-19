@@ -57,7 +57,7 @@ def test_binance_provider_context_manager_closes():
 
 
 @pytest.mark.asyncio
-async def test_binance_rest_get_candles_chunking(monkeypatch):
+async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
     provider = BinanceRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
@@ -88,7 +88,7 @@ async def test_binance_rest_get_candles_chunking(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch", fake_fetch)
 
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTCUSDT",
         Timeframe.M1,
         start_time=base_time,
@@ -107,7 +107,7 @@ async def test_binance_rest_get_candles_chunking(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_binance_rest_get_candles_respects_max_chunks(monkeypatch):
+async def test_binance_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
     provider = BinanceRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
@@ -138,7 +138,7 @@ async def test_binance_rest_get_candles_respects_max_chunks(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch", fake_fetch)
 
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTCUSDT",
         Timeframe.M1,
         start_time=base_time,

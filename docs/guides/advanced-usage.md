@@ -29,7 +29,7 @@ Advanced users can instantiate providers directly for fine-grained control:
 from laakhay.data import BinanceProvider, MarketType, Timeframe
 
 async with BinanceProvider(market_type=MarketType.SPOT) as provider:
-    candles = await provider.get_candles("BTCUSDT", Timeframe.M1, limit=200)
+    candles = await provider.fetch_ohlcv("BTCUSDT", Timeframe.M1, limit=200)
     async for trade in provider.stream_trades("BTCUSDT"):
         ...
 ```

@@ -29,8 +29,8 @@ class MockProvider(BaseProvider):
         self.api_key = api_key
         self.api_secret = api_secret
 
-    async def get_candles(self, symbol: str, interval, start_time=None, end_time=None, limit=None):
-        """Mock get_candles."""
+    async def fetch_ohlcv(self, symbol: str, interval, start_time=None, end_time=None, limit=None):
+        """Mock fetch_ohlcv."""
         return {"symbol": symbol, "interval": interval}
 
     async def get_symbols(self):
@@ -189,7 +189,7 @@ async def test_registry_feature_handler():
     registry = ProviderRegistry()
 
     handler = FeatureHandler(
-        method_name="get_candles",
+        method_name="fetch_ohlcv",
         method=lambda: None,
         feature=DataFeature.OHLCV,
         transport=TransportKind.REST,
@@ -384,7 +384,7 @@ async def test_collect_feature_handlers():
             super().__init__(name="test")
 
         @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
-        async def get_candles(self, symbol: str):
+        async def fetch_ohlcv(self, symbol: str):
             """Get candles."""
             return symbol
 
@@ -404,6 +404,6 @@ async def test_collect_feature_handlers():
     assert (DataFeature.TRADES, TransportKind.WS) in handlers
 
     ohlcv_handler = handlers[(DataFeature.OHLCV, TransportKind.REST)]
-    assert ohlcv_handler.method_name == "get_candles"
+    assert ohlcv_handler.method_name == "fetch_ohlcv"
     assert ohlcv_handler.feature == DataFeature.OHLCV
     assert ohlcv_handler.transport == TransportKind.REST

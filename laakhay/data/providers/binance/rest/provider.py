@@ -80,7 +80,7 @@ class BinanceRESTProvider(RESTProvider):
         adapter = adapter_cls()
         return await self._runner.run(spec=spec, adapter=adapter, params=params)
 
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         timeframe: str | Timeframe,

@@ -43,7 +43,7 @@ class TestRESTOHLCVIntegration:
     async def test_fetch_ohlcv_basic(self, provider_class, exchange, symbol, market_type):
         """Test basic OHLCV fetching for each exchange."""
         async with provider_class(market_type=market_type) as provider:
-            ohlcv = await provider.get_candles(
+            ohlcv = await provider.fetch_ohlcv(
                 symbol=symbol,
                 timeframe=Timeframe.M1,
                 limit=10,
@@ -81,7 +81,7 @@ class TestRESTOHLCVIntegration:
             end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=1)
 
-            ohlcv = await provider.get_candles(
+            ohlcv = await provider.fetch_ohlcv(
                 symbol=symbol,
                 timeframe=Timeframe.M5,
                 start_time=start_time,
@@ -113,7 +113,7 @@ class TestRESTOHLCVIntegration:
     ):
         """Test OHLCV fetching with different timeframes."""
         async with provider_class(market_type=market_type) as provider:
-            ohlcv = await provider.get_candles(
+            ohlcv = await provider.fetch_ohlcv(
                 symbol=symbol,
                 timeframe=timeframe,
                 limit=5,
@@ -139,7 +139,7 @@ class TestRESTOHLCVIntegration:
             from laakhay.data.core.exceptions import ProviderError
 
             with pytest.raises((ProviderError, ValueError, ClientResponseError)):
-                await provider.get_candles(
+                await provider.fetch_ohlcv(
                     symbol=symbol,
                     timeframe=Timeframe.M1,
                     limit=10,

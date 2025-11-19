@@ -29,7 +29,7 @@ class ConcreteProvider(BaseProvider):
     def __init__(self, name: str = "test"):
         super().__init__(name)
 
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         interval: Timeframe,
@@ -37,7 +37,7 @@ class ConcreteProvider(BaseProvider):
         end_time: datetime | None = None,
         limit: int | None = None,
     ) -> OHLCV:
-        """Implement get_candles."""
+        """Implement fetch_ohlcv."""
         bars = [
             Bar(
                 symbol=symbol,

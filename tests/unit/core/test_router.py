@@ -29,7 +29,7 @@ class MockProvider:
         self.name = "mock"
         self.market_type = MarketType.SPOT
 
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         timeframe: str | Timeframe,
@@ -37,7 +37,7 @@ class MockProvider:
         end_time=None,
         limit=None,
     ):
-        """Mock get_candles method."""
+        """Mock fetch_ohlcv method."""
         return {"symbol": symbol, "timeframe": timeframe, "limit": limit}
 
     async def stream_trades(self, symbol: str) -> AsyncIterator[dict]:
@@ -53,8 +53,8 @@ def mock_provider_registry():
     registry.get_provider = AsyncMock(return_value=MockProvider())
     registry.get_feature_handler = MagicMock(
         return_value=FeatureHandler(
-            method_name="get_candles",
-            method=MockProvider.get_candles,
+            method_name="fetch_ohlcv",
+            method=MockProvider.fetch_ohlcv,
             feature=DataFeature.OHLCV,
             transport=TransportKind.REST,
         )

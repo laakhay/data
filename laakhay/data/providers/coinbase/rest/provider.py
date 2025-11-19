@@ -80,7 +80,7 @@ class CoinbaseRESTProvider(RESTProvider):
             params["market_type"] = self.market_type
         return await self._runner.run(spec=spec, adapter=adapter, params=params)
 
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         timeframe: str | Timeframe,

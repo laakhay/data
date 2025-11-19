@@ -45,7 +45,7 @@ from laakhay.data.io.rest import RESTProvider
 from laakhay.data.models import OHLCV, OrderBook, Trade
 
 class NewExchangeRESTProvider(RESTProvider):
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         interval: Timeframe,
@@ -138,7 +138,7 @@ from laakhay.data.core.enums import DataFeature, TransportKind
 
 class NewExchangeRESTProvider(RESTProvider):
     @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
-    async def get_candles(self, ...):
+    async def fetch_ohlcv(self, ...):
         # Implementation
         pass
 ```
@@ -152,9 +152,9 @@ import pytest
 from laakhay.data.providers.new_exchange import NewExchangeProvider
 
 @pytest.mark.asyncio
-async def test_get_candles():
+async def test_fetch_ohlcv():
     async with NewExchangeProvider() as provider:
-        ohlcv = await provider.get_candles("BTCUSDT", Timeframe.H1)
+        ohlcv = await provider.fetch_ohlcv("BTCUSDT", Timeframe.H1)
         assert len(ohlcv) > 0
 ```
 
@@ -165,7 +165,7 @@ async def test_get_candles():
 @pytest.mark.asyncio
 async def test_live_api():
     async with NewExchangeProvider() as provider:
-        ohlcv = await provider.get_candles("BTCUSDT", Timeframe.H1)
+        ohlcv = await provider.fetch_ohlcv("BTCUSDT", Timeframe.H1)
         assert ohlcv.latest is not None
 ```
 

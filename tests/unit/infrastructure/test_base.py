@@ -19,7 +19,7 @@ def test_validate_symbol_valid():
     from laakhay.data import Timeframe
 
     class TestProvider(BaseProvider):
-        async def get_candles(
+        async def fetch_ohlcv(
             self,
             symbol: str,
             interval: Timeframe,
@@ -48,7 +48,7 @@ def test_validate_symbol_invalid():
     from laakhay.data import Timeframe
 
     class TestProvider(BaseProvider):
-        async def get_candles(
+        async def fetch_ohlcv(
             self,
             symbol: str,
             interval: Timeframe,

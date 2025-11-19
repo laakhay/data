@@ -697,7 +697,7 @@ def test_mark_price_adapter_parses_valid_message():
 
 
 @pytest.mark.asyncio
-async def test_hyperliquid_rest_get_candles_handles_5000_limit(monkeypatch):
+async def test_hyperliquid_rest_fetch_ohlcv_handles_5000_limit(monkeypatch):
     """REST provider handles Hyperliquid's 5000 candle limit correctly."""
     provider = HyperliquidRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
@@ -736,7 +736,7 @@ async def test_hyperliquid_rest_get_candles_handles_5000_limit(monkeypatch):
 
     # Request 7000 candles with max_chunks=1 to disable pagination
     # This tests that a single request returns max 5000 candles
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTC",
         Timeframe.M15,
         start_time=base_time,
@@ -753,7 +753,7 @@ async def test_hyperliquid_rest_get_candles_handles_5000_limit(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_hyperliquid_rest_get_candles_with_time_range(monkeypatch):
+async def test_hyperliquid_rest_fetch_ohlcv_with_time_range(monkeypatch):
     """REST provider uses startTime/endTime for pagination."""
     provider = HyperliquidRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
@@ -786,7 +786,7 @@ async def test_hyperliquid_rest_get_candles_with_time_range(monkeypatch):
 
     monkeypatch.setattr(provider, "fetch", fake_fetch)
 
-    result = await provider.get_candles(
+    result = await provider.fetch_ohlcv(
         "BTC",
         Timeframe.M15,
         start_time=base_time,

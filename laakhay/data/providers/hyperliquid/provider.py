@@ -63,7 +63,7 @@ class HyperliquidProvider(BaseProvider):
 
     # --- REST delegations -------------------------------------------------
     @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
-    async def get_candles(
+    async def fetch_ohlcv(
         self,
         symbol: str,
         timeframe: str | Timeframe,
@@ -71,7 +71,7 @@ class HyperliquidProvider(BaseProvider):
         end_time: datetime | None = None,
         limit: int | None = None,
     ) -> OHLCV:
-        return await self._rest.get_candles(
+        return await self._rest.fetch_ohlcv(
             symbol=symbol,
             timeframe=timeframe,
             start_time=start_time,

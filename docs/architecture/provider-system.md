@@ -55,7 +55,7 @@ Providers remain part of the public API for advanced consumers:
 from laakhay.data import BinanceProvider, MarketType, Timeframe
 
 async with BinanceProvider(market_type=MarketType.SPOT) as provider:
-    bars = await provider.get_candles("BTCUSDT", Timeframe.M1)
+    bars = await provider.fetch_ohlcv("BTCUSDT", Timeframe.M1)
 ```
 
 Documenting this layer clarifies that the system is intentionally modular and
