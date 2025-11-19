@@ -1,4 +1,22 @@
-"""OHLCV series data model."""
+"""OHLCV series data model.
+
+Architecture:
+    This module defines the OHLCV (Open-High-Low-Close-Volume) series model,
+    which is the primary data structure for candlestick/bar data. The model
+    is immutable and provides rich computed properties and convenience methods.
+
+Design Decisions:
+    - Immutable model: Frozen Pydantic model prevents accidental modification
+    - Validation: Bars must be sorted by timestamp
+    - Computed properties: Derived metrics (highest_price, total_volume, etc.)
+    - Convenience methods: Time range filtering, bar selection, etc.
+    - List-like interface: Supports indexing, iteration, len()
+
+See Also:
+    - Bar: Individual OHLCV bar model
+    - SeriesMeta: Series metadata (symbol, timeframe)
+    - StreamingBar: Real-time streaming bar updates
+"""
 
 from collections.abc import Iterator
 from datetime import datetime
@@ -11,21 +29,40 @@ from .series_meta import SeriesMeta
 
 
 class OHLCV(BaseModel):
-    """OHLCV series containing metadata and a list of bars."""
+    """OHLCV series containing metadata and a list of bars.
+
+    Architecture:
+        Immutable Pydantic model representing a time series of OHLCV bars.
+        Provides list-like interface (indexing, iteration) and computed properties
+        for common operations (price statistics, time ranges, etc.).
+
+    Design Decision:
+        Frozen model ensures data integrity. Methods that "modify" the series
+        (append_bar, extend_bars) return new instances, following immutability pattern.
+    """
 
     meta: SeriesMeta = Field(..., description="Series metadata (symbol, timeframe)")
     bars: list[Bar] = Field(default_factory=list, description="List of OHLCV bars")
 
+    # Architecture: Frozen model prevents accidental modification
+    # All "mutations" return new instances
     model_config = {"frozen": True}
 
     @field_validator("bars")
     @classmethod
     def validate_bars(cls, bars: list[Bar]) -> list[Bar]:
-        """Validate that bars are sorted by timestamp and have consistent time intervals."""
+        """Validate that bars are sorted by timestamp and have consistent time intervals.
+
+        Architecture:
+            Pydantic validator ensures data integrity. Bars must be chronologically
+            ordered to maintain time series semantics. This validation happens at
+            model creation time.
+        """
         if not bars:
             return bars
 
-        # Check if bars are sorted by timestamp
+        # Architecture: Validate chronological ordering
+        # Time series must be sorted for proper analysis
         for i in range(1, len(bars)):
             if bars[i].timestamp <= bars[i - 1].timestamp:
                 raise ValueError("Bars must be sorted by timestamp")
@@ -111,12 +148,22 @@ class OHLCV(BaseModel):
         return OHLCV(meta=self.meta, bars=open_bars)
 
     def append_bar(self, bar: Bar) -> "OHLCV":
-        """Create a new OHLCV with an additional bar appended."""
+        """Create a new OHLCV with an additional bar appended.
+
+        Architecture:
+            Immutability pattern: Returns new instance instead of modifying self.
+            This ensures data integrity and allows safe sharing of OHLCV instances.
+        """
         new_bars = self.bars + [bar]
         return OHLCV(meta=self.meta, bars=new_bars)
 
     def extend_bars(self, bars: list[Bar]) -> "OHLCV":
-        """Create a new OHLCV with additional bars."""
+        """Create a new OHLCV with additional bars.
+
+        Architecture:
+            Immutability pattern: Returns new instance. New bars are appended,
+            maintaining chronological order (caller must ensure sorted input).
+        """
         new_bars = self.bars + bars
         return OHLCV(meta=self.meta, bars=new_bars)
 
