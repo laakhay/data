@@ -27,6 +27,30 @@ async with DataAPI(
 
 ### Methods
 
+#### fetch_health
+
+Fetch health/status information for an exchange.
+
+```python
+health: dict[str, Any] = await api.fetch_health(
+    *,
+    exchange: str | None = None,
+    market_type: MarketType | None = None,
+    instrument_type: InstrumentType | None = None,
+) -> dict[str, Any]
+```
+
+**Parameters:**
+- `exchange`: Exchange name (uses default if None)
+- `market_type`: Market type (uses default if None)
+- `instrument_type`: Instrument type (optional for completeness)
+
+**Returns:** Dictionary containing health metadata (status, latency, endpoint, etc.)
+
+**Raises:**
+- `CapabilityError`: If health endpoint not supported
+- `ProviderError`: If provider operation fails
+
 #### fetch_ohlcv
 
 Fetch OHLCV (candlestick) data.

@@ -64,6 +64,10 @@ class BaseProvider(ABC):
         # Subclasses manage their own session lifecycle
         self._session: object | None = None
 
+    async def fetch_health(self) -> dict[str, object]:
+        """Fetch provider health information."""
+        raise NotImplementedError("fetch_health is not implemented for this provider")
+
     @abstractmethod
     async def fetch_ohlcv(
         self,

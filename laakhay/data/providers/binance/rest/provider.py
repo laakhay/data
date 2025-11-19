@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from time import perf_counter
 from typing import Any
 
 from ....core import MarketType, Timeframe
@@ -71,6 +72,20 @@ class BinanceRESTProvider(RESTProvider):
 
     _MAX_CANDLES_PER_REQUEST = 1000
     _DEFAULT_MAX_CANDLE_CHUNKS = 5
+
+    async def fetch_health(self) -> dict[str, object]:
+        """Ping Binance REST API to verify connectivity."""
+        path = "/fapi/v1/ping" if self.market_type == MarketType.FUTURES else "/api/v3/ping"
+        start = perf_counter()
+        await self._transport.get(path)
+        latency_ms = (perf_counter() - start) * 1000.0
+        return {
+            "exchange": "binance",
+            "market_type": self.market_type.value,
+            "status": "ok",
+            "latency_ms": latency_ms,
+            "endpoint": path,
+        }
 
     async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
         if endpoint not in self._ENDPOINTS:

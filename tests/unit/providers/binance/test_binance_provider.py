@@ -57,6 +57,48 @@ def test_binance_provider_context_manager_closes():
 
 
 @pytest.mark.asyncio
+async def test_binance_provider_fetch_health(monkeypatch):
+    provider = BinanceProvider()
+
+    async def fake_fetch_health():
+        return {"status": "ok"}
+
+    monkeypatch.setattr(provider._rest, "fetch_health", fake_fetch_health)
+    result = await provider.fetch_health()
+    assert result["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_binance_rest_fetch_health_paths(monkeypatch):
+    provider = BinanceRESTProvider()
+    called = []
+
+    async def fake_get(path, *, params=None):
+        called.append(path)
+        return {}
+
+    monkeypatch.setattr(provider._transport, "get", fake_get)
+    result = await provider.fetch_health()
+    assert called == ["/api/v3/ping"]
+    assert result["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_binance_rest_fetch_health_futures(monkeypatch):
+    provider = BinanceRESTProvider(market_type=MarketType.FUTURES)
+    called = []
+
+    async def fake_get(path, *, params=None):
+        called.append(path)
+        return {}
+
+    monkeypatch.setattr(provider._transport, "get", fake_get)
+    result = await provider.fetch_health()
+    assert called == ["/fapi/v1/ping"]
+    assert result["status"] == "ok"
+
+
+@pytest.mark.asyncio
 async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
     provider = BinanceRESTProvider()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)

@@ -57,6 +57,11 @@ class BinanceProvider(BaseProvider):
 
         return list(INTERVAL_MAP.keys())
 
+    @register_feature_handler(DataFeature.HEALTH, TransportKind.REST)
+    async def fetch_health(self) -> dict[str, object]:
+        """Fetch health information for Binance."""
+        return await self._rest.fetch_health()
+
     # --- REST delegations -------------------------------------------------
     @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
     async def fetch_ohlcv(

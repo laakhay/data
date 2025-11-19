@@ -135,6 +135,30 @@ class DataAPI:
 
     # --- REST / Historical Methods -------------------------------------------
 
+    async def fetch_health(
+        self,
+        *,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> dict[str, Any]:
+        """Fetch exchange health information."""
+        request = DataRequest(
+            feature=DataFeature.HEALTH,
+            transport=TransportKind.REST,
+            exchange=self._resolve_exchange(exchange),
+            market_type=self._resolve_market_type(market_type),
+            instrument_type=self._resolve_instrument_type(instrument_type),
+        )
+        logger.debug(
+            "Fetching health",
+            extra={
+                "exchange": request.exchange,
+                "market_type": request.market_type.value,
+            },
+        )
+        return await self._router.route(request)
+
     async def fetch_ohlcv(
         self,
         symbol: str,

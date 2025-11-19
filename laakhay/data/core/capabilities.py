@@ -101,6 +101,7 @@ EXCHANGE_METADATA: dict[str, ExchangeCapability] = {
         "supported_timeframes": [tf.value for tf in Timeframe],
         "data_types": {
             "ohlcv": {"rest": True, "ws": True},
+            "health": {"rest": True, "ws": False},
             "order_book": {"rest": True, "ws": True},
             "trades": {"rest": True, "ws": True},
             "liquidations": {"rest": False, "ws": True},

@@ -125,6 +125,7 @@ class DataFeature(str, Enum):
     """Data features available from exchanges."""
 
     OHLCV = "ohlcv"
+    HEALTH = "health"
     ORDER_BOOK = "order_book"
     TRADES = "trades"
     LIQUIDATIONS = "liquidations"

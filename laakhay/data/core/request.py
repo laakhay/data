@@ -90,7 +90,8 @@ class DataRequest:
         if (
             self.symbol is None
             and self.symbols is None
-            and self.feature not in (DataFeature.LIQUIDATIONS, DataFeature.SYMBOL_METADATA)
+            and self.feature
+            not in (DataFeature.LIQUIDATIONS, DataFeature.SYMBOL_METADATA, DataFeature.HEALTH)
         ):
             raise ValueError("Either 'symbol' or 'symbols' must be provided")
 

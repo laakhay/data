@@ -261,6 +261,31 @@ class TestDataAPIParameterResolution:
         assert call_args.instrument_type == InstrumentType.PERPETUAL
 
 
+class TestDataAPIFetchHealth:
+    """Test DataAPI.fetch_health method."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_health_success(self, mock_router):
+        """Test health fetch builds correct request."""
+        mock_router.route.return_value = {"status": "ok"}
+
+        api = DataAPI(router=mock_router)
+        async with api:
+            result = await api.fetch_health(
+                exchange="binance",
+                market_type=MarketType.SPOT,
+            )
+
+        assert result == {"status": "ok"}
+        mock_router.route.assert_called_once()
+        call_args = mock_router.route.call_args[0][0]
+        assert isinstance(call_args, DataRequest)
+        assert call_args.feature == DataFeature.HEALTH
+        assert call_args.transport == TransportKind.REST
+        assert call_args.exchange == "binance"
+        assert call_args.market_type == MarketType.SPOT
+
+
 class TestDataAPIFetchOHLCV:
     """Test DataAPI.fetch_ohlcv method."""
 

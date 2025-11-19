@@ -32,6 +32,10 @@ from ...models import OHLCV, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 class RESTProvider(ABC):
     """Pure REST interface for market data providers."""
 
+    async def fetch_health(self) -> dict[str, object]:
+        """Fetch health of the provider."""
+        raise NotImplementedError("fetch_health not implemented for this provider")
+
     @abstractmethod
     async def fetch_ohlcv(
         self,
