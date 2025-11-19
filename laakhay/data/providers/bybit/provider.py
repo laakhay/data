@@ -198,6 +198,12 @@ class BybitProvider(BaseProvider):
         async for ob in self._ws.stream_order_book(symbol, update_speed=update_speed):
             yield ob
 
+    async def stream_order_book_multi(
+        self, symbols: list[str], update_speed: str = "100ms"
+    ) -> AsyncIterator[OrderBook]:
+        async for ob in self._ws.stream_order_book_multi(symbols, update_speed=update_speed):
+            yield ob
+
     @register_feature_handler(DataFeature.LIQUIDATIONS, TransportKind.WS)
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
         async for liq in self._ws.stream_liquidations():
