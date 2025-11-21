@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from laakhay.data.io.ws.transport import TransportConfig, WebSocketTransport
+from laakhay.data.runtime.ws import TransportConfig, WebSocketTransport
 
 
 class TestWebSocketTransport:

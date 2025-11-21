@@ -9,8 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from laakhay.data.io.rest.runner import ResponseAdapter, RestEndpointSpec, RestRunner
-from laakhay.data.io.rest.transport import RESTTransport
+from laakhay.data.runtime.rest import (
+    ResponseAdapter,
+    RestEndpointSpec,
+    RestRunner,
+    RESTTransport,
+)
 
 
 class TestRestRunner:

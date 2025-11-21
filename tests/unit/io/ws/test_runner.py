@@ -9,8 +9,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from laakhay.data.io.ws.runner import MessageAdapter, StreamRunner, WSEndpointSpec
-from laakhay.data.io.ws.transport import WebSocketTransport
+from laakhay.data.runtime.ws import (
+    MessageAdapter,
+    StreamRunner,
+    WebSocketTransport,
+    WSEndpointSpec,
+)
 
 
 class TestStreamRunner:

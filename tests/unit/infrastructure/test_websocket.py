@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from laakhay.data.io import ConnectionState, WebSocketClient
+from laakhay.data.runtime.ws import ConnectionState, WebSocketClient
 
 
 def test_websocket_client_initialization():
