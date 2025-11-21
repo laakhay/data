@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult
+from .executors import ChunkExecutor
 from .planners import ChunkPlanner
 
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     "ChunkResult",
     "ChunkPlan",
     "ChunkPlanner",
+    "ChunkExecutor",
 ]
