@@ -98,9 +98,12 @@ class Adapter(MessageAdapter):
                             else datetime.now(UTC)
                         ),
                         open_interest=Decimal(str(oi_str)),
-                        open_interest_value=(Decimal(str(oi_value_str)) if oi_value_str else None),
+                        open_interest_value=(
+                            Decimal(str(oi_value_str)) if oi_value_str else None
+                        ),
                     )
                 )
         except Exception:
             return []
         return out
+

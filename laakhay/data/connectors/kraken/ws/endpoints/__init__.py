@@ -98,3 +98,4 @@ __all__ = [
     "build_liquidations_spec",
     "LiquidationsAdapter",
 ]
+
