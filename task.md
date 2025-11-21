@@ -1,128 +1,85 @@
-## PR4: Introduce Connectors Namespace & Migrate Binance
+# Generic Chunking Layer - Task List
 
-### Goal
-Prove the connector structure (`connectors/<exchange>/rest|ws|urm`) with Binance as the most complex exchange, following the ideal architecture.
+## Goal
+Extract reusable chunking logic from exchange-specific implementations into a generic `runtime/chunking/` layer that can handle pagination, limit extension, and deduplication for any endpoint based on metadata.
 
-### Architecture Overview
-Based on `docs/laakhay-data-ideal-architecture.md`:
-- **Connector Plane**: Exchange-specific REST/WS implementations, endpoint metadata, adapters, URM mappers
-- **Structure**: `connectors/binance/rest/endpoints/<scope>/<endpoint>.py` - one module per endpoint (spec + adapter)
-- **Provider shims**: `providers/binance/` wraps connectors for DataRouter consumption
+## Architecture Reference
+Based on `docs/laakhay-data-ideal-architecture.md` Section 5:
+- **Chunk planners** read `EndpointDefinition` metadata (max_points, has_cursor, timestamp_key, weight tiers)
+- **Executors** call endpoint runner repeatedly, feeding start/end/cursor parameters
+- **Result builders** stitch typed results using adapter output
+- **Policies** (strict vs clamp) handle exchanges that reject out-of-range requests
 
-### Tasks
+## Current State
+- Chunking logic exists in `providers/binance/rest/provider.py` (shim, for backward compatibility)
+- Each exchange would need to reimplement similar chunking logic
+- No metadata-driven automatic chunking
 
-#### Phase 1: Scaffold Connectors Structure
-- [x] **connectors/binance: create package structure**
-  - Create `laakhay/data/connectors/__init__.py`
-  - Create `laakhay/data/connectors/binance/__init__.py`
-  - Create `laakhay/data/connectors/binance/rest/__init__.py`
-  - Create `laakhay/data/connectors/binance/rest/endpoints/__init__.py`
-  - Create `laakhay/data/connectors/binance/rest/endpoints/common/__init__.py`
-  - Create `laakhay/data/connectors/binance/rest/endpoints/spot/__init__.py`
-  - Create `laakhay/data/connectors/binance/rest/endpoints/futures/__init__.py`
-  - Create `laakhay/data/connectors/binance/ws/__init__.py`
-  - Create `laakhay/data/connectors/binance/ws/endpoints/__init__.py`
+## Target Structure
+```
+runtime/chunking/
+├── __init__.py
+├── definitions.py      # ChunkPolicy, ChunkHint, chunk semantics from EndpointDefinition
+├── planners.py         # ChunkPlanner - timeframe-aware window planning
+├── executors.py        # ChunkExecutor - generic chunk execution / dedupe
+└── telemetry.py        # Structured logs + metrics
+```
 
-#### Phase 2: Move URM and Constants
-- [x] **connectors/binance: move URM mapper**
-  - Move `providers/binance/urm.py` → `connectors/binance/urm.py`
-  - Update imports in provider registration
-  - Keep temporary import in `providers/binance/urm.py` for backward compatibility
+## Task Breakdown
 
-- [x] **connectors/binance: move constants**
-  - Move `providers/binance/constants.py` → `connectors/binance/config.py` (rename per architecture)
-  - Update all imports
+### Phase 1: Define Chunking Abstractions
+- [ ] **chunking/definitions.py: create chunk metadata structures**
+  - Define `ChunkPolicy` dataclass (max_points, max_chunks, requires_start_time, supports_auto_chunking)
+  - Define `ChunkHint` dataclass (cursor_field, timestamp_key, limit_field)
+  - Define `ChunkResult` dataclass (aggregated data, chunks_used, weight_consumed, throttle_applied)
+  - Helper to extract chunk metadata from `RestEndpointSpec`
 
-#### Phase 3: Port REST Endpoints to Modular Structure
-- [x] **connectors/binance/rest/endpoints: port OHLCV endpoint**
-  - Create `connectors/binance/rest/endpoints/common/ohlcv.py`
-  - Move `candles_spec()` logic into module, export as `SPEC: RestEndpointSpec`
-  - Move `CandlesResponseAdapter` from `providers/binance/rest/adapters.py`
-  - Export `SPEC` and `Adapter` class
+### Phase 2: Implement Chunk Planner
+- [ ] **chunking/planners.py: create ChunkPlanner**
+  - `plan()` method: takes user request (limit, start_time, end_time) + chunk policy
+  - Determine base page size = min(limit_policy.max_points, user_limit)
+  - If time range provided, align windows on timeframe boundaries
+  - Respect max_chunks and requires_start_time
+  - Return list of chunk plans (start_time, end_time, limit per chunk)
 
-- [x] **connectors/binance/rest/endpoints: port exchange_info endpoint**
-  - Create `connectors/binance/rest/endpoints/common/exchange_info.py`
-  - Move `exchange_info_spec()` logic, export as `SPEC: RestEndpointSpec`
-  - Move `ExchangeInfoSymbolsAdapter` from adapters.py
+### Phase 3: Implement Chunk Executor
+- [ ] **chunking/executors.py: create ChunkExecutor**
+  - `execute()` method: takes chunk plans + fetch function + adapter
+  - For each chunk: call fetch, parse with adapter, deduplicate
+  - Deduplicate using (symbol, timeframe, timestamp) key
+  - Drop bars older than last appended
+  - Stop early when endpoint returns fewer than requested
+  - Track rate-limit weights for telemetry
+  - Return aggregated result
 
-- [x] **connectors/binance/rest/endpoints: port remaining endpoints**
-  - Port all endpoints from `providers/binance/rest/endpoints.py` to individual modules:
-    - `order_book_spec()` → `spot/order_book.py` or `futures/order_book.py`
-    - `open_interest_current_spec()` → `futures/open_interest_current.py`
-    - `open_interest_hist_spec()` → `futures/open_interest_hist.py`
-    - `recent_trades_spec()` → `common/trades.py`
-    - `historical_trades_spec()` → `spot/historical_trades.py`
-    - `funding_rate_spec()` → `futures/funding_rate.py`
-  - Organize by scope: `common/`, `spot/`, `futures/`
-  - Each module exports `SPEC: RestEndpointSpec` and `Adapter: ResponseAdapter`
+### Phase 4: Integrate with Binance Connector
+- [ ] **connectors/binance/rest/provider.py: use generic chunking**
+  - Remove manual chunking logic from `fetch_ohlcv`
+  - Use `ChunkPlanner` and `ChunkExecutor` instead
+  - Ensure endpoint specs expose chunk metadata
+  - Test that chunking still works correctly
 
-- [x] **connectors/binance/rest: create endpoint registry**
-  - Create `connectors/binance/rest/endpoints/__init__.py` that discovers and exports all endpoints
-  - Implement `get_endpoint_spec(id: str) -> RestEndpointSpec | None`
-  - Implement `get_endpoint_adapter(id: str) -> ResponseAdapter | None`
-  - Export all endpoint specs and adapters for discovery
+### Phase 5: Add Telemetry
+- [ ] **chunking/telemetry.py: structured logging**
+  - Log chunk_completed events (chunk_idx, rows_aggregated, weight)
+  - Log chunk_plan events (total_chunks, window_size)
+  - Provide metrics hooks for observability
 
-#### Phase 4: Create REST Connector Provider
-- [x] **connectors/binance/rest: create provider.py**
-  - Create `BinanceRESTConnector` class that composes endpoint registry
-  - Implement methods that use endpoint definitions and adapters
-  - Support direct use by researchers (no capability validation)
-  - Register feature handlers via decorators
+### Phase 6: Update Tests
+- [ ] **tests: add chunking layer tests**
+  - Unit tests for ChunkPlanner (various scenarios)
+  - Unit tests for ChunkExecutor (deduplication, early stopping)
+  - Integration test with Binance connector
+  - Ensure backward compatibility
 
-#### Phase 5: Port WebSocket Endpoints
-- [x] **connectors/binance/ws/endpoints: port WS endpoint specs**
-  - Move WS endpoint specs from `providers/binance/ws/endpoints.py`
-  - Create individual modules per WS stream type
-  - Each module exports `WSEndpointSpec` (or equivalent)
+### Phase 7: Documentation
+- [ ] **docs: document chunking layer**
+  - Add usage examples
+  - Document chunk policies and hints
+  - Update architecture docs if needed
 
-- [x] **connectors/binance/ws: create provider.py**
-  - Create `BinanceWSConnector` class
-  - Implement streaming methods using endpoint specs
-  - Support direct use by researchers
-
-#### Phase 6: Create Unified Provider
-- [x] **connectors/binance: create provider.py**
-  - Create unified `BinanceProvider` that composes REST + WS connectors
-  - This is the provider used by DataRouter
-  - Register all feature handlers
-
-#### Phase 7: Convert Providers to Shims
-- [x] **providers/binance: convert to shims**
-  - Update `providers/binance/provider.py` to instantiate connectors
-  - Keep same public interface for backward compatibility
-  - Update `providers/binance/__init__.py` exports
-
-- [ ] **providers/binance: update registration**
-  - Update `register_binance()` to use connector-based provider
-  - Ensure URM mapper imports from connectors
-
-#### Phase 8: Update Discovery
-- [x] **capability/discovery: update for connectors**
-  - Update discovery to look in `connectors/<exchange>/rest/endpoints/`
-  - Update discovery to look in `connectors/<exchange>/ws/endpoints/`
-  - Ensure discovery finds all endpoint definitions
-
-#### Phase 9: Tests and Cleanup
-- [ ] **tests: update Binance tests**
-  - Move/adapt Binance-specific unit tests to connector modules
-  - Update test imports to use connector paths
-  - Ensure all tests pass
-
-- [ ] **cleanup: remove old endpoint files**
-  - Delete `providers/binance/rest/endpoints.py` (replaced by modular structure)
-  - Remove temporary shims once everything works
-  - Update any remaining imports
-
-#### Phase 10: Documentation
-- [ ] **docs: update Binance documentation**
-  - Document new connector structure
-  - Update examples to show connector usage
-  - Add notes about migration path
-
-### Notes
-- Keep backward compatibility during migration (temporary imports/shim files)
-- Follow the ideal architecture structure exactly
-- Each endpoint module should be self-contained (DEFINITION + Adapter)
-- Connectors should be usable directly by researchers (no router required)
-- Providers become thin shims that wrap connectors for DataRouter
-
+## Notes
+- Keep backward compatibility during migration
+- Chunking should work for any endpoint with proper metadata
+- Support both time-based and cursor-based pagination
+- Handle edge cases (limit=0, start>end, no data returned)
