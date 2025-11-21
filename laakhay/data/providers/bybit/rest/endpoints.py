@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....core import MarketType
-from ....io import RestEndpointSpec
+from ....runtime.rest import RestEndpointSpec
 from ..constants import CATEGORY_MAP, INTERVAL_MAP
 
 

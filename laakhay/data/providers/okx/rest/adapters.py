@@ -8,8 +8,8 @@ from decimal import Decimal
 from typing import Any
 
 from ....core.exceptions import DataError
-from ....io import ResponseAdapter
 from ....models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
+from ....runtime.rest import ResponseAdapter
 
 
 def _extract_result(response: Any) -> Any:

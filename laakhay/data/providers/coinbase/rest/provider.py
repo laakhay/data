@@ -11,8 +11,13 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ....core import MarketType, Timeframe
-from ....io import RESTProvider, RestRunner, RESTTransport
 from ....models import OHLCV, OrderBook, Symbol, Trade
+from ....runtime.rest import (
+    ResponseAdapter,
+    RESTProvider,
+    RestRunner,
+    RESTTransport,
+)
 from .adapters import (
     CandlesResponseAdapter,
     ExchangeInfoSymbolsAdapter,
@@ -205,7 +210,6 @@ class CoinbaseRESTProvider(RESTProvider):
         params = {"market_type": self.market_type}
         # Use passthrough adapter for raw data
         spec = exchange_info_raw_spec()
-        from ....io import ResponseAdapter
 
         class _Passthrough(ResponseAdapter):
             def parse(self, response: Any, params: dict[str, Any]) -> Any:

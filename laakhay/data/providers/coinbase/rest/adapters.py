@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from ....io import ResponseAdapter
 from ....models import OHLCV, Bar, OrderBook, SeriesMeta, Symbol, Trade
+from ....runtime.rest import ResponseAdapter
 from ..constants import normalize_symbol_from_coinbase
 
 

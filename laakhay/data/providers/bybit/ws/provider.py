@@ -11,8 +11,9 @@ from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
 
 from ....core import MarketType, Timeframe
-from ....io import MessageAdapter, WSProvider
 from ....models.streaming_bar import StreamingBar
+from ....runtime.ws import WSProvider
+from ....runtime.ws.runner import MessageAdapter
 from .adapters import (
     FundingRateAdapter,
     LiquidationsAdapter,

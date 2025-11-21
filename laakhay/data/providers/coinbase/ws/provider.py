@@ -10,8 +10,8 @@ from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
 
 from ....core import MarketType, Timeframe
-from ....io import MessageAdapter, WSProvider
 from ....models.streaming_bar import StreamingBar
+from ....runtime.ws import MessageAdapter, WSProvider
 from ..constants import WS_PUBLIC_URLS
 from .adapters import OhlcvAdapter, OrderBookAdapter, TradesAdapter
 from .endpoints import ohlcv_spec, order_book_spec, trades_spec

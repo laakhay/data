@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....core import MarketType, Timeframe
-from ....io import WSEndpointSpec
+from ....runtime.ws.runner import WSEndpointSpec
 from ..constants import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 
