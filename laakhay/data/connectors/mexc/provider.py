@@ -22,6 +22,10 @@ from laakhay.data.core import (
 )
 from laakhay.data.models import (
     OHLCV,
+    FundingRate,
+    Liquidation,
+    MarkPrice,
+    OpenInterest,
     OrderBook,
     StreamingBar,
     Symbol,
@@ -111,6 +115,50 @@ class MEXCProvider:
         """Fetch recent trades."""
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.REST)
+    async def fetch_historical_trades(
+        self,
+        symbol: str,
+        *,
+        limit: int | None = None,
+        from_id: int | None = None,
+    ) -> list[Trade]:
+        """Fetch historical trades."""
+        return await self._rest.fetch_historical_trades(symbol=symbol, limit=limit, from_id=from_id)
+
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.REST)
+    async def get_funding_rate(
+        self,
+        symbol: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 100,
+    ) -> list[FundingRate]:
+        """Fetch funding rates."""
+        return await self._rest.get_funding_rate(
+            symbol=symbol, start_time=start_time, end_time=end_time, limit=limit
+        )
+
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.REST)
+    async def get_open_interest(
+        self,
+        symbol: str,
+        historical: bool = False,
+        period: str = "5m",
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 30,
+    ) -> list[OpenInterest]:
+        """Fetch open interest."""
+        return await self._rest.get_open_interest(
+            symbol=symbol,
+            historical=historical,
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+        )
+
     @register_feature_handler(DataFeature.OHLCV, TransportKind.WS)
     async def stream_ohlcv(
         self,
@@ -144,6 +192,36 @@ class MEXCProvider:
         """Stream order book updates."""
         async for ob in self._ws.stream_order_book(symbol=symbol, update_speed=update_speed):
             yield ob
+
+    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.WS)
+    async def stream_open_interest(
+        self, symbols: list[str], period: str = "5m"
+    ) -> AsyncIterator[OpenInterest]:
+        """Stream open interest updates."""
+        async for oi in self._ws.stream_open_interest(symbols=symbols, period=period):
+            yield oi
+
+    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.WS)
+    async def stream_funding_rate(
+        self, symbols: list[str], update_speed: str = "1s"
+    ) -> AsyncIterator[FundingRate]:
+        """Stream funding rate updates."""
+        async for fr in self._ws.stream_funding_rate(symbols=symbols, update_speed=update_speed):
+            yield fr
+
+    @register_feature_handler(DataFeature.MARK_PRICE, TransportKind.WS)
+    async def stream_mark_price(
+        self, symbols: list[str], update_speed: str = "1s"
+    ) -> AsyncIterator[MarkPrice]:
+        """Stream mark price updates."""
+        async for mp in self._ws.stream_mark_price(symbols=symbols, update_speed=update_speed):
+            yield mp
+
+    @register_feature_handler(DataFeature.LIQUIDATIONS, TransportKind.WS)
+    async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
+        """Stream liquidation events."""
+        async for liq in self._ws.stream_liquidations():
+            yield liq
 
     async def close(self) -> None:
         """Close underlying resources."""

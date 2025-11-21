@@ -18,7 +18,14 @@ from typing import Any
 
 from laakhay.data.connectors.mexc.config import BASE_URLS, INTERVAL_MAP
 from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.models import OHLCV, OrderBook, Symbol, Trade
+from laakhay.data.models import (
+    OHLCV,
+    FundingRate,
+    OpenInterest,
+    OrderBook,
+    Symbol,
+    Trade,
+)
 from laakhay.data.runtime.chunking import extract_chunk_hint, extract_chunk_policy
 from laakhay.data.runtime.rest import RESTProvider, RestRunner, RESTTransport
 
@@ -263,6 +270,115 @@ class MEXCRESTConnector(RESTProvider):
         """
         params = {"symbol": symbol, "limit": limit}
         data = await self.fetch("recent_trades", params)
+        return list(data)
+
+    async def fetch_historical_trades(
+        self,
+        symbol: str,
+        *,
+        limit: int | None = None,
+        from_id: int | None = None,
+    ) -> list[Trade]:
+        """Fetch historical trades (available for both Spot and Futures, requires API key).
+
+        Args:
+            symbol: Trading symbol
+            limit: Optional limit on number of trades
+                - Spot: default 100, max 1000
+                - Futures: default 100, max 500
+            from_id: Optional trade ID to start from
+
+        Returns:
+            List of Trade objects
+
+        Raises:
+            ValueError: If API key missing
+        """
+        if not self._api_key:
+            raise ValueError("api_key is required to use MEXC historical trades endpoint")
+
+        params = {
+            "symbol": symbol,
+            "limit": limit,
+            "from_id": from_id,
+            "api_key": self._api_key,
+        }
+        data = await self.fetch("historical_trades", params)
+        return list(data)
+
+    async def get_funding_rate(
+        self,
+        symbol: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 100,
+    ) -> list[FundingRate]:
+        """Fetch historical applied funding rates (Futures-only).
+
+        Args:
+            symbol: Trading symbol
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Number of records (default 100, max 1000)
+
+        Returns:
+            List of FundingRate objects
+
+        Raises:
+            ValueError: If not futures market
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Funding rates are only available for Futures on MEXC")
+
+        params: dict[str, Any] = {
+            "symbol": symbol,
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+        data = await self.fetch("funding_rate", params)
+        return list(data)
+
+    async def get_open_interest(
+        self,
+        symbol: str,
+        historical: bool = False,
+        period: str = "5m",
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 30,
+    ) -> list[OpenInterest]:
+        """Fetch open interest (current or historical, Futures-only).
+
+        Args:
+            symbol: Trading symbol
+            historical: If True, fetch historical data
+            period: Period for historical data (default "5m")
+            start_time: Optional start time for historical
+            end_time: Optional end time for historical
+            limit: Number of records (default 30, max 500 for historical)
+
+        Returns:
+            List of OpenInterest objects
+
+        Raises:
+            ValueError: If not futures market
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Open interest is only available for Futures on MEXC")
+
+        if historical:
+            params: dict[str, Any] = {
+                "symbol": symbol,
+                "period": period,
+                "start_time": start_time,
+                "end_time": end_time,
+                "limit": limit,
+            }
+            data = await self.fetch("open_interest_hist", params)
+        else:
+            params = {"symbol": symbol}
+            data = await self.fetch("open_interest_current", params)
         return list(data)
 
     async def close(self) -> None:

@@ -10,8 +10,16 @@ from laakhay.data.core import MarketType
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
 
 # Import all endpoint modules
+from .funding_rate import Adapter as FundingRateAdapter
+from .funding_rate import build_spec as build_funding_rate_spec
+from .liquidations import Adapter as LiquidationsAdapter
+from .liquidations import build_spec as build_liquidations_spec
+from .mark_price import Adapter as MarkPriceAdapter
+from .mark_price import build_spec as build_mark_price_spec
 from .ohlcv import Adapter as OHLCVAdapter
 from .ohlcv import build_spec as build_ohlcv_spec
+from .open_interest import Adapter as OpenInterestAdapter
+from .open_interest import build_spec as build_open_interest_spec
 from .order_book import Adapter as OrderBookAdapter
 from .order_book import build_spec as build_order_book_spec
 from .trades import Adapter as TradesAdapter
@@ -32,6 +40,10 @@ def get_endpoint_spec(endpoint_id: str, market_type: MarketType) -> WSEndpointSp
         "ohlcv": build_ohlcv_spec,
         "trades": build_trades_spec,
         "order_book": build_order_book_spec,
+        "open_interest": build_open_interest_spec,
+        "mark_price": build_mark_price_spec,
+        "liquidations": build_liquidations_spec,
+        "funding_rate": build_funding_rate_spec,
     }
     builder = spec_builders.get(endpoint_id)
     if builder is None:
@@ -55,6 +67,10 @@ def get_endpoint_adapter(endpoint_id: str) -> type[MessageAdapter] | None:
         "ohlcv": OHLCVAdapter,
         "trades": TradesAdapter,
         "order_book": OrderBookAdapter,
+        "open_interest": OpenInterestAdapter,
+        "mark_price": MarkPriceAdapter,
+        "liquidations": LiquidationsAdapter,
+        "funding_rate": FundingRateAdapter,
     }
     return adapters.get(endpoint_id)
 
@@ -65,7 +81,15 @@ def list_endpoints() -> list[str]:
     Returns:
         List of endpoint identifiers
     """
-    return ["ohlcv", "trades", "order_book"]
+    return [
+        "ohlcv",
+        "trades",
+        "order_book",
+        "open_interest",
+        "mark_price",
+        "liquidations",
+        "funding_rate",
+    ]
 
 
 __all__ = [
@@ -79,4 +103,12 @@ __all__ = [
     "TradesAdapter",
     "build_order_book_spec",
     "OrderBookAdapter",
+    "build_open_interest_spec",
+    "OpenInterestAdapter",
+    "build_mark_price_spec",
+    "MarkPriceAdapter",
+    "build_liquidations_spec",
+    "LiquidationsAdapter",
+    "build_funding_rate_spec",
+    "FundingRateAdapter",
 ]

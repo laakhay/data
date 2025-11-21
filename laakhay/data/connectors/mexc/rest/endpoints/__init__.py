@@ -10,12 +10,32 @@ from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 from .common.exchange_info import SPEC as ExchangeInfoSpec  # noqa: N811
 from .common.exchange_info import Adapter as ExchangeInfoAdapter
+from .common.historical_trades import (
+    SPEC as HistoricalTradesSpec,  # noqa: N811
+)
+from .common.historical_trades import (
+    Adapter as HistoricalTradesAdapter,
+)
 from .common.ohlcv import SPEC as OHLCVSpec  # noqa: N811
 from .common.ohlcv import Adapter as OHLCVAdapter
 from .common.order_book import SPEC as OrderBookSpec  # noqa: N811
 from .common.order_book import Adapter as OrderBookAdapter
 from .common.trades import SPEC as TradesSpec  # noqa: N811
 from .common.trades import Adapter as TradesAdapter
+from .futures.funding_rate import SPEC as FundingRateSpec  # noqa: N811
+from .futures.funding_rate import Adapter as FundingRateAdapter
+from .futures.open_interest_current import (
+    SPEC as OpenInterestCurrentSpec,  # noqa: N811
+)
+from .futures.open_interest_current import (
+    Adapter as OpenInterestCurrentAdapter,
+)
+from .futures.open_interest_hist import (
+    SPEC as OpenInterestHistSpec,  # noqa: N811
+)
+from .futures.open_interest_hist import (
+    Adapter as OpenInterestHistAdapter,
+)
 
 # Registry mapping endpoint IDs to specs and adapters
 _ENDPOINT_REGISTRY: dict[str, tuple[RestEndpointSpec, type[ResponseAdapter]]] = {
@@ -23,6 +43,10 @@ _ENDPOINT_REGISTRY: dict[str, tuple[RestEndpointSpec, type[ResponseAdapter]]] = 
     "exchange_info": (ExchangeInfoSpec, ExchangeInfoAdapter),
     "order_book": (OrderBookSpec, OrderBookAdapter),
     "recent_trades": (TradesSpec, TradesAdapter),
+    "historical_trades": (HistoricalTradesSpec, HistoricalTradesAdapter),
+    "open_interest_current": (OpenInterestCurrentSpec, OpenInterestCurrentAdapter),
+    "open_interest_hist": (OpenInterestHistSpec, OpenInterestHistAdapter),
+    "funding_rate": (FundingRateSpec, FundingRateAdapter),
 }
 
 
@@ -74,4 +98,12 @@ __all__ = [
     "OrderBookAdapter",
     "TradesSpec",
     "TradesAdapter",
+    "HistoricalTradesSpec",
+    "HistoricalTradesAdapter",
+    "OpenInterestCurrentSpec",
+    "OpenInterestCurrentAdapter",
+    "OpenInterestHistSpec",
+    "OpenInterestHistAdapter",
+    "FundingRateSpec",
+    "FundingRateAdapter",
 ]

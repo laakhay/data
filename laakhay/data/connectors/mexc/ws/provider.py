@@ -22,7 +22,14 @@ from laakhay.data.runtime.ws import StreamRunner, WSProvider
 from .endpoints import get_endpoint_adapter, get_endpoint_spec
 
 if TYPE_CHECKING:
-    from laakhay.data.models import OrderBook, Trade
+    from laakhay.data.models import (
+        FundingRate,
+        Liquidation,
+        MarkPrice,
+        OpenInterest,
+        OrderBook,
+        Trade,
+    )
 
 
 class MEXCWSConnector(WSProvider):
@@ -155,6 +162,60 @@ class MEXCWSConnector(WSProvider):
             OrderBook objects
         """
         async for obj in self.stream("order_book", symbols, {"update_speed": update_speed}):
+            yield obj
+
+    async def stream_open_interest(
+        self, symbols: list[str], period: str = "5m"
+    ) -> AsyncIterator[OpenInterest]:
+        """Stream open interest updates (Futures-only).
+
+        Args:
+            symbols: List of trading symbols
+            period: Update period (default "5m")
+
+        Yields:
+            OpenInterest objects
+        """
+        async for obj in self.stream("open_interest", symbols, {"period": period}):
+            yield obj
+
+    async def stream_funding_rate(
+        self, symbols: list[str], update_speed: str = "1s"
+    ) -> AsyncIterator[FundingRate]:
+        """Stream funding rate updates (Futures-only).
+
+        Args:
+            symbols: List of trading symbols
+            update_speed: Update speed (default "1s")
+
+        Yields:
+            FundingRate objects
+        """
+        async for obj in self.stream("funding_rate", symbols, {"update_speed": update_speed}):
+            yield obj
+
+    async def stream_mark_price(
+        self, symbols: list[str], update_speed: str = "1s"
+    ) -> AsyncIterator[MarkPrice]:
+        """Stream mark price updates.
+
+        Args:
+            symbols: List of trading symbols
+            update_speed: Update speed (default "1s")
+
+        Yields:
+            MarkPrice objects
+        """
+        async for obj in self.stream("mark_price", symbols, {"update_speed": update_speed}):
+            yield obj
+
+    async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
+        """Stream liquidation events (Futures-only, global stream).
+
+        Yields:
+            Liquidation objects
+        """
+        async for obj in self.stream("liquidations", ["!forceOrder@arr"], {}):
             yield obj
 
     async def stream(
