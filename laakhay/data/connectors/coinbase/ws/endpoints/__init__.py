@@ -1,0 +1,2 @@
+"""Coinbase WebSocket endpoints package."""
+
