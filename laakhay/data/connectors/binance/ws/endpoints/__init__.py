@@ -10,12 +10,18 @@ from laakhay.data.core import MarketType
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
 
 # Import all endpoint modules
-from .liquidations import Adapter as LiquidationsAdapter, build_spec as build_liquidations_spec
-from .mark_price import Adapter as MarkPriceAdapter, build_spec as build_mark_price_spec
-from .ohlcv import Adapter as OHLCVAdapter, build_spec as build_ohlcv_spec
-from .open_interest import Adapter as OpenInterestAdapter, build_spec as build_open_interest_spec
-from .order_book import Adapter as OrderBookAdapter, build_spec as build_order_book_spec
-from .trades import Adapter as TradesAdapter, build_spec as build_trades_spec
+from .liquidations import Adapter as LiquidationsAdapter
+from .liquidations import build_spec as build_liquidations_spec
+from .mark_price import Adapter as MarkPriceAdapter
+from .mark_price import build_spec as build_mark_price_spec
+from .ohlcv import Adapter as OHLCVAdapter
+from .ohlcv import build_spec as build_ohlcv_spec
+from .open_interest import Adapter as OpenInterestAdapter
+from .open_interest import build_spec as build_open_interest_spec
+from .order_book import Adapter as OrderBookAdapter
+from .order_book import build_spec as build_order_book_spec
+from .trades import Adapter as TradesAdapter
+from .trades import build_spec as build_trades_spec
 
 
 def get_endpoint_spec(endpoint_id: str, market_type: MarketType) -> WSEndpointSpec | None:

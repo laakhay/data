@@ -57,6 +57,9 @@ class BinanceProvider(BaseProvider):
             rest_connector=rest_provider,
             ws_connector=ws_provider,
         )
+        # Expose _rest and _ws for backward compatibility with tests
+        self._rest = self._connector._rest
+        self._ws = self._connector._ws
         self._owns_rest = rest_provider is None
         self._owns_ws = ws_provider is None
         self._closed = False

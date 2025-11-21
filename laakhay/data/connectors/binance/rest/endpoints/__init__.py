@@ -10,23 +10,35 @@ from typing import Any
 
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
+from .common.exchange_info import SPEC as ExchangeInfoSpec
+
 # Import all endpoint modules
-from .common.exchange_info import Adapter as ExchangeInfoAdapter, SPEC as ExchangeInfoSpec
-from .common.ohlcv import Adapter as OHLCVAdapter, SPEC as OHLCVSpec
-from .common.order_book import Adapter as OrderBookAdapter, SPEC as OrderBookSpec
-from .common.trades import Adapter as TradesAdapter, SPEC as TradesSpec
-from .futures.funding_rate import Adapter as FundingRateAdapter, SPEC as FundingRateSpec
+from .common.exchange_info import Adapter as ExchangeInfoAdapter
+from .common.ohlcv import SPEC as OHLCVSpec
+from .common.ohlcv import Adapter as OHLCVAdapter
+from .common.order_book import SPEC as OrderBookSpec
+from .common.order_book import Adapter as OrderBookAdapter
+from .common.trades import SPEC as TradesSpec
+from .common.trades import Adapter as TradesAdapter
+from .futures.funding_rate import SPEC as FundingRateSpec
+from .futures.funding_rate import Adapter as FundingRateAdapter
+from .futures.open_interest_current import (
+    SPEC as OpenInterestCurrentSpec,
+)
 from .futures.open_interest_current import (
     Adapter as OpenInterestCurrentAdapter,
-    SPEC as OpenInterestCurrentSpec,
+)
+from .futures.open_interest_hist import (
+    SPEC as OpenInterestHistSpec,
 )
 from .futures.open_interest_hist import (
     Adapter as OpenInterestHistAdapter,
-    SPEC as OpenInterestHistSpec,
+)
+from .spot.historical_trades import (
+    SPEC as HistoricalTradesSpec,
 )
 from .spot.historical_trades import (
     Adapter as HistoricalTradesAdapter,
-    SPEC as HistoricalTradesSpec,
 )
 
 # Registry mapping endpoint IDs to specs and adapters

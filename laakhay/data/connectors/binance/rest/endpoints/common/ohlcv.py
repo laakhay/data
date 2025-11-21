@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.core import MarketType
-from laakhay.data.models import Bar, OHLCV, SeriesMeta
+from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 

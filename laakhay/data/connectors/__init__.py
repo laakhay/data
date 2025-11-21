@@ -9,4 +9,3 @@ Architecture:
 """
 
 __all__: list[str] = []
-

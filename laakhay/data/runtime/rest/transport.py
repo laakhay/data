@@ -18,11 +18,23 @@ class RESTTransport:
     def add_response_hook(self, hook: Callable[[Any], float | None]) -> None:
         self._http.add_response_hook(hook)
 
-    async def get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
-        return await self._http.get(path, params=params)
+    async def get(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
+        return await self._http.get(path, params=params, headers=headers)
 
-    async def post(self, path: str, *, json_body: dict[str, Any] | None = None) -> Any:
-        return await self._http.post(path, json=json_body)
+    async def post(
+        self,
+        path: str,
+        *,
+        json_body: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
+        return await self._http.post(path, json=json_body, headers=headers)
 
     async def close(self) -> None:
         await self._http.close()
