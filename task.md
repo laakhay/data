@@ -53,7 +53,7 @@ runtime/chunking/
   - Return aggregated result
 
 ### Phase 4: Integrate with Binance Connector
-- [ ] **connectors/binance/rest/provider.py: use generic chunking**
+- [x] **connectors/binance/rest/provider.py: use generic chunking**
   - Remove manual chunking logic from `fetch_ohlcv`
   - Use `ChunkPlanner` and `ChunkExecutor` instead
   - Ensure endpoint specs expose chunk metadata
