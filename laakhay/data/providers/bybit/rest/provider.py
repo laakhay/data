@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ....core import MarketType, Timeframe
-from ....io import RESTProvider, RestRunner, RESTTransport
 from ....models import (
     OHLCV,
     FundingRate,
@@ -18,6 +17,12 @@ from ....models import (
     OrderBook,
     Symbol,
     Trade,
+)
+from ....runtime.rest import (
+    ResponseAdapter,
+    RESTProvider,
+    RestRunner,
+    RESTTransport,
 )
 from .adapters import (
     CandlesResponseAdapter,
@@ -200,7 +205,6 @@ class BybitRESTProvider(RESTProvider):
         # Adapter returns symbols list; but for raw we can just reuse and reassemble dict
         # Better: have a Passthrough adapter; for now fetch via runner directly
         spec = exchange_info_raw_spec()
-        from ....io import ResponseAdapter
 
         class _Passthrough(ResponseAdapter):
             def parse(self, response: Any, params: dict[str, Any]) -> Any:

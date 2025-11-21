@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from websockets.exceptions import ConnectionClosed
 
-from laakhay.data.io.ws.client import ConnectionState, WebSocketClient
+from laakhay.data.runtime.ws import ConnectionState, WebSocketClient
 
 
 class TestWebSocketClientInitialization:

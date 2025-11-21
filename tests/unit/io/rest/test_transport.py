@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from laakhay.data.io.rest.transport import RESTTransport
+from laakhay.data.runtime.rest import RESTTransport
 
 
 class TestRESTTransport:

@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 import aiohttp
 import pytest
 
-from laakhay.data.io.rest.http import HTTPClient
+from laakhay.data.runtime.rest import HTTPClient
 
 
 class TestHTTPClientSessionManagement:

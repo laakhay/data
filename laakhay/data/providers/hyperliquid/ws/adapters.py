@@ -12,9 +12,9 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from ....io import MessageAdapter
 from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from ....models.streaming_bar import StreamingBar
+from ....runtime.ws import MessageAdapter
 
 
 class OhlcvAdapter(MessageAdapter):

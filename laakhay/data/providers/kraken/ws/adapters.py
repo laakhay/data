@@ -7,9 +7,9 @@ from decimal import Decimal
 from typing import Any
 
 from ....core import MarketType
-from ....io import MessageAdapter
 from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 from ....models.streaming_bar import StreamingBar
+from ....runtime.ws import MessageAdapter
 from ..constants import normalize_symbol_from_kraken
 
 

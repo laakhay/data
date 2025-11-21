@@ -13,8 +13,8 @@ from typing import Any
 
 from ....core import MarketType
 from ....core.exceptions import DataError
-from ....io import ResponseAdapter
 from ....models import OHLCV, Bar, FundingRate, OpenInterest, OrderBook, SeriesMeta, Symbol, Trade
+from ....runtime.rest import ResponseAdapter
 
 logger = logging.getLogger(__name__)
 

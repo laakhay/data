@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....core import MarketType, Timeframe
-from ....io import WSEndpointSpec
+from ....runtime.ws import WSEndpointSpec
 from ..constants import INTERVAL_MAP, WS_PUBLIC_URLS, normalize_symbol_to_coinbase
 
 

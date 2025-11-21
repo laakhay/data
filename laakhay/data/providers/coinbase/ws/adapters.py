@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from ....io import MessageAdapter
 from ....models import OrderBook, Trade
 from ....models.streaming_bar import StreamingBar
+from ....runtime.ws import MessageAdapter
 from ..constants import normalize_symbol_from_coinbase
 
 
