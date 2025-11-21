@@ -63,6 +63,9 @@ class ChunkPlanner:
         # Determine effective max chunks
         effective_max_chunks = max_chunks or self._policy.max_chunks
 
+        # Log plan creation (will be updated with actual chunk count)
+        endpoint_id = getattr(self, "_endpoint_id", "unknown")
+
         # Fast path: single request is enough
         if (
             limit is not None
@@ -100,11 +103,20 @@ class ChunkPlanner:
             )
 
         # Limit-based chunking (no time range)
-        return self._plan_limit_based(
+        plans = self._plan_limit_based(
             limit=limit,
             chunk_limit=chunk_limit,
             max_chunks=effective_max_chunks,
         )
+
+        # Log plan creation
+        log_chunk_plan(
+            endpoint_id=endpoint_id,
+            total_chunks=len(plans),
+            total_limit=limit,
+        )
+
+        return plans
 
     def _plan_time_based(
         self,
@@ -195,6 +207,16 @@ class ChunkPlanner:
             # Check if we've reached the end time
             if end_time is not None and current_start >= end_time:
                 break
+
+        # Log plan creation
+        log_chunk_plan(
+            endpoint_id=getattr(self, "_endpoint_id", "unknown"),
+            total_chunks=len(plans),
+            window_size=int(window_size.total_seconds()) if window_size else None,
+            total_limit=limit,
+            start_time=start_time,
+            end_time=end_time,
+        )
 
         return plans
 

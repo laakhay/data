@@ -28,6 +28,12 @@ from .definitions import (
 )
 from .executors import ChunkExecutor
 from .planners import ChunkPlanner
+from .telemetry import (
+    log_chunk_completed,
+    log_chunk_error,
+    log_chunk_execution_complete,
+    log_chunk_plan,
+)
 
 __all__ = [
     "ChunkPolicy",
@@ -38,4 +44,8 @@ __all__ = [
     "ChunkExecutor",
     "extract_chunk_policy",
     "extract_chunk_hint",
+    "log_chunk_plan",
+    "log_chunk_completed",
+    "log_chunk_execution_complete",
+    "log_chunk_error",
 ]
