@@ -8,32 +8,32 @@ from __future__ import annotations
 
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
-from .common.exchange_info import SPEC as ExchangeInfoSpec
+from .common.exchange_info import SPEC as ExchangeInfoSpec  # noqa: N811
 
 # Import all endpoint modules
 from .common.exchange_info import Adapter as ExchangeInfoAdapter
 from .common.historical_trades import (
-    SPEC as HistoricalTradesSpec,
+    SPEC as HistoricalTradesSpec,  # noqa: N811
 )
 from .common.historical_trades import (
     Adapter as HistoricalTradesAdapter,
 )
-from .common.ohlcv import SPEC as OHLCVSpec
+from .common.ohlcv import SPEC as OHLCVSpec  # noqa: N811
 from .common.ohlcv import Adapter as OHLCVAdapter
-from .common.order_book import SPEC as OrderBookSpec
+from .common.order_book import SPEC as OrderBookSpec  # noqa: N811
 from .common.order_book import Adapter as OrderBookAdapter
-from .common.trades import SPEC as TradesSpec
+from .common.trades import SPEC as TradesSpec  # noqa: N811
 from .common.trades import Adapter as TradesAdapter
-from .futures.funding_rate import SPEC as FundingRateSpec
+from .futures.funding_rate import SPEC as FundingRateSpec  # noqa: N811
 from .futures.funding_rate import Adapter as FundingRateAdapter
 from .futures.open_interest_current import (
-    SPEC as OpenInterestCurrentSpec,
+    SPEC as OpenInterestCurrentSpec,  # noqa: N811
 )
 from .futures.open_interest_current import (
     Adapter as OpenInterestCurrentAdapter,
 )
 from .futures.open_interest_hist import (
-    SPEC as OpenInterestHistSpec,
+    SPEC as OpenInterestHistSpec,  # noqa: N811
 )
 from .futures.open_interest_hist import (
     Adapter as OpenInterestHistAdapter,
