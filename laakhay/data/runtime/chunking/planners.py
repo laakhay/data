@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 from ...core.enums import Timeframe
 from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, calculate_chunk_window_size
+from .telemetry import log_chunk_plan
 
 
 class ChunkPlanner:
