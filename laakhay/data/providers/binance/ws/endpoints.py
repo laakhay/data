@@ -6,7 +6,7 @@ from typing import Any
 
 from ....core import MarketType, Timeframe
 from ....runtime.ws.runner import WSEndpointSpec
-from ..constants import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
+from laakhay.data.connectors.binance.config import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 
 def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:

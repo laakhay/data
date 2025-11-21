@@ -61,7 +61,7 @@ class BinanceRESTProvider(RESTProvider):
     ) -> None:
         self.market_type = market_type
         self._api_key = api_key
-        from ..constants import BASE_URLS
+        from laakhay.data.connectors.binance.config import BASE_URLS
 
         self._transport = RESTTransport(base_url=BASE_URLS[market_type])
         self._runner = RestRunner(self._transport)
@@ -112,7 +112,7 @@ class BinanceRESTProvider(RESTProvider):
         limit: int | None = None,
         max_chunks: int | None = None,
     ) -> OHLCV:
-        from ..constants import INTERVAL_MAP as BINANCE_INTERVAL_MAP
+        from laakhay.data.connectors.binance.config import INTERVAL_MAP as BINANCE_INTERVAL_MAP
 
         if isinstance(timeframe, str):
             parsed_timeframe = Timeframe.from_str(timeframe)

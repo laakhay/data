@@ -53,7 +53,7 @@ class BinanceProvider(BaseProvider):
         self._closed = False
 
     def get_timeframes(self) -> list[str]:
-        from .constants import INTERVAL_MAP
+        from laakhay.data.connectors.binance.config import INTERVAL_MAP
 
         return list(INTERVAL_MAP.keys())
 

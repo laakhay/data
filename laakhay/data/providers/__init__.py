@@ -12,9 +12,11 @@ from laakhay.data.core import MarketType
 from laakhay.data.providers.binance import (
     BinanceProvider,
     BinanceRESTProvider,
-    BinanceURM,
     BinanceWSProvider,
 )
+
+# Import URM from connectors
+from laakhay.data.connectors.binance.urm import BinanceURM
 from laakhay.data.providers.bybit import (
     BybitProvider,
     BybitRESTProvider,

@@ -2,8 +2,10 @@
 
 from .provider import BinanceProvider
 from .rest.provider import BinanceRESTProvider
-from .urm import BinanceURM
 from .ws.provider import BinanceWSProvider
+
+# Import URM from connectors
+from laakhay.data.connectors.binance.urm import BinanceURM
 
 __all__ = [
     "BinanceProvider",
