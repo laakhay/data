@@ -1,0 +1,2 @@
+"""Kraken REST connector package."""
+

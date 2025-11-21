@@ -162,25 +162,24 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
 
     Args:
         registry: Optional registry instance (defaults to global singleton)
-
-    Note:
-        This registers a minimal stub provider. Full implementation with
-        feature handlers will be added once REST and WS connectors are complete.
     """
     if registry is None:
         registry = get_provider_registry()
 
+    # Import URM from providers shim
+    # Import provider from connectors (full implementation)
     from laakhay.data.connectors.kraken.provider import KrakenProvider
     from laakhay.data.providers.kraken import KrakenURM
 
-    # Register minimal stub provider with URM mapper
-    # Feature handlers will be added once full implementation is complete
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
+
     registry.register(
         "kraken",
         KrakenProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
         urm_mapper=KrakenURM(),  # noqa: F405
-        feature_handlers={},  # Empty for now - will be populated when complete
+        feature_handlers=feature_handlers,
     )
 
 
