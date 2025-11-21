@@ -1,4 +1,4 @@
-"""OKX funding rate endpoint definition and adapter.
+"""OKX historical open interest endpoint definition and adapter.
 
 This endpoint is Futures-only.
 """
@@ -10,33 +10,40 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.core import MarketType
-from laakhay.data.models import FundingRate
+from laakhay.data.models import OpenInterest
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
-from ....config import to_okx_symbol
+from ....config import OI_PERIOD_MAP, to_okx_symbol
 
 
 def build_path(params: dict[str, Any]) -> str:
-    """Build the fundingRate path (futures only)."""
+    """Build the open-interest-history path (futures only)."""
     market: MarketType = params["market_type"]
     if market != MarketType.FUTURES:
-        raise ValueError("Funding rate endpoint is Futures-only on OKX")
-    return "/api/v5/public/funding-rate"
+        raise ValueError("Open interest history endpoint is Futures-only on OKX")
+    return "/api/v5/public/open-interest-history"
 
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
-    """Build query parameters for fundingRate endpoint."""
+    """Build query parameters for open-interest-history endpoint."""
+    period = params.get("period", "5m")
+    period_str = OI_PERIOD_MAP.get(period, "5m")
+
     q: dict[str, Any] = {
         "instId": to_okx_symbol(params["symbol"]),
+        "period": period_str,
+        "limit": min(int(params.get("limit", 100)), 100),  # OKX max is 100
     }
-    if params.get("limit"):
-        q["limit"] = min(int(params.get("limit", 100)), 100)  # OKX max is 100
+    if params.get("start_time"):
+        q["before"] = int(params["start_time"].timestamp() * 1000)
+    if params.get("end_time"):
+        q["after"] = int(params["end_time"].timestamp() * 1000)
     return q
 
 
 # Endpoint specification
 SPEC = RestEndpointSpec(
-    id="funding_rate",
+    id="open_interest_hist",
     method="GET",
     build_path=build_path,
     build_query=build_query,
@@ -65,17 +72,17 @@ def _extract_result(response: Any) -> Any:
 
 
 class Adapter(ResponseAdapter):
-    """Adapter for parsing OKX fundingRate response into FundingRate list."""
+    """Adapter for parsing OKX open-interest-history response into OpenInterest list."""
 
-    def parse(self, response: Any, params: dict[str, Any]) -> list[FundingRate]:
-        """Parse OKX fundingRate response.
+    def parse(self, response: Any, params: dict[str, Any]) -> list[OpenInterest]:
+        """Parse OKX open-interest-history response.
 
         Args:
-            response: Raw response from OKX API (list of funding rate data)
+            response: Raw response from OKX API
             params: Request parameters containing symbol
 
         Returns:
-            List of FundingRate objects
+            List of OpenInterest objects
         """
         data = _extract_result(response)
         symbol = params["symbol"].upper()
@@ -83,39 +90,35 @@ class Adapter(ResponseAdapter):
         if not isinstance(data, list):
             return []
 
-        out: list[FundingRate] = []
+        out: list[OpenInterest] = []
         for row in data:
-            if not isinstance(row, dict):
+            if not isinstance(row, list) or len(row) < 2:
                 continue
 
             try:
-                # OKX format: {instId, fundingRate, fundingTime, nextFundingTime, markPx}
-                fr_str = row.get("fundingRate")
-                ts_str = row.get("fundingTime", "")
-                mark_price_str = row.get("markPx")
-
-                if fr_str is None or not ts_str:
-                    continue
-
-                # Convert timestamp
+                # OKX format: [ts, oi, oiCcy]
+                ts_str = str(row[0])
                 if "T" in ts_str:
                     ts_dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
                     ts_ms = int(ts_dt.timestamp() * 1000)
                 else:
                     ts_ms = int(ts_str)
 
-                funding_rate = Decimal(str(fr_str))
-                mark_price = Decimal(str(mark_price_str)) if mark_price_str else None
+                oi_str = row[1] if len(row) > 1 else None
+                oi_value_str = row[2] if len(row) > 2 else None
+
+                if oi_str is None:
+                    continue
 
                 out.append(
-                    FundingRate(
+                    OpenInterest(
                         symbol=symbol,
-                        funding_time=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
-                        funding_rate=funding_rate,
-                        mark_price=mark_price,
+                        timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
+                        open_interest=Decimal(str(oi_str)),
+                        open_interest_value=Decimal(str(oi_value_str)) if oi_value_str else None,
                     )
                 )
-            except (ValueError, TypeError, KeyError):
+            except (ValueError, TypeError, IndexError):
                 continue
 
         return out
