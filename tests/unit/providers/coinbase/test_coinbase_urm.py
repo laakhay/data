@@ -2,8 +2,8 @@
 
 import pytest
 
+from laakhay.data.connectors.coinbase.urm import CoinbaseURM
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
-from laakhay.data.providers.coinbase.urm import CoinbaseURM
 
 
 def test_coinbase_urm_spot_to_spec():

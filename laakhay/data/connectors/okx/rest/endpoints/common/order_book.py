@@ -12,7 +12,7 @@ from typing import Any
 from laakhay.data.models import OrderBook
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
-from ...config import to_okx_symbol
+from ....config import to_okx_symbol
 
 
 def build_path(params: dict[str, Any]) -> str:

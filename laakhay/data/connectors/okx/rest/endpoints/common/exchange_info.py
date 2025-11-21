@@ -13,7 +13,7 @@ from laakhay.data.core import MarketType
 from laakhay.data.models import Symbol
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
-from ...config import INST_TYPE_MAP
+from ....config import INST_TYPE_MAP
 
 
 def build_path(params: dict[str, Any]) -> str:
