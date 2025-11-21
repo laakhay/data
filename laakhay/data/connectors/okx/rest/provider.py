@@ -1,0 +1,359 @@
+"""OKX REST connector for direct use by researchers.
+
+This connector provides direct access to OKX REST endpoints without
+going through the DataRouter or capability validation. It's designed for
+research use cases where developers want full control.
+
+Architecture:
+    This connector uses the endpoint registry to look up specs and adapters,
+    then uses RestRunner to execute requests. It implements RESTProvider
+    interface for compatibility with the router system.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from time import perf_counter
+from typing import Any
+
+from laakhay.data.connectors.okx.config import BASE_URLS, INTERVAL_MAP
+from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.models import (
+    OHLCV,
+    FundingRate,
+    OpenInterest,
+    OrderBook,
+    Symbol,
+    Trade,
+)
+from laakhay.data.runtime.chunking import (
+    extract_chunk_hint,
+    extract_chunk_policy,
+)
+from laakhay.data.runtime.rest import (
+    RESTProvider,
+    RestRunner,
+    RESTTransport,
+)
+
+from .endpoints import get_endpoint_adapter, get_endpoint_spec
+
+
+class OKXRESTConnector(RESTProvider):
+    """OKX REST connector for direct research use.
+
+    This connector can be used directly without going through DataRouter.
+    It provides full access to OKX REST endpoints with automatic
+    endpoint spec and adapter resolution.
+    """
+
+    _MAX_CANDLES_PER_REQUEST = 300  # OKX max is 300
+    _DEFAULT_MAX_CANDLE_CHUNKS = 5
+
+    def __init__(
+        self,
+        market_type: MarketType,
+        *,
+        api_key: str | None = None,
+        api_secret: str | None = None,
+    ) -> None:
+        """Initialize OKX REST connector.
+
+        Args:
+            market_type: Market type (spot or futures)
+            api_key: Optional API key for authenticated endpoints
+            api_secret: Optional API secret (not currently used)
+        """
+        self.market_type = market_type
+        self._api_key = api_key
+        self._transport = RESTTransport(base_url=BASE_URLS[market_type])
+        self._runner = RestRunner(self._transport)
+
+    async def fetch_health(self) -> dict[str, object]:
+        """Ping OKX REST API to verify connectivity."""
+        path = "/api/v5/public/time"
+        start = perf_counter()
+        await self._transport.get(path)
+        latency_ms = (perf_counter() - start) * 1000.0
+        return {
+            "exchange": "okx",
+            "market_type": self.market_type.value,
+            "status": "ok",
+            "latency_ms": latency_ms,
+            "endpoint": path,
+        }
+
+    async def fetch(self, endpoint_id: str, params: dict[str, Any]) -> Any:
+        """Fetch data from an OKX REST endpoint.
+
+        Args:
+            endpoint_id: Endpoint identifier (e.g., "ohlcv", "order_book")
+            params: Request parameters
+
+        Returns:
+            Parsed response from the endpoint adapter
+
+        Raises:
+            ValueError: If endpoint_id is not found in registry
+        """
+        spec = get_endpoint_spec(endpoint_id)
+        if spec is None:
+            raise ValueError(f"Unknown REST endpoint: {endpoint_id}")
+
+        adapter_cls = get_endpoint_adapter(endpoint_id)
+        if adapter_cls is None:
+            raise ValueError(f"No adapter found for endpoint: {endpoint_id}")
+
+        # Ensure market_type is in params
+        params = {**params, "market_type": self.market_type}
+
+        adapter = adapter_cls()
+        return await self._runner.run(spec=spec, adapter=adapter, params=params)
+
+    async def fetch_ohlcv(
+        self,
+        symbol: str,
+        interval: Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+    ) -> OHLCV:
+        """Fetch OHLCV bars for a symbol and timeframe.
+
+        Uses generic chunking layer if endpoint supports it and limit exceeds max_points.
+
+        Args:
+            symbol: Trading symbol (e.g., "BTC-USDT")
+            interval: Timeframe for bars
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Optional limit on number of bars
+            max_chunks: Optional maximum number of chunks
+
+        Returns:
+            OHLCV object with bars
+        """
+        if interval not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {interval}")
+
+        # Get endpoint spec to check for chunking support
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
+
+        chunk_policy = extract_chunk_policy(spec)
+        chunk_hint = extract_chunk_hint(spec)
+
+        # Use generic chunking if policy exists and limit exceeds max_points
+        if (
+            chunk_policy
+            and chunk_policy.supports_auto_chunking
+            and limit is not None
+            and limit > chunk_policy.max_points
+        ):
+            return await self._fetch_ohlcv_chunked(
+                symbol=symbol,
+                interval=interval,
+                start_time=start_time,
+                end_time=end_time,
+                limit=limit,
+                max_chunks=max_chunks,
+                chunk_policy=chunk_policy,
+                chunk_hint=chunk_hint,
+            )
+
+        # Simple path: single request
+        params = {
+            "symbol": symbol,
+            "interval": interval,
+            "interval_str": INTERVAL_MAP[interval],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+        result: OHLCV = await self.fetch("ohlcv", params)
+        return result
+
+    async def _fetch_ohlcv_chunked(
+        self,
+        symbol: str,
+        interval: Timeframe,
+        start_time: datetime | None,
+        end_time: datetime | None,
+        limit: int,
+        max_chunks: int | None,
+        chunk_policy: Any,
+        chunk_hint: Any,
+    ) -> OHLCV:
+        """Fetch OHLCV using generic chunking layer."""
+        from laakhay.data.runtime.chunking import ChunkExecutor, ChunkPlanner
+
+        planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
+        plans = planner.plan(
+            limit=limit,
+            start_time=start_time,
+            end_time=end_time,
+            timeframe=interval,
+            max_chunks=max_chunks,
+        )
+
+        async def fetch_chunk(plan: Any) -> OHLCV:
+            params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": interval,
+                "interval_str": INTERVAL_MAP[interval],
+                "start_time": plan.start_time,
+                "end_time": plan.end_time,
+                "limit": plan.limit,
+            }
+            return await self.fetch("ohlcv", params)
+
+        # Get metadata from first chunk for reconstruction
+        first_chunk = await fetch_chunk(plans[0])
+
+        executor = ChunkExecutor(policy=chunk_policy, hint=chunk_hint)
+        result = await executor.execute(
+            plans=plans,
+            fetch_chunk=fetch_chunk,
+        )
+
+        # Executor extracts bars and aggregates them as a list
+        # We need to reconstruct OHLCV from aggregated bars
+        if isinstance(result.data, list):
+            # Executor returned list of bars
+            return OHLCV(meta=first_chunk.meta, bars=result.data)
+
+        # If executor preserved OHLCV structure (shouldn't happen with current impl)
+        if isinstance(result.data, OHLCV):
+            return result.data
+
+        # Fallback: try to extract bars
+        if hasattr(result.data, "bars") and hasattr(result.data, "meta"):
+            return OHLCV(meta=result.data.meta, bars=result.data.bars)
+
+        raise ValueError(f"Unexpected result type: {type(result.data)}")
+
+    async def get_symbols(
+        self, quote_asset: str | None = None, use_cache: bool = True
+    ) -> list[Symbol]:
+        """List trading symbols, optionally filtered by quote asset.
+
+        Args:
+            quote_asset: Optional quote asset filter (e.g., "USDT")
+            use_cache: Whether to use cached results (not implemented yet)
+
+        Returns:
+            List of Symbol objects
+        """
+        params = {"quote_asset": quote_asset}
+        data = await self.fetch("exchange_info", params)
+        return list(data) if use_cache else data
+
+    async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
+        """Fetch current order book.
+
+        Args:
+            symbol: Trading symbol
+            limit: Depth limit (default 100)
+
+        Returns:
+            OrderBook object
+        """
+        params = {"symbol": symbol, "limit": limit}
+        result: OrderBook = await self.fetch("order_book", params)
+        return result
+
+    async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
+        """Fetch recent trades.
+
+        Args:
+            symbol: Trading symbol
+            limit: Number of trades to fetch (default 500, max 500)
+
+        Returns:
+            List of Trade objects
+        """
+        params = {"symbol": symbol, "limit": limit}
+        data = await self.fetch("recent_trades", params)
+        return list(data)
+
+    async def get_funding_rate(
+        self,
+        symbol: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 100,
+    ) -> list[FundingRate]:
+        """Fetch historical applied funding rates (Futures-only).
+
+        Args:
+            symbol: Trading symbol
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Number of records (default 100, max 100)
+
+        Returns:
+            List of FundingRate objects
+
+        Raises:
+            ValueError: If not futures market
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Funding rates are only available for Futures on OKX")
+
+        params: dict[str, Any] = {
+            "symbol": symbol,
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+        data = await self.fetch("funding_rate", params)
+        return list(data)
+
+    async def get_open_interest(
+        self,
+        symbol: str,
+        historical: bool = False,
+        period: str = "5m",
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 30,
+    ) -> list[OpenInterest]:
+        """Fetch open interest (current or historical, Futures-only).
+
+        Args:
+            symbol: Trading symbol
+            historical: If True, fetch historical data
+            period: Period for historical data (default "5m")
+            start_time: Optional start time for historical
+            end_time: Optional end time for historical
+            limit: Number of records (default 30, max 100 for historical)
+
+        Returns:
+            List of OpenInterest objects
+
+        Raises:
+            ValueError: If not futures market
+        """
+        if self.market_type != MarketType.FUTURES:
+            raise ValueError("Open interest is only available for Futures on OKX")
+
+        if historical:
+            params: dict[str, Any] = {
+                "symbol": symbol,
+                "period": period,
+                "start_time": start_time,
+                "end_time": end_time,
+                "limit": limit,
+            }
+            data = await self.fetch("open_interest_hist", params)
+        else:
+            params = {"symbol": symbol}
+            data = await self.fetch("open_interest_current", params)
+        return list(data)
+
+    async def close(self) -> None:
+        """Close underlying HTTP resources."""
+        await self._transport.close()

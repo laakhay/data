@@ -13,7 +13,7 @@ from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
-from ...config import INTERVAL_MAP, to_okx_symbol
+from ....config import INTERVAL_MAP, to_okx_symbol
 
 
 def build_path(params: dict[str, Any]) -> str:
@@ -145,3 +145,4 @@ class Adapter(ResponseAdapter):
         bars.reverse()
 
         return OHLCV(meta=meta, bars=bars)
+
