@@ -29,7 +29,7 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
     if not ws_single:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
-    def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
+    def build_stream_name(symbol: str, _params: dict[str, Any]) -> str:
         # Bybit format: publicTrade.{symbol}
         return f"publicTrade.{symbol.upper()}"
 
@@ -113,3 +113,4 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
+

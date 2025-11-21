@@ -50,7 +50,7 @@ class BybitRESTConnector(RESTProvider):
         market_type: MarketType,
         *,
         api_key: str | None = None,
-        api_secret: str | None = None,
+        api_secret: str | None = None,  # noqa: ARG002
     ) -> None:
         """Initialize Bybit REST connector.
 

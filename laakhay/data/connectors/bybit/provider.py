@@ -58,6 +58,7 @@ class BybitProvider:
             rest_connector: Optional REST connector instance
             ws_connector: Optional WebSocket connector instance
         """
+        self.name = "bybit"
         self.market_type = market_type
         self._rest = rest_connector or BybitRESTConnector(
             market_type=market_type, api_key=api_key, api_secret=api_secret
@@ -221,3 +222,12 @@ class BybitProvider:
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
+
+    async def __aenter__(self) -> "BybitProvider":
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()
+

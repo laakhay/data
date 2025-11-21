@@ -35,7 +35,7 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
     if not ws_single:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
-    def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
+    def build_stream_name(symbol: str, _params: dict[str, Any]) -> str:
         # Bybit format: markPrice.{symbol}
         return f"markPrice.{symbol.upper()}"
 
@@ -107,9 +107,9 @@ class Adapter(MessageAdapter):
                     mark_price=mark_price,
                     index_price=index_price,
                     estimated_settle_price=None,  # Bybit doesn't provide
-                    last_funding_rate=Decimal(str(data.get("fundingRate", "0")))
-                    if data.get("fundingRate")
-                    else None,
+                    last_funding_rate=(
+                        Decimal(str(data.get("fundingRate", "0"))) if data.get("fundingRate") else None
+                    ),
                     next_funding_time=(
                         datetime.fromtimestamp(int(data["nextFundingTime"]) / 1000, tz=UTC)
                         if data.get("nextFundingTime")
@@ -121,3 +121,4 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
+

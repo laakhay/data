@@ -34,7 +34,7 @@ def _extract_result(response: Any) -> Any:
     return result
 
 
-def build_path(params: dict[str, Any]) -> str:
+def build_path(params: dict[str, Any]) -> str:  # noqa: ARG001
     """Build the open-interest path (futures only)."""
     market: MarketType = params["market_type"]
     if market != MarketType.FUTURES:
@@ -102,3 +102,4 @@ class Adapter(ResponseAdapter):
             ]
         except (ValueError, KeyError, TypeError):
             return []
+

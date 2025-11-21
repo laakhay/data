@@ -34,7 +34,7 @@ def _extract_result(response: Any) -> Any:
     return result
 
 
-def build_path(params: dict[str, Any]) -> str:
+def build_path(_params: dict[str, Any]) -> str:
     """Build the orderbook path (same for both market types)."""
     return "/v5/market/orderbook"
 
@@ -126,3 +126,4 @@ class Adapter(ResponseAdapter):
             asks=asks,
             timestamp=timestamp,
         )
+

@@ -35,7 +35,7 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     # Bybit liquidations stream is global: liquidation.{symbol} or all symbols
-    def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
+    def build_stream_name(symbol: str, _params: dict[str, Any]) -> str:  # noqa: ARG001
         # Bybit supports both symbol-specific and global liquidation streams
         # For global, use "liquidation" without symbol
         # For symbol-specific, use "liquidation.{symbol}"
@@ -43,7 +43,7 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
             return f"liquidation.{symbol.upper()}"
         return "liquidation"  # Global stream
 
-    def build_combined_url(names: list[str]) -> str:
+    def build_combined_url(_names: list[str]) -> str:  # noqa: ARG001
         # Not applicable for liquidations; single global stream
         raise ValueError("Combined stream not supported for liquidations")
 
@@ -119,3 +119,4 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
+
