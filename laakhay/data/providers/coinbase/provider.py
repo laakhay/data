@@ -8,7 +8,13 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 
-from ...capability.registry import CapabilityStatus, supports
+from laakhay.data.connectors.coinbase.provider import (
+    CoinbaseProvider as ConnectorCoinbaseProvider,
+)
+from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
+from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
+
+from ...capability.registry import CapabilityStatus
 from ...core import (
     BaseProvider,
     DataFeature,
@@ -19,11 +25,6 @@ from ...core import (
     register_feature_handler,
 )
 from ...models import OHLCV, OrderBook, StreamingBar, Symbol, Trade
-from laakhay.data.connectors.coinbase.provider import (
-    CoinbaseProvider as ConnectorCoinbaseProvider,
-)
-from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
-from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
 
 
 class CoinbaseProvider(BaseProvider):
@@ -79,7 +80,9 @@ class CoinbaseProvider(BaseProvider):
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
-        return await self._connector_provider.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
+        return await self._connector_provider.get_symbols(
+            quote_asset=quote_asset, use_cache=use_cache
+        )
 
     @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.REST)
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
@@ -145,7 +148,9 @@ class CoinbaseProvider(BaseProvider):
     async def stream_order_book(
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
-        async for book in self._connector_provider.stream_order_book(symbol, update_speed=update_speed):
+        async for book in self._connector_provider.stream_order_book(
+            symbol, update_speed=update_speed
+        ):
             yield book
 
     @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.WS)

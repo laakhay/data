@@ -78,7 +78,9 @@ class CoinbaseWSProvider(WSProvider):
     async def stream_order_book_multi(
         self, symbols: list[str], update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
-        async for obj in self._connector.stream_order_book_multi(symbols, update_speed=update_speed):
+        async for obj in self._connector.stream_order_book_multi(
+            symbols, update_speed=update_speed
+        ):
             yield obj
 
     async def close(self) -> None:

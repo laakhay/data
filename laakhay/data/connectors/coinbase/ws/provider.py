@@ -238,4 +238,3 @@ class CoinbaseWSConnector(WSProvider):
     async def close(self) -> None:
         """Close underlying resources."""
         return None
-

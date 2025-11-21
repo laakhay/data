@@ -20,32 +20,66 @@ from laakhay.data.providers import (
     CoinbaseRESTProvider,
     CoinbaseWSProvider,
 )
-from laakhay.data.providers.coinbase.constants import (
+from laakhay.data.connectors.coinbase.config import (
     INTERVAL_MAP,
     normalize_symbol_from_coinbase,
     normalize_symbol_to_coinbase,
 )
-from laakhay.data.providers.coinbase.rest.adapters import (
-    CandlesResponseAdapter,
-    ExchangeInfoSymbolsAdapter,
-    OrderBookResponseAdapter,
-    RecentTradesAdapter,
+from laakhay.data.connectors.coinbase.rest.endpoints.common.exchange_info import (
+    Adapter as ExchangeInfoSymbolsAdapter,
+    SPEC as ExchangeInfoSpec,  # noqa: N811
 )
-from laakhay.data.providers.coinbase.rest.endpoints import (
-    candles_spec,
-    exchange_info_spec,
-    order_book_spec,
-    recent_trades_spec,
+from laakhay.data.connectors.coinbase.rest.endpoints.common.ohlcv import (
+    Adapter as CandlesResponseAdapter,
+    SPEC as OHLCVSpec,  # noqa: N811
 )
-from laakhay.data.providers.coinbase.ws.adapters import (
-    OhlcvAdapter,
-    OrderBookAdapter,
-    TradesAdapter,
+from laakhay.data.connectors.coinbase.rest.endpoints.common.order_book import (
+    Adapter as OrderBookResponseAdapter,
+    SPEC as OrderBookSpec,  # noqa: N811
 )
-from laakhay.data.providers.coinbase.ws.endpoints import (
-    ohlcv_spec,
-    trades_spec,
+from laakhay.data.connectors.coinbase.rest.endpoints.common.trades import (
+    Adapter as RecentTradesAdapter,
+    SPEC as TradesSpec,  # noqa: N811
 )
+from laakhay.data.connectors.coinbase.ws.endpoints.ohlcv import (
+    Adapter as OhlcvAdapter,
+    build_spec as build_ohlcv_spec,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.order_book import (
+    Adapter as OrderBookAdapter,
+    build_spec as build_order_book_spec,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.trades import (
+    Adapter as TradesAdapter,
+    build_spec as build_trades_spec,
+)
+
+
+# Legacy function names for backward compatibility in tests
+def candles_spec():
+    return OHLCVSpec
+
+
+def exchange_info_spec():
+    return ExchangeInfoSpec
+
+
+def order_book_spec():
+    return OrderBookSpec
+
+
+def recent_trades_spec():
+    return TradesSpec
+
+
+def ohlcv_spec(market_type):
+    return build_ohlcv_spec(market_type)
+
+
+def trades_spec(market_type):
+    return build_trades_spec(market_type)
+
+
 from laakhay.data.providers.coinbase.ws.endpoints import (
     order_book_spec as ws_order_book_spec,
 )

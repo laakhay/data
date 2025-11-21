@@ -6,7 +6,11 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.connectors.coinbase.config import WS_PUBLIC_URLS, normalize_symbol_from_coinbase, normalize_symbol_to_coinbase
+from laakhay.data.connectors.coinbase.config import (
+    WS_PUBLIC_URLS,
+    normalize_symbol_from_coinbase,
+    normalize_symbol_to_coinbase,
+)
 from laakhay.data.core import MarketType
 from laakhay.data.models import OrderBook
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
@@ -143,4 +147,3 @@ class Adapter(MessageAdapter):
             return []
 
         return out
-

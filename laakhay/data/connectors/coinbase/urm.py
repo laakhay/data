@@ -102,4 +102,3 @@ class CoinbaseURM:
             )
 
         return f"{spec.base}-{spec.quote}"
-

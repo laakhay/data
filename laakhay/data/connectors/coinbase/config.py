@@ -112,4 +112,3 @@ def normalize_symbol_from_coinbase(symbol: str) -> str:
 
     # Remove hyphen as fallback
     return symbol.replace("-", "").upper()
-

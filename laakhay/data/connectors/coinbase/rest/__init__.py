@@ -1,2 +1,1 @@
 """Coinbase REST connector package."""
-

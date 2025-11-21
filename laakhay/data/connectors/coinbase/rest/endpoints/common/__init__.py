@@ -1,2 +1,1 @@
 """Coinbase common REST endpoints."""
-

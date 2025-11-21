@@ -6,10 +6,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from laakhay.data.connectors.coinbase.config import normalize_symbol_to_coinbase
 from laakhay.data.core import MarketType
 from laakhay.data.models import Trade
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
-from laakhay.data.connectors.coinbase.config import normalize_symbol_to_coinbase
 
 
 def build_path(params: dict[str, Any]) -> str:
@@ -139,4 +139,3 @@ class Adapter(ResponseAdapter):
                 continue
 
         return out
-

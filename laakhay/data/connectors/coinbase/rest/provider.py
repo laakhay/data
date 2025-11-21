@@ -208,4 +208,3 @@ class CoinbaseRESTConnector(RESTProvider):
     async def close(self) -> None:
         """Close underlying resources."""
         await self._transport.close()
-

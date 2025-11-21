@@ -1,2 +1,1 @@
 """Coinbase WebSocket connector package."""
-
