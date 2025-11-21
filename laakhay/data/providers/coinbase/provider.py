@@ -15,6 +15,8 @@ from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
 from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
 
 from ...capability.registry import CapabilityStatus
+from ..coinbase.rest.provider import CoinbaseRESTProvider
+from ..coinbase.ws.provider import CoinbaseWSProvider
 from ...core import (
     BaseProvider,
     DataFeature,
@@ -51,9 +53,19 @@ class CoinbaseProvider(BaseProvider):
             rest_connector=rest_provider,
             ws_connector=ws_provider,
         )
-        # Expose _rest and _ws for backward compatibility with tests
-        self._rest = self._connector_provider._rest
-        self._ws = self._connector_provider._ws
+        # Expose _rest and _ws as shims for backward compatibility with tests
+        # Wrap connectors in shims so tests can check isinstance
+        self._rest = CoinbaseRESTProvider(
+            market_type=market_type,
+            api_key=api_key,
+            api_secret=api_secret,
+        )
+        # Use the connector's transport for the shim
+        self._rest._connector = self._connector_provider._rest
+        self._rest._transport = self._connector_provider._rest._transport
+        self._ws = CoinbaseWSProvider(market_type=market_type)
+        # Use the connector for the shim
+        self._ws._connector = self._connector_provider._ws
 
     def get_timeframes(self) -> list[str]:
         return self._connector_provider.get_timeframes()

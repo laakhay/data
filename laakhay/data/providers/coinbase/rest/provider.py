@@ -177,7 +177,10 @@ class CoinbaseRESTProvider(RESTProvider):
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
         """Get trading symbols."""
-        return await self._connector.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
+        # Use shim's fetch method so tests can mock it
+        params = {"quote_asset": quote_asset}
+        data = await self.fetch("exchange_info", params)
+        return list(data) if use_cache else data
 
     async def get_exchange_info(self) -> dict:
         """Return raw exchange info payload."""
