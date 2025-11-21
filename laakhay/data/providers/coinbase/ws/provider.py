@@ -7,7 +7,7 @@ The actual implementation has been moved to connectors/coinbase/ws/provider.py.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
 
@@ -80,6 +80,39 @@ class CoinbaseWSProvider(WSProvider):
     ) -> AsyncIterator[OrderBook]:
         async for obj in self._connector.stream_order_book_multi(
             symbols, update_speed=update_speed
+        ):
+            yield obj
+
+    async def stream(
+        self,
+        endpoint_id: str,
+        symbols: list[str],
+        params: dict[str, Any],
+        *,
+        only_closed: bool = False,
+        throttle_ms: int | None = None,
+        dedupe_key: Any | None = None,
+    ) -> AsyncIterator[Any]:
+        """Stream data from a Coinbase WebSocket endpoint (for backward compatibility).
+
+        Args:
+            endpoint_id: Endpoint identifier
+            symbols: List of trading symbols
+            params: Request parameters
+            only_closed: Only yield closed candles (for OHLCV)
+            throttle_ms: Optional throttle in milliseconds
+            dedupe_key: Optional deduplication key function
+
+        Yields:
+            Parsed messages from the endpoint adapter
+        """
+        async for obj in self._connector.stream(
+            endpoint_id,
+            symbols,
+            params,
+            only_closed=only_closed,
+            throttle_ms=throttle_ms,
+            dedupe_key=dedupe_key,
         ):
             yield obj
 
