@@ -235,6 +235,36 @@ class CoinbaseWSConnector(WSProvider):
         async for obj in self.stream("order_book", symbols, {}):
             yield obj
 
+    async def stream_funding_rate(self, symbols: list[str]) -> AsyncIterator[Any]:
+        """Stream funding rate updates (not supported for Coinbase).
+
+        Args:
+            symbols: List of trading symbols
+
+        Raises:
+            NotImplementedError: Coinbase Advanced Trade API does not support funding rates
+        """
+        raise NotImplementedError("Coinbase Advanced Trade API does not support funding rates")
+
+    async def stream_open_interest(self, symbols: list[str]) -> AsyncIterator[Any]:
+        """Stream open interest updates (not supported for Coinbase).
+
+        Args:
+            symbols: List of trading symbols
+
+        Raises:
+            NotImplementedError: Coinbase Advanced Trade API does not support open interest
+        """
+        raise NotImplementedError("Coinbase Advanced Trade API does not support open interest")
+
+    async def stream_liquidations(self) -> AsyncIterator[Any]:
+        """Stream liquidation updates (not supported for Coinbase).
+
+        Raises:
+            NotImplementedError: Coinbase Advanced Trade API does not support liquidations
+        """
+        raise NotImplementedError("Coinbase Advanced Trade API does not support liquidations")
+
     async def close(self) -> None:
         """Close underlying resources."""
         return None
