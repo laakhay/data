@@ -73,4 +73,3 @@ class Adapter(ResponseAdapter):
             for row in response
         ]
         return OHLCV(meta=meta, bars=bars)
-
