@@ -9,6 +9,7 @@ from typing import Any
 from laakhay.data.connectors.coinbase.config import normalize_symbol_to_coinbase
 from laakhay.data.core import MarketType
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
+from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
@@ -52,12 +53,33 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
     return q
 
 
+# Chunking policy for OHLCV endpoint
+# Coinbase returns up to 300 candles per request
+CHUNK_POLICY = ChunkPolicy(
+    max_points=300,  # Coinbase limit
+    max_chunks=None,  # No hard limit
+    requires_start_time=False,
+    supports_auto_chunking=True,
+    weight_per_request=1,
+)
+
+# Chunk hints for time-based chunking
+CHUNK_HINT = ChunkHint(
+    timestamp_key="timestamp",
+    limit_field="limit",
+    start_time_field="start_time",
+    end_time_field="end_time",
+    timeframe_field="interval",
+)
+
 # Endpoint specification
 SPEC = RestEndpointSpec(
     id="ohlcv",
     method="GET",
     build_path=build_path,
     build_query=build_query,
+    chunk_policy=CHUNK_POLICY,
+    chunk_hint=CHUNK_HINT,
 )
 
 

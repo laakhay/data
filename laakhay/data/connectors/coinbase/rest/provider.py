@@ -19,6 +19,7 @@ from typing import Any
 from laakhay.data.connectors.coinbase.config import BASE_URLS, INTERVAL_MAP
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import OHLCV, OrderBook, Symbol, Trade
+from laakhay.data.runtime.chunking import extract_chunk_hint, extract_chunk_policy
 from laakhay.data.runtime.rest import RESTProvider, RestRunner, RESTTransport
 
 from .endpoints import get_endpoint_adapter, get_endpoint_spec
@@ -146,7 +147,33 @@ class CoinbaseRESTConnector(RESTProvider):
 
         interval_str = INTERVAL_MAP[timeframe]
 
-        # Simple path: delegate to fetch
+        # Get endpoint spec to check for chunking support
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
+
+        chunk_policy = extract_chunk_policy(spec)
+        chunk_hint = extract_chunk_hint(spec)
+
+        # Use generic chunking if policy exists and limit exceeds max_points
+        if (
+            chunk_policy
+            and chunk_policy.supports_auto_chunking
+            and limit is not None
+            and limit > chunk_policy.max_points
+        ):
+            return await self._fetch_ohlcv_chunked(
+                symbol=symbol,
+                interval=timeframe,
+                start_time=start_time,
+                end_time=end_time,
+                limit=limit,
+                max_chunks=max_chunks,
+                chunk_policy=chunk_policy,
+                chunk_hint=chunk_hint,
+            )
+
+        # Simple path: single request
         params = {
             "symbol": symbol,
             "interval": timeframe,
@@ -157,6 +184,72 @@ class CoinbaseRESTConnector(RESTProvider):
         }
         result: OHLCV = await self.fetch("ohlcv", params)
         return result
+
+    async def _fetch_ohlcv_chunked(
+        self,
+        symbol: str,
+        interval: Timeframe,
+        start_time: datetime | None,
+        end_time: datetime | None,
+        limit: int,
+        max_chunks: int | None,
+        chunk_policy: Any,
+        chunk_hint: Any,
+    ) -> OHLCV:
+        """Fetch OHLCV using generic chunking layer."""
+        from laakhay.data.runtime.chunking import ChunkExecutor, ChunkPlanner
+
+        planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
+        plans = planner.plan(
+            limit=limit,
+            start_time=start_time,
+            end_time=end_time,
+            timeframe=interval,
+            max_chunks=max_chunks,
+        )
+
+        async def fetch_chunk(plan: Any) -> OHLCV:
+            params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": interval,
+                "interval_str": INTERVAL_MAP[interval],
+                "start_time": plan.start_time,
+                "end_time": plan.end_time,
+                "limit": plan.limit,
+            }
+            return await self.fetch("ohlcv", params)
+
+        executor = ChunkExecutor(policy=chunk_policy, hint=chunk_hint)
+        result = await executor.execute(
+            plans=plans,
+            fetch_chunk=fetch_chunk,
+        )
+
+        # Executor extracts bars and aggregates them as a list
+        # We need to reconstruct OHLCV from aggregated bars
+        if isinstance(result.data, list):
+            # Executor returned list of bars
+            # Create metadata from first bar or use defaults
+            if result.data:
+                from laakhay.data.models import SeriesMeta
+
+                meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+                return OHLCV(meta=meta, bars=result.data)
+            else:
+                # Fallback: fetch first chunk for metadata only if no data
+                first_chunk = await fetch_chunk(plans[0])
+                return OHLCV(meta=first_chunk.meta, bars=result.data)
+
+        # If executor preserved OHLCV structure (shouldn't happen with current impl)
+        if isinstance(result.data, OHLCV):
+            return result.data
+
+        # Fallback: try to extract bars
+        if hasattr(result.data, "bars") and hasattr(result.data, "meta"):
+            return OHLCV(meta=result.data.meta, bars=result.data.bars)
+
+        raise ValueError(f"Unexpected result type: {type(result.data)}")
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
@@ -211,6 +304,46 @@ class CoinbaseRESTConnector(RESTProvider):
         params = {"symbol": symbol, "limit": limit}
         data = await self.fetch("recent_trades", params)
         return list(data)
+
+    async def get_funding_rate(
+        self,
+        symbol: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 100,
+    ) -> Any:
+        """Get funding rate (not supported for Coinbase).
+
+        Args:
+            symbol: Trading symbol
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Number of records
+
+        Raises:
+            NotImplementedError: Coinbase Advanced Trade API does not support funding rates
+        """
+        raise NotImplementedError("Coinbase Advanced Trade API does not support funding rates")
+
+    async def get_open_interest(
+        self,
+        symbol: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int = 100,
+    ) -> Any:
+        """Get open interest (not supported for Coinbase).
+
+        Args:
+            symbol: Trading symbol
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Number of records
+
+        Raises:
+            NotImplementedError: Coinbase Advanced Trade API does not support open interest
+        """
+        raise NotImplementedError("Coinbase Advanced Trade API does not support open interest")
 
     async def close(self) -> None:
         """Close underlying resources."""

@@ -191,7 +191,8 @@ async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
 
     assert calls[0]["limit"] == 1000
     assert calls[1]["limit"] == 200
-    assert calls[1]["start_time"] == base_time + timedelta(minutes=1000)
+    # Chunk planner adds 1 interval to avoid overlap between chunks
+    assert calls[1]["start_time"] == base_time + timedelta(minutes=1000 + 1)
 
 
 @pytest.mark.asyncio

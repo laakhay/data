@@ -150,15 +150,33 @@ def _extract_result(response: Any, market_type: MarketType) -> Any:
 
     Returns:
         Extracted result data
+
+    Raises:
+        DataError: If response contains an error
     """
+    from laakhay.data.core.exceptions import DataError
+
+    if not isinstance(response, dict):
+        return response
+
+    # Check for errors in Kraken Spot format
+    errors = response.get("error", [])
+    if errors and len(errors) > 0:
+        error_msg = errors[0] if isinstance(errors, list) else str(errors)
+        raise DataError(f"Kraken API error: {error_msg}")
+
+    # Check for errors in Kraken Futures format
+    if "error" in response and response["error"]:
+        raise DataError(f"Kraken API error: {response.get('error', 'Unknown error')}")
+
     if market_type == MarketType.FUTURES:
         # Futures format: {"result": "ok", "serverTime": ..., "data": {...}}
-        if isinstance(response, dict) and "result" in response:
+        if "result" in response:
             return response.get("data", response)
         return response
     else:
         # Spot format: {"error": [], "result": {...}}
-        if isinstance(response, dict) and "result" in response:
+        if "result" in response:
             return response["result"]
         return response
 

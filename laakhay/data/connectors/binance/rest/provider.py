@@ -210,9 +210,6 @@ class BinanceRESTConnector(RESTProvider):
             }
             return await self.fetch("ohlcv", params)
 
-        # Get metadata from first chunk for reconstruction
-        first_chunk = await fetch_chunk(plans[0])
-
         executor = ChunkExecutor(policy=chunk_policy, hint=chunk_hint)
         result = await executor.execute(
             plans=plans,
@@ -223,7 +220,17 @@ class BinanceRESTConnector(RESTProvider):
         # We need to reconstruct OHLCV from aggregated bars
         if isinstance(result.data, list):
             # Executor returned list of bars
-            return OHLCV(meta=first_chunk.meta, bars=result.data)
+            # Get metadata from first chunk by fetching it (or use first bar's metadata)
+            if result.data:
+                # Create metadata for OHLCV
+                from laakhay.data.models import SeriesMeta
+
+                meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+                return OHLCV(meta=meta, bars=result.data)
+            else:
+                # Fallback: fetch first chunk for metadata only if no data
+                first_chunk = await fetch_chunk(plans[0])
+                return OHLCV(meta=first_chunk.meta, bars=result.data)
 
         # If executor preserved OHLCV structure (shouldn't happen with current impl)
         if isinstance(result.data, OHLCV):

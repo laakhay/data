@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.connectors.kraken.config import WS_SINGLE_URLS
+from laakhay.data.connectors.kraken.constants import normalize_symbol_from_kraken
 from laakhay.data.core import MarketType
 from laakhay.data.models import Liquidation
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
@@ -80,12 +81,25 @@ class Adapter(MessageAdapter):
 
         try:
             # Kraken Futures format: {"feed": "liquidation", "symbol": "...", "side": "...", "orderType": "...", "price": ..., "qty": ..., "time": ...}
-            symbol = str(payload.get("symbol", ""))
+            # Or: {"channel": "liquidation", "symbol": "...", "data": {"side": ..., ...}}
+            raw_symbol = str(payload.get("symbol", ""))
+            # Infer market type and normalize symbol
+            market_type = MarketType.FUTURES if raw_symbol.startswith("PI_") else MarketType.SPOT
+            symbol = normalize_symbol_from_kraken(raw_symbol, market_type) if raw_symbol else ""
             side = str(payload.get("side", ""))
             order_type = str(payload.get("orderType") or payload.get("order_type", ""))
             price_str = payload.get("price")
             qty_str = payload.get("qty") or payload.get("size")
             time_ms = payload.get("time", 0)
+
+            # Check if data is in nested "data" field
+            data = payload.get("data")
+            if isinstance(data, dict):
+                side = side or str(data.get("side", ""))
+                order_type = order_type or str(data.get("orderType") or data.get("order_type", ""))
+                price_str = price_str or data.get("price")
+                qty_str = qty_str or data.get("qty") or data.get("size")
+                time_ms = time_ms or data.get("time", 0)
 
             if symbol and price_str and qty_str:
                 out.append(
