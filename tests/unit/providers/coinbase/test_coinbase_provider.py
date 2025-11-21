@@ -7,6 +7,53 @@ from typing import Any
 
 import pytest
 
+from laakhay.data.connectors.coinbase.config import (
+    INTERVAL_MAP,
+    normalize_symbol_from_coinbase,
+    normalize_symbol_to_coinbase,
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.exchange_info import (
+    SPEC as ExchangeInfoSpec,  # noqa: N811
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.exchange_info import (
+    Adapter as ExchangeInfoSymbolsAdapter,
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.ohlcv import (
+    SPEC as OHLCVSpec,  # noqa: N811
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.ohlcv import (
+    Adapter as CandlesResponseAdapter,
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.order_book import (
+    SPEC as OrderBookSpec,  # noqa: N811
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.order_book import (
+    Adapter as OrderBookResponseAdapter,
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.trades import (
+    SPEC as TradesSpec,  # noqa: N811
+)
+from laakhay.data.connectors.coinbase.rest.endpoints.common.trades import (
+    Adapter as RecentTradesAdapter,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.ohlcv import (
+    Adapter as OhlcvAdapter,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.ohlcv import (
+    build_spec as build_ohlcv_spec,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.order_book import (
+    Adapter as OrderBookAdapter,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.order_book import (
+    build_spec as build_order_book_spec,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.trades import (
+    Adapter as TradesAdapter,
+)
+from laakhay.data.connectors.coinbase.ws.endpoints.trades import (
+    build_spec as build_trades_spec,
+)
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import (
     OHLCV,
@@ -19,39 +66,6 @@ from laakhay.data.providers import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
     CoinbaseWSProvider,
-)
-from laakhay.data.connectors.coinbase.config import (
-    INTERVAL_MAP,
-    normalize_symbol_from_coinbase,
-    normalize_symbol_to_coinbase,
-)
-from laakhay.data.connectors.coinbase.rest.endpoints.common.exchange_info import (
-    Adapter as ExchangeInfoSymbolsAdapter,
-    SPEC as ExchangeInfoSpec,  # noqa: N811
-)
-from laakhay.data.connectors.coinbase.rest.endpoints.common.ohlcv import (
-    Adapter as CandlesResponseAdapter,
-    SPEC as OHLCVSpec,  # noqa: N811
-)
-from laakhay.data.connectors.coinbase.rest.endpoints.common.order_book import (
-    Adapter as OrderBookResponseAdapter,
-    SPEC as OrderBookSpec,  # noqa: N811
-)
-from laakhay.data.connectors.coinbase.rest.endpoints.common.trades import (
-    Adapter as RecentTradesAdapter,
-    SPEC as TradesSpec,  # noqa: N811
-)
-from laakhay.data.connectors.coinbase.ws.endpoints.ohlcv import (
-    Adapter as OhlcvAdapter,
-    build_spec as build_ohlcv_spec,
-)
-from laakhay.data.connectors.coinbase.ws.endpoints.order_book import (
-    Adapter as OrderBookAdapter,
-    build_spec as build_order_book_spec,
-)
-from laakhay.data.connectors.coinbase.ws.endpoints.trades import (
-    Adapter as TradesAdapter,
-    build_spec as build_trades_spec,
 )
 
 
@@ -80,9 +94,9 @@ def trades_spec(market_type):
     return build_trades_spec(market_type)
 
 
-from laakhay.data.providers.coinbase.ws.endpoints import (
-    order_book_spec as ws_order_book_spec,
-)
+def ws_order_book_spec(market_type):
+    return build_order_book_spec(market_type)
+
 
 # ============================================================================
 # Provider Instantiation Tests
