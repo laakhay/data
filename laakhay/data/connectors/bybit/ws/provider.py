@@ -191,7 +191,9 @@ class BybitWSConnector(WSProvider):
         Yields:
             OrderBook objects
         """
-        async for obj in self.stream("order_book", [symbol], {"update_speed": update_speed, "depth": "1"}):
+        async for obj in self.stream(
+            "order_book", [symbol], {"update_speed": update_speed, "depth": "1"}
+        ):
             yield obj
 
     async def stream_order_book_multi(
@@ -206,7 +208,9 @@ class BybitWSConnector(WSProvider):
         Yields:
             OrderBook objects
         """
-        async for obj in self.stream("order_book", symbols, {"update_speed": update_speed, "depth": "1"}):
+        async for obj in self.stream(
+            "order_book", symbols, {"update_speed": update_speed, "depth": "1"}
+        ):
             yield obj
 
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
@@ -277,4 +281,3 @@ class BybitWSConnector(WSProvider):
         """Close any underlying streaming resources."""
         # No persistent sockets to close beyond task cancellation handled by callers
         return None
-

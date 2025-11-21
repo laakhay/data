@@ -96,7 +96,9 @@ class Adapter(MessageAdapter):
                 return out
 
             mark_price = Decimal(str(data.get("markPrice", "0")))
-            index_price = Decimal(str(data.get("indexPrice", "0"))) if data.get("indexPrice") else None
+            index_price = (
+                Decimal(str(data.get("indexPrice", "0"))) if data.get("indexPrice") else None
+            )
             timestamp_ms = int(data.get("timestamp", 0))
 
             out.append(
@@ -105,7 +107,9 @@ class Adapter(MessageAdapter):
                     mark_price=mark_price,
                     index_price=index_price,
                     estimated_settle_price=None,  # Bybit doesn't provide
-                    last_funding_rate=Decimal(str(data.get("fundingRate", "0"))) if data.get("fundingRate") else None,
+                    last_funding_rate=Decimal(str(data.get("fundingRate", "0")))
+                    if data.get("fundingRate")
+                    else None,
                     next_funding_time=(
                         datetime.fromtimestamp(int(data["nextFundingTime"]) / 1000, tz=UTC)
                         if data.get("nextFundingTime")
@@ -117,4 +121,3 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
-

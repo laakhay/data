@@ -16,6 +16,7 @@ from laakhay.data.providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
+
 # Bybit moved to connectors - import from there
 from laakhay.data.connectors.bybit.provider import BybitProvider
 from laakhay.data.connectors.bybit.urm import BybitURM

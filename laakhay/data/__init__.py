@@ -52,6 +52,7 @@ from .providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
+
 # Bybit moved to connectors - will be imported from there once complete
 from .providers.coinbase import (
     CoinbaseProvider,
