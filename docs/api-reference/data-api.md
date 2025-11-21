@@ -303,5 +303,5 @@ except SymbolResolutionError as e:
 
 - [Architecture Overview](../architecture/overview.md) - System architecture
 - [Design Decisions](../architecture/design-decisions.md) - ADR-001: Facade Pattern
-- [Core API Source](../../laakhay/data/core/api.py) - Implementation
+- [Core API Source](../../laakhay/data/api/data_api.py) - Implementation
 

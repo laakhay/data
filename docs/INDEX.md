@@ -59,32 +59,32 @@ All core modules include comprehensive inline architectural comments:
 4. Dive into [Provider System](./architecture/provider-system.md) for exchange-specific details
 
 **Using the Library:**
-- See inline documentation in `core/api.py` for DataAPI usage
+- See inline documentation in `api/data_api.py` for DataAPI usage
 - Check `clients/ohlcv_feed.py` for feed examples
 - Review `sinks/` for event forwarding patterns
 
 **Extending the Library:**
 - Review `io/rest/provider.py` and `io/ws/provider.py` for provider interfaces
 - Check `core/base.py` for base provider class
-- See `core/registry.py` for provider registration
+- See `runtime/provider_registry.py` for provider registration
 
 ### By Component
 
 **Routing & Coordination:**
-- `core/api.py` - High-level facade
-- `core/router.py` - Request routing
-- `core/registry.py` - Provider management
+- `api/data_api.py` - High-level facade
+- `runtime/router.py` - Request routing
+- `runtime/provider_registry.py` - Provider management
 - `core/request.py` - Request model
 
 **Capabilities & Validation:**
-- `core/capabilities.py` - Capability registry
-- `core/capability_service.py` - Validation service
+- `capability/registry.py` - Capability registry
+- `capability/service.py` - Validation service
 
 **Symbol Normalization:**
 - `core/urm.py` - URM system
 
 **Streaming:**
-- `core/relay.py` - Stream relay
+- `runtime/relay.py` - Stream relay
 - `clients/base_feed.py` - Base feeds
 - `clients/ohlcv_feed.py` - OHLCV feeds
 - `sinks/` - Event sinks

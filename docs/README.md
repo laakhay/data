@@ -17,14 +17,14 @@ Deep dive into the library's architecture, design decisions, and system componen
 - [Clients Layer](./architecture/clients.md) - High-level streaming feeds
 
 **Core Components (Documented in Code):**
-- `core/api.py` - DataAPI facade pattern
-- `core/router.py` - DataRouter coordination
-- `core/registry.py` - Provider registry and pooling
-- `core/capabilities.py` - Capability discovery system
+- `api/data_api.py` - DataAPI facade pattern
+- `runtime/router.py` - DataRouter coordination
+- `runtime/provider_registry.py` - Provider registry and pooling
+- `capability/registry.py` - Capability discovery system
 - `core/urm.py` - Universal Representation Mapping
-- `core/relay.py` - Stream relay pattern
+- `runtime/relay.py` - Stream relay pattern
 - `core/request.py` - Request object pattern
-- `core/capability_service.py` - Capability validation service
+- `capability/service.py` - Capability validation service
 
 ### 📚 [Guides](./guides/)
 Step-by-step guides for using the library.

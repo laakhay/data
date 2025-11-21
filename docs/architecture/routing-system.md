@@ -11,13 +11,13 @@ instances, and invoking the correct feature handlers.
 - **`DataRequest`** (`core/request.py`): immutable object capturing feature,
   transport, exchange, market/instrument types, symbol, timeframe, and other
   parameters.
-- **`CapabilityService`** (`core/capability_service.py`): validates that a
+- **`CapabilityService`** (`capability/service.py`): validates that a
   request is supported before any network call is made.
 - **`URMRegistry`** (`core/urm.py`): converts symbols to/from canonical
   representations.
-- **`ProviderRegistry`** (`core/registry.py`): manages provider instances and
+- **`ProviderRegistry`** (`runtime/provider_registry.py`): manages provider instances and
   feature-handler mappings.
-- **`DataRouter`** (`core/router.py`): orchestrates the end-to-end flow.
+- **`DataRouter`** (`runtime/router.py`): orchestrates the end-to-end flow.
 
 ## Request Flow
 
