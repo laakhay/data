@@ -9,7 +9,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.core import MarketType
 from laakhay.data.models import Trade
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 

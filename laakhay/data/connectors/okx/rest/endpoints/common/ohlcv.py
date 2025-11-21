@@ -9,7 +9,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.core import MarketType
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
