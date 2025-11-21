@@ -12,7 +12,7 @@ from time import perf_counter
 from typing import Any
 
 from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult
-from .telemetry import log_chunk_completed, log_chunk_execution_complete, log_chunk_error
+from .telemetry import log_chunk_completed, log_chunk_error, log_chunk_execution_complete
 
 
 class ChunkExecutor:

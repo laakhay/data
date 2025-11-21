@@ -7,11 +7,9 @@ structured logs and metrics for observability.
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
-from typing import Any
 
-from .definitions import ChunkPlan, ChunkResult
+from .definitions import ChunkResult
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +95,6 @@ def log_chunk_execution_complete(
             "chunks_used": result.chunks_used,
             "total_points": result.total_points,
             "weight_consumed": result.weight_consumed,
-            "throttle_applied": result.throttle_applied,
             "start_timestamp": result.start_timestamp.isoformat()
             if result.start_timestamp
             else None,
