@@ -5,15 +5,13 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from laakhay.data.connectors.binance import BinanceProvider
+from laakhay.data.connectors.bybit import BybitProvider
+from laakhay.data.connectors.coinbase import CoinbaseProvider
+from laakhay.data.connectors.hyperliquid import HyperliquidProvider
+from laakhay.data.connectors.kraken import KrakenProvider
 from laakhay.data.connectors.okx.provider import OKXProvider
 from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.providers import (
-    BinanceProvider,
-    BybitProvider,
-    CoinbaseProvider,
-    HyperliquidProvider,
-    KrakenProvider,
-)
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",

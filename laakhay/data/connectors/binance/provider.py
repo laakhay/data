@@ -58,6 +58,7 @@ class BinanceProvider:
             rest_connector: Optional REST connector instance
             ws_connector: Optional WebSocket connector instance
         """
+        self.name = "binance"
         self.market_type = market_type
         self._rest = rest_connector or BinanceRESTConnector(
             market_type=market_type, api_key=api_key, api_secret=api_secret
@@ -116,6 +117,7 @@ class BinanceProvider:
         return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
 
     @register_feature_handler(DataFeature.TRADES, TransportKind.REST)
+    @register_feature_handler(DataFeature.HISTORICAL_TRADES, TransportKind.REST)
     async def fetch_historical_trades(
         self,
         symbol: str,
@@ -232,3 +234,11 @@ class BinanceProvider:
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
+
+    async def __aenter__(self) -> BinanceProvider:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()

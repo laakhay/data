@@ -317,7 +317,7 @@ class CapabilityDiscovery:
 
         try:
             # Try to import the endpoints module
-            module_path = f"laakhay.data.providers.{exchange}.rest.endpoints"
+            module_path = f"laakhay.data.connectors.{exchange}.rest.endpoints"
             module = importlib.import_module(module_path)
 
             # Find all endpoint spec functions
@@ -521,7 +521,7 @@ class CapabilityDiscovery:
 
         try:
             # Try to import the endpoints module
-            module_path = f"laakhay.data.providers.{exchange}.ws.endpoints"
+            module_path = f"laakhay.data.connectors.{exchange}.ws.endpoints"
             module = importlib.import_module(module_path)
 
             # Find all endpoint spec functions

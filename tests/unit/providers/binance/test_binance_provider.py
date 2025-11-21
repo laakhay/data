@@ -8,10 +8,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from laakhay.data.connectors.binance import (
+    BinanceProvider,
+    BinanceRESTProvider,
+    BinanceWSProvider,
+)
+from laakhay.data.connectors.binance.config import INTERVAL_MAP
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
-from laakhay.data.providers import BinanceProvider, BinanceRESTProvider, BinanceWSProvider
-from laakhay.data.providers.binance.constants import INTERVAL_MAP
 
 
 def test_binance_rest_provider_instantiation_defaults_to_spot():
@@ -117,7 +121,7 @@ async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
         return []
 
     # Mock the connector's fetch method
-    monkeypatch.setattr(provider._connector, "fetch", fake_fetch)
+    monkeypatch.setattr(provider, "fetch", fake_fetch)
 
     result = await provider.fetch_historical_trades("BTCUSDT", limit=200, from_id=42)
     assert result == []
@@ -134,7 +138,7 @@ async def test_binance_provider_fetch_historical_trades():
     rest.fetch_historical_trades = AsyncMock(return_value=["trade"])
     ws = MagicMock()
 
-    provider = BinanceProvider(rest_provider=rest, ws_provider=ws)
+    provider = BinanceProvider(rest_connector=rest, ws_connector=ws)
     result = await provider.fetch_historical_trades("BTCUSDT", limit=100, from_id=20)
     assert result == ["trade"]
     rest.fetch_historical_trades.assert_awaited_once_with(symbol="BTCUSDT", limit=100, from_id=20)
@@ -187,7 +191,8 @@ async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
 
     assert calls[0]["limit"] == 1000
     assert calls[1]["limit"] == 200
-    assert calls[1]["start_time"] == base_time + timedelta(minutes=1000)
+    # Chunk planner adds 1 interval to avoid overlap between chunks
+    assert calls[1]["start_time"] == base_time + timedelta(minutes=1000 + 1)
 
 
 @pytest.mark.asyncio

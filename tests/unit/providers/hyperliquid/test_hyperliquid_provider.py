@@ -8,6 +8,39 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from laakhay.data.connectors.hyperliquid import (
+    HyperliquidProvider,
+    HyperliquidRESTProvider,
+    HyperliquidWSProvider,
+)
+from laakhay.data.connectors.hyperliquid.constants import INTERVAL_MAP
+from laakhay.data.connectors.hyperliquid.rest.adapters import (
+    CandlesResponseAdapter,
+    ExchangeInfoSymbolsAdapter,
+    OrderBookResponseAdapter,
+    _extract_result,
+)
+from laakhay.data.connectors.hyperliquid.rest.endpoints import (
+    candles_spec,
+    exchange_info_spec,
+    order_book_spec,
+)
+from laakhay.data.connectors.hyperliquid.ws.adapters import (
+    FundingRateAdapter,
+    MarkPriceAdapter,
+    OhlcvAdapter,
+    OpenInterestAdapter,
+    OrderBookAdapter,
+    TradesAdapter,
+)
+from laakhay.data.connectors.hyperliquid.ws.endpoints import (
+    ohlcv_spec,
+    trades_spec,
+)
+from laakhay.data.connectors.hyperliquid.ws.endpoints import (
+    order_book_spec as ws_order_book_spec,
+)
+from laakhay.data.connectors.hyperliquid.ws.transport import HyperliquidWebSocketTransport
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import (
@@ -17,39 +50,6 @@ from laakhay.data.models import (
     SeriesMeta,
     Symbol,
 )
-from laakhay.data.providers import (
-    HyperliquidProvider,
-    HyperliquidRESTProvider,
-    HyperliquidWSProvider,
-)
-from laakhay.data.providers.hyperliquid.constants import INTERVAL_MAP
-from laakhay.data.providers.hyperliquid.rest.adapters import (
-    CandlesResponseAdapter,
-    ExchangeInfoSymbolsAdapter,
-    OrderBookResponseAdapter,
-    _extract_result,
-)
-from laakhay.data.providers.hyperliquid.rest.endpoints import (
-    candles_spec,
-    exchange_info_spec,
-    order_book_spec,
-)
-from laakhay.data.providers.hyperliquid.ws.adapters import (
-    FundingRateAdapter,
-    MarkPriceAdapter,
-    OhlcvAdapter,
-    OpenInterestAdapter,
-    OrderBookAdapter,
-    TradesAdapter,
-)
-from laakhay.data.providers.hyperliquid.ws.endpoints import (
-    ohlcv_spec,
-    trades_spec,
-)
-from laakhay.data.providers.hyperliquid.ws.endpoints import (
-    order_book_spec as ws_order_book_spec,
-)
-from laakhay.data.providers.hyperliquid.ws.transport import HyperliquidWebSocketTransport
 
 # ============================================================================
 # Provider Instantiation Tests
@@ -903,7 +903,7 @@ async def test_hyperliquid_ws_transport_builds_subscription_messages():
 
     # Patch websockets.connect to use our mock (not async, returns context manager directly)
     with patch(
-        "laakhay.data.providers.hyperliquid.ws.transport.websockets.connect", new=mock_connect
+        "laakhay.data.connectors.hyperliquid.ws.transport.websockets.connect", new=mock_connect
     ):
         # Start streaming with timeout to prevent hanging
         message_count = 0
@@ -1022,7 +1022,7 @@ def test_hyperliquid_rest_provider_raises_on_futures_only_endpoint():
     """REST provider raises ValueError for futures-only endpoints with spot market."""
     with pytest.raises(ValueError, match="Futures-only"):
         # This would be called internally, but we can test the endpoint spec
-        from laakhay.data.providers.hyperliquid.rest.endpoints import funding_rate_spec
+        from laakhay.data.connectors.hyperliquid.rest.endpoints import funding_rate_spec
 
         spec = funding_rate_spec()
         spec.build_path({"market_type": MarketType.SPOT})

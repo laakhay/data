@@ -12,9 +12,11 @@ from typing import Any
 from laakhay.data.core import MarketType
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
+from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 from ....config import INTERVAL_MAP
+from ....constants import normalize_symbol_to_kraken
 
 
 def _ohlcv_path(params: dict[str, Any]) -> str:
@@ -23,8 +25,9 @@ def _ohlcv_path(params: dict[str, Any]) -> str:
     if market == MarketType.FUTURES:
         # Kraken Futures API - use path parameter for symbol
         symbol = params["symbol"]
-        # Symbol is already in exchange format from router, use as-is
-        return f"/instruments/{symbol}/candles"
+        # Normalize symbol to Kraken format
+        normalized_symbol = normalize_symbol_to_kraken(symbol, market)
+        return f"/instruments/{normalized_symbol}/candles"
     else:
         # Kraken Spot API
         return "/0/public/OHLCData"
@@ -34,7 +37,8 @@ def _build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for OHLCV endpoint."""
     market_type: MarketType = params["market_type"]
     symbol = params["symbol"]
-    # Symbol is already in exchange format from router, use as-is
+    # Normalize symbol to Kraken format
+    normalized_symbol = normalize_symbol_to_kraken(symbol, market_type)
     interval_str = INTERVAL_MAP[params["interval"]]
 
     if market_type == MarketType.FUTURES:
@@ -53,7 +57,7 @@ def _build_query(params: dict[str, Any]) -> dict[str, Any]:
     else:
         # Kraken Spot API
         q: dict[str, Any] = {
-            "pair": symbol,  # Symbol already in exchange format
+            "pair": normalized_symbol,  # Normalized to Kraken format
             "interval": interval_str,
         }
         if params.get("start_time"):
@@ -63,12 +67,34 @@ def _build_query(params: dict[str, Any]) -> dict[str, Any]:
         return q
 
 
+# Chunking policy for OHLCV endpoint
+# Kraken Spot: max 720 candles per request
+# Kraken Futures: max 1000 candles per request (using 720 as conservative limit)
+CHUNK_POLICY = ChunkPolicy(
+    max_points=720,  # Kraken Spot limit
+    max_chunks=None,  # No hard limit
+    requires_start_time=False,
+    supports_auto_chunking=True,
+    weight_per_request=1,
+)
+
+# Chunk hints for time-based chunking
+CHUNK_HINT = ChunkHint(
+    timestamp_key="timestamp",
+    limit_field="limit",
+    start_time_field="start_time",
+    end_time_field="end_time",
+    timeframe_field="interval",
+)
+
 # Endpoint specification
 SPEC = RestEndpointSpec(
     id="ohlcv",
     method="GET",
     build_path=_ohlcv_path,
     build_query=_build_query,
+    chunk_policy=CHUNK_POLICY,
+    chunk_hint=CHUNK_HINT,
 )
 
 

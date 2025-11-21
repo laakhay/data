@@ -10,6 +10,10 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.connectors.kraken.config import WS_COMBINED_URLS, WS_SINGLE_URLS
+from laakhay.data.connectors.kraken.constants import (
+    normalize_symbol_from_kraken,
+    normalize_symbol_to_kraken,
+)
 from laakhay.data.core import MarketType
 from laakhay.data.models import OrderBook
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
@@ -33,8 +37,12 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         update_speed: str = params.get("update_speed", "100ms")
         # Map update_speed to depth for Kraken
         depth = "10" if update_speed == "100ms" else "25" if update_speed == "1000ms" else "10"
+        # Normalize symbol to Kraken format for stream name
+        # The symbol passed in should be in standard format (e.g., "BTCUSD")
+        # and needs to be converted to Kraken format (e.g., "XBT/USD" for spot or "PI_XBTUSD" for futures)
+        normalized_symbol = normalize_symbol_to_kraken(symbol, market_type)
         # Kraken uses book-{symbol}-{depth} format
-        return f"book-{symbol}-{depth}"
+        return f"book-{normalized_symbol}-{depth}"
 
     def build_combined_url(names: list[str]) -> str:
         if not ws_combined:
@@ -85,13 +93,20 @@ class Adapter(MessageAdapter):
             # Kraken Futures format: {"feed": "book", "symbol": "...", "bids": [...], "asks": [...], "time": ...}
             data = payload.get("data")
             feed = payload.get("feed")
-            symbol = str(payload.get("symbol", ""))
+            raw_symbol = str(payload.get("symbol", ""))
+            # Infer market type from symbol format and normalize
+            market_type = MarketType.FUTURES if raw_symbol.startswith("PI_") else MarketType.SPOT
+            symbol = normalize_symbol_from_kraken(raw_symbol, market_type) if raw_symbol else ""
+
+            time_ms = payload.get("time", 0)
 
             if feed and "book" in feed.lower():
                 # Futures format
                 bids_data = payload.get("bids", [])
                 asks_data = payload.get("asks", [])
-                time_ms = payload.get("time", 0)
+                sequence_number = (
+                    payload.get("sequenceNumber") or payload.get("sequence_number") or 0
+                )
 
                 bids: list[tuple[Decimal, Decimal]] = [
                     (Decimal(str(b[0])), Decimal(str(b[1])))
@@ -108,7 +123,7 @@ class Adapter(MessageAdapter):
                     out.append(
                         OrderBook(
                             symbol=symbol,
-                            last_update_id=payload.get("sequenceNumber", 0),
+                            last_update_id=int(sequence_number),
                             bids=bids if bids else [(Decimal("0"), Decimal("0"))],
                             asks=asks if asks else [(Decimal("0"), Decimal("0"))],
                             timestamp=(
@@ -119,9 +134,10 @@ class Adapter(MessageAdapter):
                         )
                     )
             elif data and isinstance(data, dict):
-                # Spot format
+                # Spot format (or futures with nested data)
                 bids_data = data.get("bids", [])
                 asks_data = data.get("asks", [])
+                sequence_number = data.get("sequenceNumber") or data.get("sequence_number") or 0
 
                 bids: list[tuple[Decimal, Decimal]] = [
                     (Decimal(str(b[0])), Decimal(str(b[1])))
@@ -138,10 +154,14 @@ class Adapter(MessageAdapter):
                     out.append(
                         OrderBook(
                             symbol=symbol,
-                            last_update_id=0,
+                            last_update_id=int(sequence_number),
                             bids=bids if bids else [(Decimal("0"), Decimal("0"))],
                             asks=asks if asks else [(Decimal("0"), Decimal("0"))],
-                            timestamp=datetime.now(UTC),
+                            timestamp=(
+                                datetime.fromtimestamp(time_ms / 1000, tz=UTC)
+                                if time_ms
+                                else datetime.now(UTC)
+                            ),
                         )
                     )
         except Exception:

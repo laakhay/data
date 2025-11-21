@@ -20,6 +20,38 @@ from .capability import (
     supports_market_type,
 )
 from .clients.ohlcv_feed import OHLCVFeed
+
+# All exchanges moved to connectors
+from .connectors.binance import (
+    BinanceProvider,
+    BinanceRESTProvider,
+    BinanceWSProvider,
+)
+from .connectors.bybit import (
+    BybitProvider,
+    BybitRESTProvider,
+    BybitWSProvider,
+)
+from .connectors.coinbase import (
+    CoinbaseProvider,
+    CoinbaseRESTProvider,
+    CoinbaseWSProvider,
+)
+from .connectors.hyperliquid import (
+    HyperliquidProvider,
+    HyperliquidRESTProvider,
+    HyperliquidWSProvider,
+)
+from .connectors.kraken import (
+    KrakenProvider,
+    KrakenRESTProvider,
+    KrakenWSProvider,
+)
+from .connectors.okx import (
+    OKXProvider,
+    OKXRESTProvider,
+    OKXWSProvider,
+)
 from .core import (
     BaseProvider,
     CapabilityError,
@@ -47,37 +79,6 @@ from .models import (
     StreamingBar,
     Symbol,
 )
-from .providers.binance import (
-    BinanceProvider,
-    BinanceRESTProvider,
-    BinanceWSProvider,
-)
-from .providers.bybit import (
-    BybitProvider,
-    BybitRESTProvider,
-    BybitWSProvider,
-)
-from .providers.coinbase import (
-    CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseWSProvider,
-)
-from .providers.hyperliquid import (
-    HyperliquidProvider,
-    HyperliquidRESTProvider,
-    HyperliquidWSProvider,
-)
-from .providers.kraken import (
-    KrakenURM,
-)
-
-# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-# once the connector implementation is complete
-from .providers.okx import (
-    OKXProvider,
-    OKXRESTProvider,
-    OKXWSProvider,
-)
 
 __version__ = "0.1.0"
 
@@ -103,9 +104,9 @@ __all__ = [
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
-    "KrakenURM",
-    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-    # once the connector implementation is complete
+    "KrakenProvider",
+    "KrakenRESTProvider",
+    "KrakenWSProvider",
     "OKXProvider",
     "OKXRESTProvider",
     "OKXWSProvider",

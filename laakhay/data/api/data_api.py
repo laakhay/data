@@ -606,7 +606,7 @@ class DataAPI:
         registry = self._router._provider_registry
         if not registry.is_registered(exchange_name):
             # Lazy registration: ensure provider is available
-            from ..providers import register_all
+            from ..registration import register_all
 
             register_all(registry)
 
@@ -681,7 +681,7 @@ class DataAPI:
         # Ensure provider is registered before accessing
         registry = self._router._provider_registry
         if not registry.is_registered(exchange_name):
-            from ..providers import register_all
+            from ..registration import register_all
 
             register_all(registry)
 
@@ -790,7 +790,7 @@ class DataAPI:
         # Ensure provider is registered before accessing
         registry = self._router._provider_registry
         if not registry.is_registered(exchange_name):
-            from ..providers import register_all
+            from ..registration import register_all
 
             register_all(registry)
 

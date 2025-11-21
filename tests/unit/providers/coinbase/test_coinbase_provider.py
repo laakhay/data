@@ -7,6 +7,11 @@ from typing import Any
 
 import pytest
 
+from laakhay.data.connectors.coinbase import (
+    CoinbaseProvider,
+    CoinbaseRESTProvider,
+    CoinbaseWSProvider,
+)
 from laakhay.data.connectors.coinbase.config import (
     INTERVAL_MAP,
     normalize_symbol_from_coinbase,
@@ -61,11 +66,6 @@ from laakhay.data.models import (
     OrderBook,
     SeriesMeta,
     Symbol,
-)
-from laakhay.data.providers import (
-    CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseWSProvider,
 )
 
 
@@ -1176,7 +1176,8 @@ async def test_coinbase_rest_fetch_ohlcv_chunking(monkeypatch):
 
     assert calls[0]["limit"] == 300  # First chunk uses max
     assert calls[1]["limit"] == 200  # Second chunk uses remaining
-    assert calls[1]["start_time"] == base_time + timedelta(minutes=300)
+    # Chunk planner adds 1 interval to avoid overlap between chunks
+    assert calls[1]["start_time"] == base_time + timedelta(minutes=300 + 1)
 
 
 @pytest.mark.asyncio

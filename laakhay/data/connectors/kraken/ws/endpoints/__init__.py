@@ -80,6 +80,46 @@ def list_endpoints() -> list[str]:
     return ["ohlcv", "trades", "order_book", "open_interest", "mark_price", "liquidations"]
 
 
+# Legacy compatibility functions for tests
+def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:
+    """Legacy function for test compatibility."""
+    return build_ohlcv_spec(market_type)
+
+
+def trades_spec(market_type: MarketType) -> WSEndpointSpec:
+    """Legacy function for test compatibility."""
+    return build_trades_spec(market_type)
+
+
+def order_book_spec(market_type: MarketType) -> WSEndpointSpec:
+    """Legacy function for test compatibility."""
+    return build_order_book_spec(market_type)
+
+
+def open_interest_spec(market_type: MarketType) -> WSEndpointSpec:
+    """Legacy function for test compatibility."""
+    return build_open_interest_spec(market_type)
+
+
+def funding_rate_spec(market_type: MarketType) -> WSEndpointSpec:
+    """Legacy function for test compatibility."""
+    # Funding rate is Futures-only
+    if market_type != MarketType.FUTURES:
+        raise ValueError("Funding rate WebSocket is Futures-only on Kraken")
+    # Funding rate uses mark_price endpoint
+    return build_mark_price_spec(market_type)
+
+
+# Legacy adapter exports for test compatibility
+OhlcvAdapter = OHLCVAdapter
+TradesAdapter = TradesAdapter
+OrderBookAdapter = OrderBookAdapter
+OpenInterestAdapter = OpenInterestAdapter
+MarkPriceAdapter = MarkPriceAdapter
+LiquidationsAdapter = LiquidationsAdapter
+# Note: FundingRateAdapter doesn't exist in new structure, use MarkPriceAdapter
+FundingRateAdapter = MarkPriceAdapter
+
 __all__ = [
     "get_endpoint_spec",
     "get_endpoint_adapter",
@@ -97,4 +137,17 @@ __all__ = [
     "MarkPriceAdapter",
     "build_liquidations_spec",
     "LiquidationsAdapter",
+    # Legacy compatibility exports
+    "ohlcv_spec",
+    "trades_spec",
+    "order_book_spec",
+    "open_interest_spec",
+    "funding_rate_spec",
+    "OhlcvAdapter",
+    "TradesAdapter",
+    "OrderBookAdapter",
+    "OpenInterestAdapter",
+    "MarkPriceAdapter",
+    "LiquidationsAdapter",
+    "FundingRateAdapter",
 ]

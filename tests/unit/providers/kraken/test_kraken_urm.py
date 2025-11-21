@@ -2,8 +2,8 @@
 
 import pytest
 
+from laakhay.data.connectors.kraken.urm import KrakenURM
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
-from laakhay.data.providers.kraken.urm import KrakenURM
 
 
 def test_kraken_urm_spot_to_spec():

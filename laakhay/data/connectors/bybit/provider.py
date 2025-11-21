@@ -59,6 +59,7 @@ class BybitProvider:
             ws_connector: Optional WebSocket connector instance
         """
         self.name = "bybit"
+        self.name = "bybit"
         self.market_type = market_type
         self._rest = rest_connector or BybitRESTConnector(
             market_type=market_type, api_key=api_key, api_secret=api_secret

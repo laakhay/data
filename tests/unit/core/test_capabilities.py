@@ -32,7 +32,7 @@ from laakhay.data.core import (
     supports_data_type,
     supports_market_type,
 )
-from laakhay.data.providers import register_all
+from laakhay.data.registration import register_all
 
 
 @pytest.fixture(autouse=True)
