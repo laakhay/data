@@ -52,8 +52,11 @@ from .providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
-
-# Bybit moved to connectors - will be imported from there once complete
+from .providers.bybit import (
+    BybitProvider,
+    BybitRESTProvider,
+    BybitWSProvider,
+)
 from .providers.coinbase import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
@@ -65,9 +68,15 @@ from .providers.hyperliquid import (
     HyperliquidWSProvider,
 )
 from .providers.kraken import (
-    KrakenProvider,
-    KrakenRESTProvider,
-    KrakenWSProvider,
+    KrakenURM,
+)
+
+# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+# once the connector implementation is complete
+from .providers.okx import (
+    OKXProvider,
+    OKXRESTProvider,
+    OKXWSProvider,
 )
 
 __version__ = "0.1.0"
@@ -85,16 +94,21 @@ __all__ = [
     "BinanceProvider",
     "BinanceRESTProvider",
     "BinanceWSProvider",
-    # Bybit moved to connectors
+    "BybitProvider",
+    "BybitRESTProvider",
+    "BybitWSProvider",
     "CoinbaseProvider",
     "CoinbaseRESTProvider",
     "CoinbaseWSProvider",
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
-    "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenWSProvider",
+    "KrakenURM",
+    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+    # once the connector implementation is complete
+    "OKXProvider",
+    "OKXRESTProvider",
+    "OKXWSProvider",
     # Models
     "Bar",
     "OHLCV",

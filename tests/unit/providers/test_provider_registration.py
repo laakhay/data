@@ -177,7 +177,7 @@ async def test_register_all_exchanges():
 
     register_all(registry)
 
-    expected_exchanges = ["binance", "bybit", "kraken", "hyperliquid", "coinbase"]
+    expected_exchanges = ["binance", "bybit", "kraken", "hyperliquid", "coinbase", "okx"]
     assert set(registry.list_exchanges()) == set(expected_exchanges)
 
     # Verify all have URM mappers

@@ -8,9 +8,6 @@ from __future__ import annotations
 
 # Import URM from connectors
 from laakhay.data.connectors.binance.urm import BinanceURM
-
-# Bybit moved to connectors - import from there
-from laakhay.data.connectors.bybit.provider import BybitProvider
 from laakhay.data.connectors.bybit.urm import BybitURM
 from laakhay.data.core import MarketType
 
@@ -19,6 +16,11 @@ from laakhay.data.providers.binance import (
     BinanceProvider,
     BinanceRESTProvider,
     BinanceWSProvider,
+)
+from laakhay.data.providers.bybit import (
+    BybitProvider,
+    BybitRESTProvider,
+    BybitWSProvider,
 )
 from laakhay.data.providers.coinbase import (
     CoinbaseProvider,
@@ -33,10 +35,16 @@ from laakhay.data.providers.hyperliquid import (
     HyperliquidWSProvider,
 )
 from laakhay.data.providers.kraken import (
-    KrakenProvider,
-    KrakenRESTProvider,
     KrakenURM,
-    KrakenWSProvider,
+)
+
+# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+# once the connector implementation is complete
+from laakhay.data.providers.okx import (
+    OKXURM,
+    OKXProvider,
+    OKXRESTProvider,
+    OKXWSProvider,
 )
 from laakhay.data.runtime.provider_registry import (
     ProviderRegistry,
@@ -51,9 +59,11 @@ __all__ = [
     "BinanceRESTProvider",
     "BinanceURM",
     "BinanceWSProvider",
-    # Bybit (moved to connectors)
+    # Bybit
     "BybitProvider",
+    "BybitRESTProvider",
     "BybitURM",
+    "BybitWSProvider",
     # Coinbase
     "CoinbaseProvider",
     "CoinbaseRESTProvider",
@@ -65,16 +75,21 @@ __all__ = [
     "HyperliquidURM",
     "HyperliquidWSProvider",
     # Kraken
-    "KrakenProvider",
-    "KrakenRESTProvider",
     "KrakenURM",
-    "KrakenWSProvider",
+    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+    # once the connector implementation is complete
+    # OKX
+    "OKXProvider",
+    "OKXRESTProvider",
+    "OKXURM",
+    "OKXWSProvider",
     # Registration functions
     "register_binance",
     "register_bybit",
     "register_coinbase",
     "register_hyperliquid",
     "register_kraken",
+    "register_okx",
     "register_all",
 ]
 
@@ -121,6 +136,27 @@ def register_bybit(registry: ProviderRegistry | None = None) -> None:
     )
 
 
+def register_okx(registry: ProviderRegistry | None = None) -> None:
+    """Register OKX provider with the registry.
+
+    Args:
+        registry: Optional registry instance (defaults to global singleton)
+    """
+    if registry is None:
+        registry = get_provider_registry()
+
+    # Collect feature handlers from decorators
+    feature_handlers = collect_feature_handlers(OKXProvider)  # noqa: F405
+
+    registry.register(
+        "okx",
+        OKXProvider,  # noqa: F405
+        market_types=[MarketType.SPOT, MarketType.FUTURES],
+        urm_mapper=OKXURM(),  # noqa: F405
+        feature_handlers=feature_handlers,
+    )
+
+
 def register_kraken(registry: ProviderRegistry | None = None) -> None:
     """Register Kraken provider with the registry.
 
@@ -129,6 +165,11 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
     """
     if registry is None:
         registry = get_provider_registry()
+
+    # Import URM from providers shim
+    # Import provider from connectors (full implementation)
+    from laakhay.data.connectors.kraken.provider import KrakenProvider
+    from laakhay.data.providers.kraken import KrakenURM
 
     # Collect feature handlers from decorators
     feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
@@ -194,6 +235,7 @@ def register_all(registry: ProviderRegistry | None = None) -> None:
     """
     register_binance(registry)
     register_bybit(registry)
+    register_okx(registry)
     register_kraken(registry)
     register_hyperliquid(registry)
     register_coinbase(registry)
