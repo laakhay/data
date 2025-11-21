@@ -98,7 +98,7 @@ class BinanceProvider:
             limit=limit,
         )
 
-    @register_feature_handler(DataFeature.SYMBOLS, TransportKind.REST)
+    @register_feature_handler(DataFeature.SYMBOL_METADATA, TransportKind.REST)
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:

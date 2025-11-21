@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from laakhay.data.connectors.binance.config import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
+
 from ....core import MarketType, Timeframe
 from ....runtime.ws.runner import WSEndpointSpec
-from laakhay.data.connectors.binance.config import INTERVAL_MAP, WS_COMBINED_URLS, WS_SINGLE_URLS
 
 
 def ohlcv_spec(market_type: MarketType) -> WSEndpointSpec:

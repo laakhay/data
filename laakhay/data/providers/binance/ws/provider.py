@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from ....core import MarketType, Timeframe
 from ....models.streaming_bar import StreamingBar
 from ....runtime.ws import WSProvider
-from ...connectors.binance.ws.provider import BinanceWSConnector
+from laakhay.data.connectors.binance.ws.provider import BinanceWSConnector
 
 if TYPE_CHECKING:
     from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade

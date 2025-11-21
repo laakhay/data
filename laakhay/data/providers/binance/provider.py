@@ -30,9 +30,9 @@ from ...models import (
     Symbol,
     Trade,
 )
-from ..connectors.binance.provider import BinanceProvider as BinanceConnectorProvider
-from ..connectors.binance.rest.provider import BinanceRESTConnector
-from ..connectors.binance.ws.provider import BinanceWSConnector
+from laakhay.data.connectors.binance.provider import BinanceProvider as BinanceConnectorProvider
+from laakhay.data.connectors.binance.rest.provider import BinanceRESTConnector
+from laakhay.data.connectors.binance.ws.provider import BinanceWSConnector
 
 
 class BinanceProvider(BaseProvider):

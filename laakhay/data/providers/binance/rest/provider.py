@@ -9,9 +9,9 @@ from __future__ import annotations
 from datetime import datetime
 
 from ....core import MarketType, Timeframe
-from ....models import FundingRate, OHLCV, OpenInterest, OrderBook, Symbol, Trade
+from ....models import OHLCV, FundingRate, OpenInterest, OrderBook, Symbol, Trade
 from ....runtime.rest import RESTProvider
-from ...connectors.binance.rest.provider import BinanceRESTConnector
+from laakhay.data.connectors.binance.rest.provider import BinanceRESTConnector
 
 
 class BinanceRESTProvider(RESTProvider):

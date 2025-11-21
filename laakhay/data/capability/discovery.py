@@ -463,7 +463,7 @@ class CapabilityDiscovery:
                     endpoint_module_path = f"{module_path}.{endpoint_name}"
                     endpoint_module = importlib.import_module(endpoint_module_path)
                     if hasattr(endpoint_module, "build_spec"):
-                        build_spec = getattr(endpoint_module, "build_spec")
+                        build_spec = endpoint_module.build_spec
                         for market_type in market_types:
                             try:
                                 spec = build_spec(market_type)
