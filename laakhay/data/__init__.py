@@ -68,10 +68,11 @@ from .providers.hyperliquid import (
     HyperliquidWSProvider,
 )
 from .providers.kraken import (
-    KrakenProvider,
-    KrakenRESTProvider,
-    KrakenWSProvider,
+    KrakenURM,
 )
+
+# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+# once the connector implementation is complete
 from .providers.okx import (
     OKXProvider,
     OKXRESTProvider,
@@ -102,9 +103,9 @@ __all__ = [
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
-    "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenWSProvider",
+    "KrakenURM",
+    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+    # once the connector implementation is complete
     "OKXProvider",
     "OKXRESTProvider",
     "OKXWSProvider",

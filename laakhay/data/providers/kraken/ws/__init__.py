@@ -8,4 +8,3 @@ the connector implementation is complete.
 # from laakhay.data.connectors.kraken.ws.provider import KrakenWSConnector as KrakenWSProvider
 
 __all__: list[str] = []
-

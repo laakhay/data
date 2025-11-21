@@ -8,4 +8,3 @@ the connector implementation is complete.
 # from laakhay.data.connectors.kraken.rest.provider import KrakenRESTConnector as KrakenRESTProvider
 
 __all__: list[str] = []
-

@@ -35,11 +35,11 @@ from laakhay.data.providers.hyperliquid import (
     HyperliquidWSProvider,
 )
 from laakhay.data.providers.kraken import (
-    KrakenProvider,
-    KrakenRESTProvider,
     KrakenURM,
-    KrakenWSProvider,
 )
+
+# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+# once the connector implementation is complete
 from laakhay.data.providers.okx import (
     OKXURM,
     OKXProvider,
@@ -75,10 +75,9 @@ __all__ = [
     "HyperliquidURM",
     "HyperliquidWSProvider",
     # Kraken
-    "KrakenProvider",
-    "KrakenRESTProvider",
     "KrakenURM",
-    "KrakenWSProvider",
+    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
+    # once the connector implementation is complete
     # OKX
     "OKXProvider",
     "OKXRESTProvider",
@@ -163,20 +162,28 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
 
     Args:
         registry: Optional registry instance (defaults to global singleton)
+
+    Note:
+        This function will be updated once the connector implementation is complete.
+        For now, only the URM mapper is registered.
     """
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
+    from laakhay.data.providers.kraken import KrakenURM
 
-    registry.register(
-        "kraken",
-        KrakenProvider,  # noqa: F405
-        market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=KrakenURM(),  # noqa: F405
-        feature_handlers=feature_handlers,
-    )
+    # TODO: Import KrakenProvider from connector once implementation is complete
+    # For now, just register the URM mapper
+    # Full provider registration will be added once connector is complete:
+    # feature_handlers = collect_feature_handlers(KrakenProvider)
+    # registry.register(
+    #     "kraken",
+    #     KrakenProvider,
+    #     market_types=[MarketType.SPOT, MarketType.FUTURES],
+    #     urm_mapper=KrakenURM(),
+    #     feature_handlers=feature_handlers,
+    # )
+    _ = KrakenURM  # Suppress unused import warning
 
 
 def register_hyperliquid(registry: ProviderRegistry | None = None) -> None:
@@ -232,6 +239,7 @@ def register_all(registry: ProviderRegistry | None = None) -> None:
     register_binance(registry)
     register_bybit(registry)
     register_okx(registry)
-    register_kraken(registry)
+    # TODO: Re-enable once Kraken connector implementation is complete
+    # register_kraken(registry)
     register_hyperliquid(registry)
     register_coinbase(registry)
