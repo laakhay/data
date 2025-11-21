@@ -1,10 +1,10 @@
-"""Shared Bybit provider constants.
+"""Shared Bybit connector constants.
 
 This module centralizes URLs and interval mappings used by the REST and
-WebSocket implementations so the main provider can stay small and focused.
+WebSocket connectors so the main provider can stay small and focused.
 """
 
-from ...core import MarketType, Timeframe
+from laakhay.data.core import MarketType, Timeframe
 
 # Market-specific REST base URLs
 # Bybit uses unified API v5 with category parameter
@@ -15,9 +15,14 @@ BASE_URLS = {
 
 # Market-specific WebSocket URLs
 # Bybit v5 public WebSocket endpoints
-WS_PUBLIC_URLS = {
+WS_SINGLE_URLS = {
     MarketType.SPOT: "wss://stream.bybit.com/v5/public/spot",
     MarketType.FUTURES: "wss://stream.bybit.com/v5/public/linear",  # USDT perpetuals
+}
+
+WS_COMBINED_URLS = {
+    MarketType.SPOT: "wss://stream.bybit.com/v5/public/spot",
+    MarketType.FUTURES: "wss://stream.bybit.com/v5/public/linear",
 }
 
 # Category mapping for Bybit API v5
@@ -47,9 +52,6 @@ INTERVAL_MAP = {
     Timeframe.MO1: "M",
 }
 
-# Reverse mapping for WebSocket topics (interval string -> Timeframe)
-INTERVAL_REVERSE_MAP = {v: k for k, v in INTERVAL_MAP.items()}
-
 # Open Interest period mapping
 # Bybit supports: 5min, 15min, 30min, 1h, 4h, 1d
 OI_PERIOD_MAP = {
@@ -60,7 +62,3 @@ OI_PERIOD_MAP = {
     "4h": "4h",
     "1d": "1d",
 }
-
-# Order book depth options
-# Bybit supports: 1, 25, 50, 100, 200
-ORDER_BOOK_DEPTHS = [1, 25, 50, 100, 200]

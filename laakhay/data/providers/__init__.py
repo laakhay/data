@@ -8,6 +8,10 @@ from __future__ import annotations
 
 # Import URM from connectors
 from laakhay.data.connectors.binance.urm import BinanceURM
+
+# Bybit moved to connectors - import from there
+from laakhay.data.connectors.bybit.provider import BybitProvider
+from laakhay.data.connectors.bybit.urm import BybitURM
 from laakhay.data.core import MarketType
 
 # Explicitly import and re-export all public classes from provider modules
@@ -16,12 +20,6 @@ from laakhay.data.providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
-from laakhay.data.providers.bybit import (
-    BybitProvider,
-    BybitRESTProvider,
-    BybitWSProvider,
-)
-from laakhay.data.providers.bybit.urm import BybitURM
 from laakhay.data.providers.coinbase import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
@@ -53,11 +51,9 @@ __all__ = [
     "BinanceRESTProvider",
     "BinanceURM",
     "BinanceWSProvider",
-    # Bybit
+    # Bybit (moved to connectors)
     "BybitProvider",
-    "BybitRESTProvider",
     "BybitURM",
-    "BybitWSProvider",
     # Coinbase
     "CoinbaseProvider",
     "CoinbaseRESTProvider",

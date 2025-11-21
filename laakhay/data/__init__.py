@@ -52,11 +52,8 @@ from .providers.binance import (
     BinanceRESTProvider,
     BinanceWSProvider,
 )
-from .providers.bybit import (
-    BybitProvider,
-    BybitRESTProvider,
-    BybitWSProvider,
-)
+
+# Bybit moved to connectors - will be imported from there once complete
 from .providers.coinbase import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
@@ -88,9 +85,7 @@ __all__ = [
     "BinanceProvider",
     "BinanceRESTProvider",
     "BinanceWSProvider",
-    "BybitProvider",
-    "BybitRESTProvider",
-    "BybitWSProvider",
+    # Bybit moved to connectors
     "CoinbaseProvider",
     "CoinbaseRESTProvider",
     "CoinbaseWSProvider",

@@ -7,8 +7,8 @@ Handles Bybit-specific symbol formats:
 
 from __future__ import annotations
 
-from ...core import InstrumentSpec, InstrumentType, MarketType
-from ...core.exceptions import SymbolResolutionError
+from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
+from laakhay.data.core.exceptions import SymbolResolutionError
 
 
 class BybitURM:
@@ -72,7 +72,8 @@ class BybitURM:
         if market_type == MarketType.FUTURES:
             if spec.instrument_type != InstrumentType.PERPETUAL:
                 raise SymbolResolutionError(
-                    f"Cannot convert {spec.instrument_type.value} to Bybit futures symbol. Only perpetuals supported",
+                    f"Cannot convert {spec.instrument_type.value} to Bybit futures symbol. "
+                    "Only perpetuals supported",
                     exchange="bybit",
                     value=str(spec),
                     market_type=market_type,
