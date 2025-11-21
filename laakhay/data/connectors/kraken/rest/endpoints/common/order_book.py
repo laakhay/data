@@ -14,6 +14,8 @@ from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OrderBook
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
+from ....constants import normalize_symbol_to_kraken
+
 
 def build_path(params: dict[str, Any]) -> str:
     """Build the orderBook path based on market type."""
@@ -29,7 +31,9 @@ def build_path(params: dict[str, Any]) -> str:
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for orderBook endpoint."""
     market_type: MarketType = params["market_type"]
-    symbol = params["symbol"]  # Already in exchange format from router
+    symbol = params["symbol"]
+    # Normalize symbol to Kraken format
+    normalized_symbol = normalize_symbol_to_kraken(symbol, market_type)
     limit = int(params.get("limit", 100))
 
     if market_type == MarketType.FUTURES:
@@ -49,13 +53,13 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
             depth = 1000
 
         return {
-            "symbol": symbol,
+            "symbol": normalized_symbol,
             "depth": depth,
         }
     else:
         # Kraken Spot API
         return {
-            "pair": symbol,
+            "pair": normalized_symbol,
             "count": min(limit, 500),  # Kraken Spot max is 500
         }
 
