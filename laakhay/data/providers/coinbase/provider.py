@@ -1,4 +1,7 @@
-"""Unified Coinbase provider that wraps REST and WebSocket implementations."""
+"""Coinbase providers (REST-only, WS-only, and unified facade).
+
+This module provides shims that delegate to the connector implementations.
+"""
 
 from __future__ import annotations
 
@@ -16,14 +19,17 @@ from ...core import (
     register_feature_handler,
 )
 from ...models import OHLCV, OrderBook, StreamingBar, Symbol, Trade
-from .rest.provider import CoinbaseRESTProvider
-from .ws.provider import CoinbaseWSProvider
+from laakhay.data.connectors.coinbase.provider import (
+    CoinbaseProvider as ConnectorCoinbaseProvider,
+)
+from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
+from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
 
 
 class CoinbaseProvider(BaseProvider):
     """High-level Coinbase provider exposing REST and streaming helpers.
 
-    Coinbase Advanced Trade API only supports Spot markets.
+    This is a shim that delegates to the connector implementation.
     """
 
     def __init__(
@@ -32,31 +38,24 @@ class CoinbaseProvider(BaseProvider):
         market_type: MarketType = MarketType.SPOT,
         api_key: str | None = None,
         api_secret: str | None = None,
-        rest_provider: CoinbaseRESTProvider | None = None,
-        ws_provider: CoinbaseWSProvider | None = None,
+        rest_provider: CoinbaseRESTConnector | None = None,
+        ws_provider: CoinbaseWSConnector | None = None,
     ) -> None:
-        # Coinbase Advanced Trade API only supports Spot markets
-        if market_type != MarketType.SPOT:
-            raise ValueError(
-                "Coinbase Advanced Trade API only supports Spot markets. "
-                f"Got market_type={market_type}"
-            )
-
         super().__init__(name="coinbase")
-        self.market_type = MarketType.SPOT  # Force to SPOT
-        self._rest = rest_provider or CoinbaseRESTProvider(
-            market_type=MarketType.SPOT, api_key=api_key, api_secret=api_secret
+        self._connector_provider = ConnectorCoinbaseProvider(
+            market_type=market_type,
+            api_key=api_key,
+            api_secret=api_secret,
+            rest_connector=rest_provider,
+            ws_connector=ws_provider,
         )
-        self._ws = ws_provider or CoinbaseWSProvider(market_type=MarketType.SPOT)
-        self._owns_rest = rest_provider is None
-        self._owns_ws = ws_provider is None
-        self._closed = False
 
     def get_timeframes(self) -> list[str]:
-        """Get list of supported timeframes."""
-        from .constants import INTERVAL_MAP
+        return self._connector_provider.get_timeframes()
 
-        return list(INTERVAL_MAP.keys())
+    @register_feature_handler(DataFeature.HEALTH, TransportKind.REST)
+    async def fetch_health(self) -> dict[str, object]:
+        return await self._connector_provider.fetch_health()
 
     # --- REST delegations -------------------------------------------------
     @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
@@ -68,8 +67,7 @@ class CoinbaseProvider(BaseProvider):
         end_time: datetime | None = None,
         limit: int | None = None,
     ) -> OHLCV:
-        """Fetch OHLCV candles."""
-        return await self._rest.fetch_ohlcv(
+        return await self._connector_provider.fetch_ohlcv(
             symbol=symbol,
             timeframe=timeframe,
             start_time=start_time,
@@ -78,55 +76,21 @@ class CoinbaseProvider(BaseProvider):
         )
 
     @register_feature_handler(DataFeature.SYMBOL_METADATA, TransportKind.REST)
-    async def get_symbols(  # type: ignore[override]
+    async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
-        """List trading symbols."""
-        return await self._rest.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
+        return await self._connector_provider.get_symbols(quote_asset=quote_asset, use_cache=use_cache)
 
     @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.REST)
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
-        """Fetch current order book."""
-        return await self._rest.get_order_book(symbol=symbol, limit=limit)
+        return await self._connector_provider.get_order_book(symbol=symbol, limit=limit)
 
     async def get_exchange_info(self) -> dict:
-        """Get raw exchange info."""
-        return await self._rest.get_exchange_info()
+        return await self._connector_provider.get_exchange_info()
 
     @register_feature_handler(DataFeature.TRADES, TransportKind.REST)
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
-        """Fetch recent trades."""
-        return await self._rest.get_recent_trades(symbol=symbol, limit=limit)
-
-    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.REST)
-    async def get_funding_rate(
-        self,
-        symbol: str,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-        limit: int = 100,
-    ) -> list:
-        """Fetch funding rates - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support funding rates "
-            "(Futures feature, not available on Spot markets)"
-        )
-
-    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.REST)
-    async def get_open_interest(
-        self,
-        symbol: str,
-        historical: bool = False,
-        period: str = "5m",
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-        limit: int = 30,
-    ) -> list:
-        """Fetch open interest - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support open interest "
-            "(Futures feature, not available on Spot markets)"
-        )
+        return await self._connector_provider.get_recent_trades(symbol=symbol, limit=limit)
 
     # --- Streaming delegations -------------------------------------------
     @register_feature_handler(DataFeature.OHLCV, TransportKind.WS)
@@ -139,8 +103,7 @@ class CoinbaseProvider(BaseProvider):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        """Stream OHLCV candles."""
-        async for bar in self._ws.stream_ohlcv(
+        async for bar in self._connector_provider.stream_ohlcv(
             symbol,
             timeframe,
             only_closed=only_closed,
@@ -149,6 +112,7 @@ class CoinbaseProvider(BaseProvider):
         ):
             yield bar
 
+    @register_feature_handler(DataFeature.OHLCV, TransportKind.WS)
     async def stream_ohlcv_multi(
         self,
         symbols: list[str],
@@ -158,8 +122,7 @@ class CoinbaseProvider(BaseProvider):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        """Stream OHLCV candles for multiple symbols."""
-        async for bar in self._ws.stream_ohlcv_multi(
+        async for bar in self._connector_provider.stream_ohlcv_multi(
             symbols,
             timeframe,
             only_closed=only_closed,
@@ -170,68 +133,30 @@ class CoinbaseProvider(BaseProvider):
 
     @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
     async def stream_trades(self, symbol: str) -> AsyncIterator[Trade]:
-        """Stream trades."""
-        async for trade in self._ws.stream_trades(symbol):
+        async for trade in self._connector_provider.stream_trades(symbol):
             yield trade
 
+    @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
     async def stream_trades_multi(self, symbols: list[str]) -> AsyncIterator[Trade]:
-        """Stream trades for multiple symbols."""
-        async for trade in self._ws.stream_trades_multi(symbols):
+        async for trade in self._connector_provider.stream_trades_multi(symbols):
             yield trade
 
     @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.WS)
     async def stream_order_book(
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
-        """Stream order book updates.
+        async for book in self._connector_provider.stream_order_book(symbol, update_speed=update_speed):
+            yield book
 
-        Note: Coinbase Exchange API requires authentication for level2 WebSocket.
-        This method will raise NotImplementedError. Use REST API (get_order_book) for order book data instead.
-        """
-        # Raise immediately - async generators need to raise before yielding
-        raise NotImplementedError(
-            "Coinbase Exchange API requires authentication for level2 WebSocket. "
-            "Use REST API (get_order_book) for order book data, or implement authentication for WebSocket."
-        )
-        yield  # type: ignore[unreachable]  # Never reached, but needed for async generator type
+    @register_feature_handler(DataFeature.ORDER_BOOK, TransportKind.WS)
+    async def stream_order_book_multi(
+        self, symbols: list[str], update_speed: str = "100ms"
+    ) -> AsyncIterator[OrderBook]:
+        async for book in self._connector_provider.stream_order_book_multi(
+            symbols, update_speed=update_speed
+        ):
+            yield book
 
-    @register_feature_handler(DataFeature.OPEN_INTEREST, TransportKind.WS)
-    async def stream_open_interest(self, symbols: list[str], period: str = "5m") -> AsyncIterator:
-        """Stream open interest - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support open interest "
-            "(Futures feature, not available on Spot markets)"
-        )
-
-    @register_feature_handler(DataFeature.FUNDING_RATE, TransportKind.WS)
-    async def stream_funding_rate(
-        self, symbols: list[str], update_speed: str = "1s"
-    ) -> AsyncIterator:
-        """Stream funding rates - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support funding rates "
-            "(Futures feature, not available on Spot markets)"
-        )
-
-    @register_feature_handler(DataFeature.MARK_PRICE, TransportKind.WS)
-    async def stream_mark_price(
-        self, symbols: list[str], update_speed: str = "1s"
-    ) -> AsyncIterator:
-        """Stream mark prices - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support mark prices "
-            "(Futures feature, not available on Spot markets)"
-        )
-
-    @register_feature_handler(DataFeature.LIQUIDATIONS, TransportKind.WS)
-    async def stream_liquidations(self) -> AsyncIterator:
-        """Stream liquidations - NOT SUPPORTED by Coinbase Advanced Trade API."""
-        raise NotImplementedError(
-            "Coinbase Advanced Trade API does not support liquidations "
-            "(Futures feature, not available on Spot markets)"
-        )
-
-    # --- Capability discovery ----------------------------------------------
     async def describe_capabilities(
         self,
         feature: DataFeature,
@@ -240,26 +165,12 @@ class CoinbaseProvider(BaseProvider):
         market_type: MarketType,
         instrument_type: InstrumentType,
     ) -> CapabilityStatus:
-        """Describe capabilities for Coinbase.
-
-        Returns static capability status from the registry.
-        Runtime discovery can be added later to probe actual API availability.
-        """
-        return supports(
+        return await self._connector_provider.describe_capabilities(
             feature=feature,
             transport=transport,
-            exchange="coinbase",
             market_type=market_type,
             instrument_type=instrument_type,
         )
 
-    # --- Lifecycle --------------------------------------------------------
     async def close(self) -> None:
-        """Close provider connections."""
-        if self._closed:
-            return
-        self._closed = True
-        if self._owns_rest:
-            await self._rest.close()
-        if self._owns_ws:
-            await self._ws.close()
+        await self._connector_provider.close()

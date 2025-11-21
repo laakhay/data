@@ -2,8 +2,8 @@
 
 from .provider import CoinbaseProvider
 from .rest.provider import CoinbaseRESTProvider
-from .urm import CoinbaseURM
 from .ws.provider import CoinbaseWSProvider
+from laakhay.data.connectors.coinbase.urm import CoinbaseURM
 
 __all__ = [
     "CoinbaseProvider",
