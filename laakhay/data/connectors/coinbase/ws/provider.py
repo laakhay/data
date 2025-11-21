@@ -101,7 +101,7 @@ class CoinbaseWSConnector(WSProvider):
         spec = get_endpoint_spec(endpoint_id, self.market_type)
         adapter_cls = get_endpoint_adapter(endpoint_id)
         if spec is None or adapter_cls is None:
-            raise ValueError(f"Unknown WS endpoint: {endpoint_id}")
+            raise ValueError(f"Unknown endpoint: {endpoint_id}")
 
         adapter = adapter_cls()
         async for obj in self._stream(

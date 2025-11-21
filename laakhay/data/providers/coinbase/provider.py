@@ -43,6 +43,7 @@ class CoinbaseProvider(BaseProvider):
         ws_provider: CoinbaseWSConnector | None = None,
     ) -> None:
         super().__init__(name="coinbase")
+        self.market_type = market_type
         self._connector_provider = ConnectorCoinbaseProvider(
             market_type=market_type,
             api_key=api_key,
@@ -50,6 +51,9 @@ class CoinbaseProvider(BaseProvider):
             rest_connector=rest_provider,
             ws_connector=ws_provider,
         )
+        # Expose _rest and _ws for backward compatibility with tests
+        self._rest = self._connector_provider._rest
+        self._ws = self._connector_provider._ws
 
     def get_timeframes(self) -> list[str]:
         return self._connector_provider.get_timeframes()

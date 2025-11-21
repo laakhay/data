@@ -23,6 +23,7 @@ class CoinbaseWSProvider(WSProvider):
     """Streaming-only provider for Coinbase Spot (shim)."""
 
     def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
+        self.market_type = market_type
         self._connector = CoinbaseWSConnector(market_type=market_type)
 
     async def stream_ohlcv(  # type: ignore[override,misc]
@@ -115,6 +116,31 @@ class CoinbaseWSProvider(WSProvider):
             dedupe_key=dedupe_key,
         ):
             yield obj
+
+    async def stream_liquidations(self) -> AsyncIterator[Any]:
+        """Stream liquidations - NOT SUPPORTED by Coinbase."""
+        raise NotImplementedError(
+            "Coinbase Advanced Trade API does not support liquidations "
+            "(Futures feature, not available on Spot markets)"
+        )
+
+    async def stream_open_interest(
+        self, symbols: list[str], period: str = "5m"
+    ) -> AsyncIterator[Any]:
+        """Stream open interest - NOT SUPPORTED by Coinbase."""
+        raise NotImplementedError(
+            "Coinbase Advanced Trade API does not support open interest "
+            "(Futures feature, not available on Spot markets)"
+        )
+
+    async def stream_funding_rate(
+        self, symbols: list[str], update_speed: str = "1s"
+    ) -> AsyncIterator[Any]:
+        """Stream funding rate - NOT SUPPORTED by Coinbase."""
+        raise NotImplementedError(
+            "Coinbase Advanced Trade API does not support funding rates "
+            "(Futures feature, not available on Spot markets)"
+        )
 
     async def close(self) -> None:
         await self._connector.close()

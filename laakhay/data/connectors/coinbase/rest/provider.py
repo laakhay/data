@@ -126,7 +126,14 @@ class CoinbaseRESTConnector(RESTProvider):
 
         Returns:
             OHLCV object with bars
+
+        Raises:
+            ValueError: If timeframe is invalid or max_chunks is invalid
         """
+        # Validate max_chunks
+        if max_chunks is not None and max_chunks <= 0:
+            raise ValueError("max_chunks must be None or a positive integer")
+
         # Convert string timeframe to Timeframe if needed
         if isinstance(timeframe, str):
             tf = Timeframe.from_str(timeframe)
