@@ -140,9 +140,7 @@ class KrakenRESTConnector(RESTProvider):
         return result
 
     async def get_symbols(
-        self,
-        quote_asset: str | None = None,
-        use_cache: bool = True,  # noqa: ARG002
+        self, quote_asset: str | None = None, use_cache: bool = True  # noqa: ARG002
     ) -> list[Symbol]:
         """List trading symbols, optionally filtered by quote asset.
 
@@ -293,3 +291,4 @@ class KrakenRESTConnector(RESTProvider):
     async def close(self) -> None:
         """Close underlying HTTP resources."""
         await self._transport.close()
+

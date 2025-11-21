@@ -37,7 +37,6 @@ from laakhay.data.providers.hyperliquid import (
 from laakhay.data.providers.kraken import (
     KrakenURM,
 )
-
 # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
 # once the connector implementation is complete
 from laakhay.data.providers.okx import (
@@ -167,9 +166,10 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
         registry = get_provider_registry()
 
     # Import URM from providers shim
+    from laakhay.data.providers.kraken import KrakenURM
+
     # Import provider from connectors (full implementation)
     from laakhay.data.connectors.kraken.provider import KrakenProvider
-    from laakhay.data.providers.kraken import KrakenURM
 
     # Collect feature handlers from decorators
     feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
