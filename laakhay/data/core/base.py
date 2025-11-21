@@ -134,7 +134,6 @@ class BaseProvider(ABC):
         return CapabilityStatus(
             supported=False,
             reason="Runtime capability discovery not implemented for this provider",
-            source="static",
         )
 
     async def __aenter__(self) -> BaseProvider:

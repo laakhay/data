@@ -1,7 +1,6 @@
 """Capability registry and service exports."""
 
 from .registry import (
-    EXCHANGE_METADATA,
     CapabilityKey,
     CapabilityStatus,
     FallbackOption,
@@ -23,7 +22,6 @@ from .service import CapabilityService
 
 __all__ = [
     "CapabilityService",
-    "EXCHANGE_METADATA",
     "CapabilityKey",
     "CapabilityStatus",
     "FallbackOption",
