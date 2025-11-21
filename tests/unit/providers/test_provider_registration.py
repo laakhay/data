@@ -3,7 +3,7 @@
 import pytest
 
 from laakhay.data.core import DataFeature, MarketType, TransportKind
-from laakhay.data.providers import (
+from laakhay.data.registration import (
     register_all,
     register_binance,
     register_bybit,

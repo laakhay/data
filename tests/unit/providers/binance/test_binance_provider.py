@@ -8,10 +8,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from laakhay.data.connectors.binance import (
+    BinanceProvider,
+    BinanceRESTProvider,
+    BinanceWSProvider,
+)
+from laakhay.data.connectors.binance.config import INTERVAL_MAP
 from laakhay.data.core import MarketType, Timeframe
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
-from laakhay.data.providers import BinanceProvider, BinanceRESTProvider, BinanceWSProvider
-from laakhay.data.connectors.binance.config import INTERVAL_MAP
 
 
 def test_binance_rest_provider_instantiation_defaults_to_spot():

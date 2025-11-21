@@ -1,8 +1,8 @@
 """Integration tests for URM registry with Binance and Kraken mappers."""
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, URMRegistry
 from laakhay.data.connectors.binance.urm import BinanceURM
 from laakhay.data.connectors.kraken.urm import KrakenURM
+from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, URMRegistry
 
 
 def test_registry_with_binance_mapper():

@@ -6,6 +6,9 @@ from the modular endpoint structure.
 
 from __future__ import annotations
 
+from typing import Any
+
+from laakhay.data.core import MarketType
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 # Import all endpoint modules
@@ -86,6 +89,80 @@ def list_endpoints() -> list[str]:
     return list(_ENDPOINT_REGISTRY.keys())
 
 
+# Legacy compatibility functions for tests
+def candles_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return OHLCVSpec
+
+
+def exchange_info_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return ExchangeInfoSpec
+
+
+def order_book_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return OrderBookSpec
+
+
+def recent_trades_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return TradesSpec
+
+
+def historical_trades_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return HistoricalTradesSpec
+
+
+def open_interest_current_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return OpenInterestCurrentSpec
+
+
+def open_interest_hist_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return OpenInterestHistSpec
+
+
+def funding_rate_spec() -> RestEndpointSpec:
+    """Legacy function for test compatibility."""
+    return FundingRateSpec
+
+
+# Legacy adapter exports for test compatibility
+CandlesResponseAdapter = OHLCVAdapter
+ExchangeInfoSymbolsAdapter = ExchangeInfoAdapter
+OrderBookResponseAdapter = OrderBookAdapter
+RecentTradesAdapter = TradesAdapter
+FundingRateAdapter = FundingRateAdapter
+OpenInterestCurrentAdapter = OpenInterestCurrentAdapter
+OpenInterestHistAdapter = OpenInterestHistAdapter
+
+
+# Helper function for extracting result (used by adapters)
+def _extract_result(response: Any, market_type: MarketType) -> Any:
+    """Extract result from Kraken API response.
+
+    Args:
+        response: Raw API response
+        market_type: Market type (spot or futures)
+
+    Returns:
+        Extracted result data
+    """
+    if market_type == MarketType.FUTURES:
+        # Futures format: {"result": "ok", "serverTime": ..., "data": {...}}
+        if isinstance(response, dict) and "result" in response:
+            return response.get("data", response)
+        return response
+    else:
+        # Spot format: {"error": [], "result": {...}}
+        if isinstance(response, dict) and "result" in response:
+            return response["result"]
+        return response
+
+
 __all__ = [
     "get_endpoint_spec",
     "get_endpoint_adapter",
@@ -107,4 +184,21 @@ __all__ = [
     "OpenInterestHistAdapter",
     "FundingRateSpec",
     "FundingRateAdapter",
+    # Legacy compatibility exports
+    "candles_spec",
+    "exchange_info_spec",
+    "order_book_spec",
+    "recent_trades_spec",
+    "historical_trades_spec",
+    "open_interest_current_spec",
+    "open_interest_hist_spec",
+    "funding_rate_spec",
+    "CandlesResponseAdapter",
+    "ExchangeInfoSymbolsAdapter",
+    "OrderBookResponseAdapter",
+    "RecentTradesAdapter",
+    "FundingRateAdapter",
+    "OpenInterestCurrentAdapter",
+    "OpenInterestHistAdapter",
+    "_extract_result",
 ]

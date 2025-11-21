@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from laakhay.data.connectors.binance import BinanceProvider
 from laakhay.data.core import Timeframe
-from laakhay.data.providers import BinanceProvider
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",

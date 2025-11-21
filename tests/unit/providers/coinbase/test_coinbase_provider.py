@@ -7,6 +7,11 @@ from typing import Any
 
 import pytest
 
+from laakhay.data.connectors.coinbase import (
+    CoinbaseProvider,
+    CoinbaseRESTProvider,
+    CoinbaseWSProvider,
+)
 from laakhay.data.connectors.coinbase.config import (
     INTERVAL_MAP,
     normalize_symbol_from_coinbase,
@@ -61,11 +66,6 @@ from laakhay.data.models import (
     OrderBook,
     SeriesMeta,
     Symbol,
-)
-from laakhay.data.providers import (
-    CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseWSProvider,
 )
 
 

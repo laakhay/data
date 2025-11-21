@@ -4,29 +4,20 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.core.exceptions import DataError
-from laakhay.data.models import (
-    OHLCV,
-    Bar,
-    OrderBook,
-    SeriesMeta,
-)
-from laakhay.data.providers import (
+from laakhay.data.connectors.kraken import (
     KrakenProvider,
     KrakenRESTProvider,
     KrakenWSProvider,
 )
+from laakhay.data.connectors.kraken.config import INTERVAL_MAP
 from laakhay.data.connectors.kraken.constants import (
-    INTERVAL_MAP,
     normalize_symbol_from_kraken,
     normalize_symbol_to_kraken,
 )
-from laakhay.data.connectors.kraken.rest.adapters import (
+from laakhay.data.connectors.kraken.rest.endpoints import (
     CandlesResponseAdapter,
     ExchangeInfoSymbolsAdapter,
     FundingRateAdapter,
@@ -35,8 +26,6 @@ from laakhay.data.connectors.kraken.rest.adapters import (
     OrderBookResponseAdapter,
     RecentTradesAdapter,
     _extract_result,
-)
-from laakhay.data.connectors.kraken.rest.endpoints import (
     candles_spec,
     exchange_info_spec,
     funding_rate_spec,
@@ -44,27 +33,33 @@ from laakhay.data.connectors.kraken.rest.endpoints import (
     order_book_spec,
     recent_trades_spec,
 )
-from laakhay.data.connectors.kraken.ws.adapters import (
+from laakhay.data.connectors.kraken.ws.endpoints import (
     FundingRateAdapter as WSFundingRateAdapter,
 )
-from laakhay.data.connectors.kraken.ws.adapters import (
+from laakhay.data.connectors.kraken.ws.endpoints import (
     LiquidationsAdapter,
     MarkPriceAdapter,
     OhlcvAdapter,
     OpenInterestAdapter,
     OrderBookAdapter,
     TradesAdapter,
-)
-from laakhay.data.connectors.kraken.ws.endpoints import (
-    funding_rate_spec as ws_funding_rate_spec,
-)
-from laakhay.data.connectors.kraken.ws.endpoints import (
     ohlcv_spec,
     open_interest_spec,
     trades_spec,
 )
 from laakhay.data.connectors.kraken.ws.endpoints import (
+    funding_rate_spec as ws_funding_rate_spec,
+)
+from laakhay.data.connectors.kraken.ws.endpoints import (
     order_book_spec as ws_order_book_spec,
+)
+from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.core.exceptions import DataError
+from laakhay.data.models import (
+    OHLCV,
+    Bar,
+    OrderBook,
+    SeriesMeta,
 )
 
 # ============================================================================
@@ -1147,4 +1142,3 @@ def test_kraken_ws_provider_stream_ohlcv_format():
     assert stream_name == "ohlc-PI_XBTUSD-15"
     assert spec.combined_supported is True
     assert spec.max_streams_per_connection >= 1
->>>>>>> Stashed changes

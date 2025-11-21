@@ -8,16 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.core.exceptions import DataError
-from laakhay.data.models import (
-    OHLCV,
-    Bar,
-    OrderBook,
-    SeriesMeta,
-    Symbol,
-)
-from laakhay.data.providers import (
+from laakhay.data.connectors.hyperliquid import (
     HyperliquidProvider,
     HyperliquidRESTProvider,
     HyperliquidWSProvider,
@@ -50,6 +41,15 @@ from laakhay.data.connectors.hyperliquid.ws.endpoints import (
     order_book_spec as ws_order_book_spec,
 )
 from laakhay.data.connectors.hyperliquid.ws.transport import HyperliquidWebSocketTransport
+from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.core.exceptions import DataError
+from laakhay.data.models import (
+    OHLCV,
+    Bar,
+    OrderBook,
+    SeriesMeta,
+    Symbol,
+)
 
 # ============================================================================
 # Provider Instantiation Tests

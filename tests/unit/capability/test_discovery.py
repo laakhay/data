@@ -6,7 +6,7 @@ import pytest
 
 from laakhay.data.capability.discovery import CapabilityDiscovery
 from laakhay.data.core.enums import DataFeature, InstrumentType, MarketType, TransportKind
-from laakhay.data.providers import register_all
+from laakhay.data.registration import register_all
 
 
 @pytest.fixture

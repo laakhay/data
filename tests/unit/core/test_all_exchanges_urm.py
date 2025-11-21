@@ -1,12 +1,12 @@
 """Integration tests for all exchange URM mappers."""
 
+from laakhay.data.connectors.binance.urm import BinanceURM
 from laakhay.data.connectors.bybit.urm import BybitURM
 from laakhay.data.connectors.coinbase.urm import CoinbaseURM
-from laakhay.data.connectors.okx.urm import OKXURM
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, URMRegistry
-from laakhay.data.connectors.binance.urm import BinanceURM
 from laakhay.data.connectors.hyperliquid.urm import HyperliquidURM
 from laakhay.data.connectors.kraken.urm import KrakenURM
+from laakhay.data.connectors.okx.urm import OKXURM
+from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, URMRegistry
 
 
 def test_all_exchanges_registered():

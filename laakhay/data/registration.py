@@ -1,51 +1,23 @@
-"""Provider registration and initialization.
+"""Provider registration utilities.
 
 This module provides utilities for registering providers with the global
-ProviderRegistry and setting up feature handlers.
-
-All exchanges have been migrated to connectors/. This module now imports
-from connectors/ and re-exports for backward compatibility.
+ProviderRegistry. All exchanges are now in connectors/.
 """
 
 from __future__ import annotations
 
-# All exchanges moved to connectors - import from there
-from laakhay.data.connectors.binance import (
-    BinanceProvider,
-    BinanceRESTProvider,
-    BinanceWSProvider,
-)
+from laakhay.data.connectors.binance import BinanceProvider
 from laakhay.data.connectors.binance.urm import BinanceURM
-from laakhay.data.connectors.bybit import (
-    BybitProvider,
-    BybitRESTProvider,
-    BybitWSProvider,
-)
+from laakhay.data.connectors.bybit import BybitProvider
 from laakhay.data.connectors.bybit.urm import BybitURM
-from laakhay.data.connectors.coinbase import (
-    CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseURM,
-    CoinbaseWSProvider,
-)
-from laakhay.data.connectors.hyperliquid import (
-    HyperliquidProvider,
-    HyperliquidRESTProvider,
-    HyperliquidURM,
-    HyperliquidWSProvider,
-)
-from laakhay.data.connectors.kraken import (
-    KrakenProvider,
-    KrakenRESTProvider,
-    KrakenURM,
-    KrakenWSProvider,
-)
-from laakhay.data.connectors.okx import (
-    OKXProvider,
-    OKXRESTProvider,
-    OKXURM,
-    OKXWSProvider,
-)
+from laakhay.data.connectors.coinbase import CoinbaseProvider
+from laakhay.data.connectors.coinbase.urm import CoinbaseURM
+from laakhay.data.connectors.hyperliquid import HyperliquidProvider
+from laakhay.data.connectors.hyperliquid.urm import HyperliquidURM
+from laakhay.data.connectors.kraken import KrakenProvider
+from laakhay.data.connectors.kraken.urm import KrakenURM
+from laakhay.data.connectors.okx import OKXProvider
+from laakhay.data.connectors.okx.urm import OKXURM
 from laakhay.data.core import MarketType
 from laakhay.data.runtime.provider_registry import (
     ProviderRegistry,
@@ -53,39 +25,7 @@ from laakhay.data.runtime.provider_registry import (
     get_provider_registry,
 )
 
-# Explicit re-exports to satisfy ruff (these are exported via __all__)
 __all__ = [
-    # Binance
-    "BinanceProvider",
-    "BinanceRESTProvider",
-    "BinanceURM",
-    "BinanceWSProvider",
-    # Bybit
-    "BybitProvider",
-    "BybitRESTProvider",
-    "BybitURM",
-    "BybitWSProvider",
-    # Coinbase
-    "CoinbaseProvider",
-    "CoinbaseRESTProvider",
-    "CoinbaseURM",
-    "CoinbaseWSProvider",
-    # Hyperliquid
-    "HyperliquidProvider",
-    "HyperliquidRESTProvider",
-    "HyperliquidURM",
-    "HyperliquidWSProvider",
-    # Kraken
-    "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenURM",
-    "KrakenWSProvider",
-    # OKX
-    "OKXProvider",
-    "OKXRESTProvider",
-    "OKXURM",
-    "OKXWSProvider",
-    # Registration functions
     "register_binance",
     "register_bybit",
     "register_coinbase",
@@ -105,14 +45,13 @@ def register_binance(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(BinanceProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(BinanceProvider)
 
     registry.register(
         "binance",
-        BinanceProvider,  # noqa: F405
+        BinanceProvider,
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=BinanceURM(),  # noqa: F405
+        urm_mapper=BinanceURM(),
         feature_handlers=feature_handlers,
     )
 
@@ -126,14 +65,13 @@ def register_bybit(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(BybitProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(BybitProvider)
 
     registry.register(
         "bybit",
-        BybitProvider,  # noqa: F405
+        BybitProvider,
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=BybitURM(),  # noqa: F405
+        urm_mapper=BybitURM(),
         feature_handlers=feature_handlers,
     )
 
@@ -147,14 +85,13 @@ def register_okx(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(OKXProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(OKXProvider)
 
     registry.register(
         "okx",
-        OKXProvider,  # noqa: F405
+        OKXProvider,
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=OKXURM(),  # noqa: F405
+        urm_mapper=OKXURM(),
         feature_handlers=feature_handlers,
     )
 
@@ -168,14 +105,13 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(KrakenProvider)
 
     registry.register(
         "kraken",
-        KrakenProvider,  # noqa: F405
+        KrakenProvider,
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=KrakenURM(),  # noqa: F405
+        urm_mapper=KrakenURM(),
         feature_handlers=feature_handlers,
     )
 
@@ -189,14 +125,13 @@ def register_hyperliquid(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(HyperliquidProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(HyperliquidProvider)
 
     registry.register(
         "hyperliquid",
-        HyperliquidProvider,  # noqa: F405
+        HyperliquidProvider,
         market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=HyperliquidURM(),  # noqa: F405
+        urm_mapper=HyperliquidURM(),
         feature_handlers=feature_handlers,
     )
 
@@ -212,14 +147,13 @@ def register_coinbase(registry: ProviderRegistry | None = None) -> None:
     if registry is None:
         registry = get_provider_registry()
 
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(CoinbaseProvider)  # noqa: F405
+    feature_handlers = collect_feature_handlers(CoinbaseProvider)
 
     registry.register(
         "coinbase",
-        CoinbaseProvider,  # noqa: F405
+        CoinbaseProvider,
         market_types=[MarketType.SPOT],  # Coinbase only supports spot
-        urm_mapper=CoinbaseURM(),  # noqa: F405
+        urm_mapper=CoinbaseURM(),
         feature_handlers=feature_handlers,
     )
 

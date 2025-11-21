@@ -20,33 +20,7 @@ from .capability import (
     supports_market_type,
 )
 from .clients.ohlcv_feed import OHLCVFeed
-from .core import (
-    BaseProvider,
-    CapabilityError,
-    DataError,
-    DataFeature,
-    InstrumentSpec,
-    InstrumentType,
-    InvalidIntervalError,
-    InvalidSymbolError,
-    MarketType,
-    ProviderError,
-    RateLimitError,
-    Timeframe,
-    TransportKind,
-    ValidationError,
-)
-from .models import (
-    OHLCV,
-    Bar,
-    ConnectionEvent,
-    ConnectionStatus,
-    DataEvent,
-    DataEventType,
-    SeriesMeta,
-    StreamingBar,
-    Symbol,
-)
+
 # All exchanges moved to connectors
 from .connectors.binance import (
     BinanceProvider,
@@ -77,6 +51,33 @@ from .connectors.okx import (
     OKXProvider,
     OKXRESTProvider,
     OKXWSProvider,
+)
+from .core import (
+    BaseProvider,
+    CapabilityError,
+    DataError,
+    DataFeature,
+    InstrumentSpec,
+    InstrumentType,
+    InvalidIntervalError,
+    InvalidSymbolError,
+    MarketType,
+    ProviderError,
+    RateLimitError,
+    Timeframe,
+    TransportKind,
+    ValidationError,
+)
+from .models import (
+    OHLCV,
+    Bar,
+    ConnectionEvent,
+    ConnectionStatus,
+    DataEvent,
+    DataEventType,
+    SeriesMeta,
+    StreamingBar,
+    Symbol,
 )
 
 __version__ = "0.1.0"

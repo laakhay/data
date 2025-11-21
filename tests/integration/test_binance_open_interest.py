@@ -5,9 +5,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from laakhay.data.connectors.binance import BinanceProvider
 from laakhay.data.core import MarketType
 from laakhay.data.models import OpenInterest
-from laakhay.data.connectors.binance import BinanceProvider
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
