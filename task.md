@@ -66,7 +66,7 @@ runtime/chunking/
   - Provide metrics hooks for observability
 
 ### Phase 6: Update Tests
-- [ ] **tests: add chunking layer tests**
+- [x] **tests: add chunking layer tests**
   - Unit tests for ChunkPlanner (various scenarios)
   - Unit tests for ChunkExecutor (deduplication, early stopping)
   - Integration test with Binance connector

@@ -69,7 +69,7 @@ class ChunkExecutor:
 
             # Handle empty chunks
             if chunk_data is None:
-                continue
+                break
 
             # Extract data points from chunk
             data_points = self._extract_data_points(chunk_data)
