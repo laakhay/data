@@ -1,40 +1,27 @@
-"""Coinbase REST-only provider.
+"""Coinbase REST-only provider (shim for backward compatibility).
 
-Implements the RESTProvider interface for Coinbase Advanced Trade API.
-Coinbase Advanced Trade API only supports Spot markets.
+This module is a shim that wraps the connector-based REST provider.
+The actual implementation has been moved to connectors/coinbase/rest/provider.py.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
 
+from laakhay.data.connectors.coinbase.config import INTERVAL_MAP
+from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
+
 from ....core import MarketType, Timeframe
 from ....models import OHLCV, OrderBook, Symbol, Trade
-from ....runtime.rest import (
-    ResponseAdapter,
-    RESTProvider,
-    RestRunner,
-    RESTTransport,
-)
-from .adapters import (
-    CandlesResponseAdapter,
-    ExchangeInfoSymbolsAdapter,
-    OrderBookResponseAdapter,
-    RecentTradesAdapter,
-)
-from .endpoints import (
-    candles_spec,
-    exchange_info_raw_spec,
-    exchange_info_spec,
-    order_book_spec,
-    recent_trades_spec,
-)
+from ....runtime.rest import RESTProvider
 
 
 class CoinbaseRESTProvider(RESTProvider):
-    """REST-only provider for Coinbase Advanced Trade API (Spot markets only)."""
+    """REST-only provider for Coinbase Spot (shim)."""
+
+    _MAX_CANDLES_PER_REQUEST = 300  # Coinbase max is 300 candles per request
+    _DEFAULT_MAX_CANDLE_CHUNKS = 5
 
     def __init__(
         self,
@@ -43,47 +30,35 @@ class CoinbaseRESTProvider(RESTProvider):
         api_key: str | None = None,
         api_secret: str | None = None,
     ) -> None:
-        # Coinbase Advanced Trade API only supports Spot markets
-        if market_type != MarketType.SPOT:
-            raise ValueError(
-                "Coinbase Advanced Trade API only supports Spot markets. "
-                f"Got market_type={market_type}"
-            )
+        """Initialize REST provider shim.
 
-        self.market_type = MarketType.SPOT  # Force to SPOT
-        from ..constants import BASE_URLS
+        Args:
+            market_type: Market type (only SPOT supported for Coinbase)
+            api_key: Optional API key
+            api_secret: Optional API secret
+        """
+        self.market_type = market_type
+        self._connector = CoinbaseRESTConnector(
+            market_type=market_type, api_key=api_key, api_secret=api_secret
+        )
+        # Expose _transport for backward compatibility with tests
+        self._transport = self._connector._transport
 
-        self._transport = RESTTransport(base_url=BASE_URLS[MarketType.SPOT])
-        self._runner = RestRunner(self._transport)
+    async def fetch(self, endpoint_id: str, params: dict[str, Any]) -> Any:
+        """Fetch data from a Coinbase REST endpoint (for backward compatibility).
 
-        # Registry: key -> (spec_builder, adapter_class)
-        self._ENDPOINTS: dict[str, tuple[Callable[..., Any], type]] = {
-            "ohlcv": (candles_spec, CandlesResponseAdapter),
-            "symbols": (exchange_info_spec, ExchangeInfoSymbolsAdapter),
-            "order_book": (order_book_spec, OrderBookResponseAdapter),
-            "recent_trades": (recent_trades_spec, RecentTradesAdapter),
-            "exchange_info_raw": (exchange_info_raw_spec, ExchangeInfoSymbolsAdapter),
-        }
+        Args:
+            endpoint_id: Endpoint identifier
+            params: Request parameters
 
-        # Note: Coinbase doesn't support Futures features:
-        # - funding_rate
-        # - open_interest
-        # These are intentionally omitted
+        Returns:
+            Parsed response
+        """
+        return await self._connector.fetch(endpoint_id, params)
 
-    _MAX_CANDLES_PER_REQUEST = 300  # Coinbase max is 300 candles per request
-    _DEFAULT_MAX_CANDLE_CHUNKS = 5
-
-    async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
-        """Fetch data from a registered endpoint."""
-        if endpoint not in self._ENDPOINTS:
-            raise ValueError(f"Unknown REST endpoint: {endpoint}")
-        spec_fn, adapter_cls = self._ENDPOINTS[endpoint]
-        spec = spec_fn()
-        adapter = adapter_cls()
-        # Ensure market_type is set
-        if "market_type" not in params:
-            params["market_type"] = self.market_type
-        return await self._runner.run(spec=spec, adapter=adapter, params=params)
+    async def fetch_health(self) -> dict[str, object]:
+        """Ping Coinbase REST API to verify connectivity."""
+        return await self._connector.fetch_health()
 
     async def fetch_ohlcv(
         self,
@@ -94,26 +69,29 @@ class CoinbaseRESTProvider(RESTProvider):
         limit: int | None = None,
         max_chunks: int | None = None,
     ) -> OHLCV:
-        """Fetch OHLCV candles for a symbol.
+        """Fetch OHLCV bars with chunking support.
 
         Coinbase returns up to 300 candles per request. If more are needed,
         requests are chunked automatically.
         """
-        from ..constants import INTERVAL_MAP as COINBASE_INTERVAL_MAP
-
-        if isinstance(timeframe, str):
-            parsed_timeframe = Timeframe.from_str(timeframe)
-            if parsed_timeframe is None:
-                raise ValueError(f"Invalid timeframe: {timeframe}")
-            timeframe = parsed_timeframe
-        if not isinstance(timeframe, Timeframe) or timeframe not in COINBASE_INTERVAL_MAP:
-            raise ValueError(f"Invalid timeframe: {timeframe}")
-
+        # Validate max_chunks
         if max_chunks is not None and max_chunks <= 0:
             raise ValueError("max_chunks must be None or a positive integer")
 
+        # Convert string timeframe to Timeframe if needed
+        if isinstance(timeframe, str):
+            tf = Timeframe.from_str(timeframe)
+            if tf is None:
+                raise ValueError(f"Invalid timeframe: {timeframe}")
+            timeframe = tf
+
+        if timeframe not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
+
         chunk_cap = max_chunks or self._DEFAULT_MAX_CANDLE_CHUNKS
-        interval_delta = timedelta(seconds=timeframe.seconds)
+        interval_delta = (
+            timedelta(seconds=timeframe.seconds) if timeframe.seconds else timedelta(minutes=1)
+        )
 
         async def _fetch_chunk(
             *,
@@ -121,13 +99,11 @@ class CoinbaseRESTProvider(RESTProvider):
             chunk_end: datetime | None,
             chunk_limit: int | None,
         ) -> OHLCV:
-            if not isinstance(timeframe, Timeframe):
-                raise ValueError(f"Invalid timeframe: {timeframe}")
             params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
                 "interval": timeframe,
-                "interval_str": COINBASE_INTERVAL_MAP[timeframe],
+                "interval_str": INTERVAL_MAP[timeframe],
                 "start_time": chunk_start,
                 "end_time": chunk_end,
                 "limit": chunk_limit,
@@ -200,36 +176,23 @@ class CoinbaseRESTProvider(RESTProvider):
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
     ) -> list[Symbol]:
-        """List trading symbols, optionally filtered by quote asset."""
-        params = {"market_type": self.market_type, "quote_asset": quote_asset}
-        data = await self.fetch("symbols", params)
+        """Get trading symbols."""
+        # Use shim's fetch method so tests can mock it
+        params = {"quote_asset": quote_asset}
+        data = await self.fetch("exchange_info", params)
         return list(data) if use_cache else data
 
     async def get_exchange_info(self) -> dict:
         """Return raw exchange info payload."""
-        params = {"market_type": self.market_type}
-        # Use passthrough adapter for raw data
-        spec = exchange_info_raw_spec()
-
-        class _Passthrough(ResponseAdapter):
-            def parse(self, response: Any, params: dict[str, Any]) -> Any:
-                return response
-
-        adapter = _Passthrough()
-        result: dict[Any, Any] = await self._runner.run(spec=spec, adapter=adapter, params=params)
-        return result
+        return await self._connector.get_exchange_info()
 
     async def get_order_book(self, symbol: str, limit: int = 100) -> OrderBook:
-        """Fetch current order book."""
-        params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
-        result: OrderBook = await self.fetch("order_book", params)
-        return result
+        """Fetch order book."""
+        return await self._connector.get_order_book(symbol=symbol, limit=limit)
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> list[Trade]:
         """Fetch recent trades."""
-        params = {"market_type": self.market_type, "symbol": symbol, "limit": limit}
-        data = await self.fetch("recent_trades", params)
-        return list(data)
+        return await self._connector.get_recent_trades(symbol=symbol, limit=limit)
 
     async def get_funding_rate(
         self,
@@ -260,5 +223,5 @@ class CoinbaseRESTProvider(RESTProvider):
         )
 
     async def close(self) -> None:
-        """Close HTTP transport."""
-        await self._transport.close()
+        """Close underlying resources."""
+        await self._connector.close()

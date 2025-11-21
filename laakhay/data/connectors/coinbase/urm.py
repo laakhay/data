@@ -6,8 +6,8 @@ Handles Coinbase-specific symbol formats:
 
 from __future__ import annotations
 
-from ...core import InstrumentSpec, InstrumentType, MarketType
-from ...core.exceptions import SymbolResolutionError
+from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
+from laakhay.data.core.exceptions import SymbolResolutionError
 
 
 class CoinbaseURM:

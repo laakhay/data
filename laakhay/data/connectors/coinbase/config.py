@@ -4,7 +4,7 @@ This module centralizes URLs, interval mappings, and symbol normalization
 used by the REST and WebSocket providers.
 """
 
-from ...core import MarketType, Timeframe
+from laakhay.data.core import MarketType, Timeframe
 
 # Market-specific REST base URLs
 # Coinbase Exchange API (public, no auth) for market data
