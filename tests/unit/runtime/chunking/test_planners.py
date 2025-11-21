@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import pytest
 
 from laakhay.data.core import Timeframe
-from laakhay.data.runtime.chunking import ChunkHint, ChunkPlan, ChunkPlanner, ChunkPolicy
+from laakhay.data.runtime.chunking import ChunkPlanner, ChunkPolicy
 
 
 class TestChunkPlanner:

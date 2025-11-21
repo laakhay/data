@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock
 
 import pytest
 
-from laakhay.data.models import Bar, OHLCV, SeriesMeta
+from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.runtime.chunking import ChunkExecutor, ChunkHint, ChunkPlan, ChunkPolicy
 
 
@@ -97,6 +96,7 @@ class TestChunkExecutor:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
+                # First chunk returns full limit (10 bars)
                 bars = [
                     Bar(
                         timestamp=datetime(2024, 1, 1, i, tzinfo=UTC),
@@ -107,7 +107,7 @@ class TestChunkExecutor:
                         volume=Decimal("10"),
                         is_closed=True,
                     )
-                    for i in range(5)
+                    for i in range(10)
                 ]
                 return OHLCV(meta=SeriesMeta(symbol="BTCUSDT", timeframe="1m"), bars=bars)
             # Second chunk returns empty
@@ -119,9 +119,10 @@ class TestChunkExecutor:
         ]
         result = await executor.execute(plans=plans, fetch_chunk=fetch_chunk)
 
-        assert result.chunks_used == 2
-        assert result.total_points == 5
-        assert call_count == 2  # Should stop after empty chunk
+        # Executor processes first chunk (has data), then second chunk (empty), then stops
+        assert result.chunks_used == 2  # Both chunks were attempted
+        assert result.total_points == 10
+        assert call_count == 2  # Both chunks were fetched
 
     @pytest.mark.asyncio
     async def test_execute_stops_early_on_fewer_points(self):

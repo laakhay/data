@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime
+from time import perf_counter
 from typing import Any
 
 from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult
+from .telemetry import log_chunk_completed, log_chunk_error, log_chunk_execution_complete
 
 
 class ChunkExecutor:
@@ -62,14 +64,25 @@ class ChunkExecutor:
         end_timestamp: datetime | None = None
 
         for plan in plans:
-            # Fetch chunk
-            chunk_data = await fetch_chunk(plan)
-            chunks_used += 1
-            weight_consumed += self._policy.weight_per_request
+            # Fetch chunk with timing
+            chunk_start = perf_counter()
+            try:
+                chunk_data = await fetch_chunk(plan)
+                chunks_used += 1
+                weight_consumed += self._policy.weight_per_request
+                chunk_latency_ms = (perf_counter() - chunk_start) * 1000.0
+            except Exception as e:
+                log_chunk_error(
+                    endpoint_id=getattr(plan, "endpoint_id", "unknown"),
+                    chunk_index=plan.chunk_index,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                )
+                raise
 
             # Handle empty chunks
             if chunk_data is None:
-                continue
+                break
 
             # Extract data points from chunk
             data_points = self._extract_data_points(chunk_data)
@@ -77,6 +90,15 @@ class ChunkExecutor:
             if not data_points:
                 # No data in this chunk, stop early
                 break
+
+            # Log chunk completion
+            log_chunk_completed(
+                endpoint_id=getattr(plan, "endpoint_id", "unknown"),
+                chunk_index=plan.chunk_index,
+                rows_aggregated=len(data_points),
+                weight=self._policy.weight_per_request,
+                latency_ms=chunk_latency_ms,
+            )
 
             # Deduplicate if we have a previous timestamp
             if last_timestamp is not None:
@@ -120,7 +142,7 @@ class ChunkExecutor:
                 # Preserve metadata
                 pass
 
-        return ChunkResult(
+        result = ChunkResult(
             data=aggregated,
             chunks_used=chunks_used,
             weight_consumed=weight_consumed,
@@ -130,6 +152,14 @@ class ChunkExecutor:
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
         )
+
+        # Log execution completion
+        log_chunk_execution_complete(
+            endpoint_id=getattr(plans[0] if plans else None, "endpoint_id", "unknown"),
+            result=result,
+        )
+
+        return result
 
     def _extract_data_points(self, chunk_data: Any) -> list[Any]:
         """Extract list of data points from chunk data.
