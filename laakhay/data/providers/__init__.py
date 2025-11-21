@@ -164,26 +164,24 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
         registry: Optional registry instance (defaults to global singleton)
 
     Note:
-        This function will be updated once the connector implementation is complete.
-        For now, only the URM mapper is registered.
+        This registers a minimal stub provider. Full implementation with
+        feature handlers will be added once REST and WS connectors are complete.
     """
     if registry is None:
         registry = get_provider_registry()
 
+    from laakhay.data.connectors.kraken.provider import KrakenProvider
     from laakhay.data.providers.kraken import KrakenURM
 
-    # TODO: Import KrakenProvider from connector once implementation is complete
-    # For now, just register the URM mapper
-    # Full provider registration will be added once connector is complete:
-    # feature_handlers = collect_feature_handlers(KrakenProvider)
-    # registry.register(
-    #     "kraken",
-    #     KrakenProvider,
-    #     market_types=[MarketType.SPOT, MarketType.FUTURES],
-    #     urm_mapper=KrakenURM(),
-    #     feature_handlers=feature_handlers,
-    # )
-    _ = KrakenURM  # Suppress unused import warning
+    # Register minimal stub provider with URM mapper
+    # Feature handlers will be added once full implementation is complete
+    registry.register(
+        "kraken",
+        KrakenProvider,  # noqa: F405
+        market_types=[MarketType.SPOT, MarketType.FUTURES],
+        urm_mapper=KrakenURM(),  # noqa: F405
+        feature_handlers={},  # Empty for now - will be populated when complete
+    )
 
 
 def register_hyperliquid(registry: ProviderRegistry | None = None) -> None:
@@ -239,7 +237,6 @@ def register_all(registry: ProviderRegistry | None = None) -> None:
     register_binance(registry)
     register_bybit(registry)
     register_okx(registry)
-    # TODO: Re-enable once Kraken connector implementation is complete
-    # register_kraken(registry)
+    register_kraken(registry)
     register_hyperliquid(registry)
     register_coinbase(registry)
