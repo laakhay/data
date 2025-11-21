@@ -1,13 +1,12 @@
 """Kraken providers (REST-only, WS-only, and unified facade)."""
 
-from .provider import KrakenProvider
-from .rest.provider import KrakenRESTProvider
-from .urm import KrakenURM
-from .ws.provider import KrakenWSProvider
+# Import URM from connectors
+from laakhay.data.connectors.kraken.urm import KrakenURM
+
+# Note: KrakenProvider, KrakenRESTProvider, and KrakenWSProvider will be available
+# once the connector implementation is complete. For now, these are not exported
+# to avoid import errors.
 
 __all__ = [
-    "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenWSProvider",
     "KrakenURM",
 ]
