@@ -178,7 +178,11 @@ class CapabilityDiscovery:
     def _discover_rest_endpoints(
         self, exchange: str, market_types: list[MarketType]
     ) -> list[DiscoveredCapability]:
-        """Discover REST endpoints from rest/endpoints.py module.
+        """Discover REST endpoints from rest/endpoints modules.
+
+        Checks both:
+        1. connectors/{exchange}/rest/endpoints (new structure with registry)
+        2. providers/{exchange}/rest/endpoints (legacy structure)
 
         Args:
             exchange: Exchange name
@@ -187,6 +191,128 @@ class CapabilityDiscovery:
         Returns:
             List of discovered capabilities
         """
+        capabilities: list[DiscoveredCapability] = []
+
+        # Try connectors namespace first (new structure)
+        connector_caps = self._discover_rest_endpoints_from_connectors(exchange, market_types)
+        capabilities.extend(connector_caps)
+
+        # Try providers namespace (legacy structure)
+        provider_caps = self._discover_rest_endpoints_from_providers(exchange, market_types)
+        capabilities.extend(provider_caps)
+
+        return capabilities
+
+    def _discover_rest_endpoints_from_connectors(
+        self, exchange: str, market_types: list[MarketType]
+    ) -> list[DiscoveredCapability]:
+        """Discover REST endpoints from connectors/{exchange}/rest/endpoints."""
+        capabilities: list[DiscoveredCapability] = []
+
+        try:
+            # Try to import the endpoints registry module
+            module_path = f"laakhay.data.connectors.{exchange}.rest.endpoints"
+            module = importlib.import_module(module_path)
+
+            # Check if there's a registry function
+            if hasattr(module, "list_endpoints"):
+                endpoint_ids = module.list_endpoints()
+                for endpoint_id in endpoint_ids:
+                    try:
+                        # Get the spec using the registry function
+                        if hasattr(module, "get_endpoint_spec"):
+                            spec = module.get_endpoint_spec(endpoint_id)
+                            if spec and hasattr(spec, "id"):
+                                feature = self._map_endpoint_id_to_feature(endpoint_id)
+                                if feature:
+                                    for market_type in market_types:
+                                        instrument_types = self._infer_instrument_types(
+                                            market_type, feature
+                                        )
+                                        for instrument_type in instrument_types:
+                                            if not self._has_handler_capability(
+                                                exchange,
+                                                market_type,
+                                                instrument_type,
+                                                feature,
+                                                TransportKind.REST,
+                                            ):
+                                                capability = DiscoveredCapability(
+                                                    exchange=exchange,
+                                                    market_type=market_type,
+                                                    instrument_type=instrument_type,
+                                                    feature=feature,
+                                                    transport=TransportKind.REST,
+                                                    source="endpoint",
+                                                )
+                                                capabilities.append(capability)
+                    except Exception:
+                        continue
+
+            # Also check for SPEC constants in endpoint modules
+            # Look for common/spot/futures subdirectories
+            for scope in ["common", "spot", "futures"]:
+                try:
+                    scope_module_path = f"{module_path}.{scope}"
+                    scope_module = importlib.import_module(scope_module_path)
+                    # Check for SPEC constants
+                    for name in dir(scope_module):
+                        if name == "SPEC":
+                            try:
+                                spec = getattr(scope_module, name)
+                                if hasattr(spec, "id"):
+                                    endpoint_id = spec.id
+                                    feature = self._map_endpoint_id_to_feature(endpoint_id)
+                                    if feature:
+                                        # Determine applicable market types
+                                        applicable_markets = market_types
+                                        if scope == "spot":
+                                            applicable_markets = [
+                                                mt for mt in market_types if mt == MarketType.SPOT
+                                            ]
+                                        elif scope == "futures":
+                                            applicable_markets = [
+                                                mt
+                                                for mt in market_types
+                                                if mt == MarketType.FUTURES
+                                            ]
+
+                                        for market_type in applicable_markets:
+                                            instrument_types = self._infer_instrument_types(
+                                                market_type, feature
+                                            )
+                                            for instrument_type in instrument_types:
+                                                if not self._has_handler_capability(
+                                                    exchange,
+                                                    market_type,
+                                                    instrument_type,
+                                                    feature,
+                                                    TransportKind.REST,
+                                                ):
+                                                    capability = DiscoveredCapability(
+                                                        exchange=exchange,
+                                                        market_type=market_type,
+                                                        instrument_type=instrument_type,
+                                                        feature=feature,
+                                                        transport=TransportKind.REST,
+                                                        source="endpoint",
+                                                    )
+                                                    capabilities.append(capability)
+                            except Exception:
+                                continue
+                except ImportError:
+                    continue
+
+        except ImportError:
+            # Connector endpoints module doesn't exist, skip
+            pass
+
+        return capabilities
+
+    def _discover_rest_endpoints_from_providers(
+        self, exchange: str, market_types: list[MarketType]
+    ) -> list[DiscoveredCapability]:
+        """Discover REST endpoints from providers/{exchange}/rest/endpoints (legacy)."""
         capabilities: list[DiscoveredCapability] = []
 
         try:
@@ -240,7 +366,11 @@ class CapabilityDiscovery:
     def _discover_ws_endpoints(
         self, exchange: str, market_types: list[MarketType]
     ) -> list[DiscoveredCapability]:
-        """Discover WebSocket endpoints from ws/endpoints.py module.
+        """Discover WebSocket endpoints from ws/endpoints modules.
+
+        Checks both:
+        1. connectors/{exchange}/ws/endpoints (new structure with registry)
+        2. providers/{exchange}/ws/endpoints (legacy structure)
 
         Args:
             exchange: Exchange name
@@ -249,6 +379,144 @@ class CapabilityDiscovery:
         Returns:
             List of discovered capabilities
         """
+        capabilities: list[DiscoveredCapability] = []
+
+        # Try connectors namespace first (new structure)
+        connector_caps = self._discover_ws_endpoints_from_connectors(exchange, market_types)
+        capabilities.extend(connector_caps)
+
+        # Try providers namespace (legacy structure)
+        provider_caps = self._discover_ws_endpoints_from_providers(exchange, market_types)
+        capabilities.extend(provider_caps)
+
+        return capabilities
+
+    def _discover_ws_endpoints_from_connectors(
+        self, exchange: str, market_types: list[MarketType]
+    ) -> list[DiscoveredCapability]:
+        """Discover WebSocket endpoints from connectors/{exchange}/ws/endpoints."""
+        capabilities: list[DiscoveredCapability] = []
+
+        try:
+            # Try to import the endpoints registry module
+            module_path = f"laakhay.data.connectors.{exchange}.ws.endpoints"
+            module = importlib.import_module(module_path)
+
+            # Check if there's a registry function
+            if hasattr(module, "list_endpoints"):
+                endpoint_ids = module.list_endpoints()
+                for endpoint_id in endpoint_ids:
+                    # WS specs typically take market_type as parameter
+                    for market_type in market_types:
+                        try:
+                            # Get the spec using the registry function
+                            if hasattr(module, "get_endpoint_spec"):
+                                spec = module.get_endpoint_spec(endpoint_id, market_type)
+                                if spec and hasattr(spec, "id"):
+                                    feature = self._map_endpoint_id_to_feature(endpoint_id)
+                                    if feature:
+                                        instrument_types = self._infer_instrument_types(
+                                            market_type, feature
+                                        )
+                                        for instrument_type in instrument_types:
+                                            if not self._has_handler_capability(
+                                                exchange,
+                                                market_type,
+                                                instrument_type,
+                                                feature,
+                                                TransportKind.WS,
+                                            ):
+                                                # Extract stream metadata from spec
+                                                constraints: dict[str, Any] = {}
+                                                if hasattr(spec, "max_streams_per_connection"):
+                                                    constraints["max_streams"] = (
+                                                        spec.max_streams_per_connection
+                                                    )
+                                                if hasattr(spec, "combined_supported"):
+                                                    constraints["combined_streams"] = (
+                                                        spec.combined_supported
+                                                    )
+
+                                                capability = DiscoveredCapability(
+                                                    exchange=exchange,
+                                                    market_type=market_type,
+                                                    instrument_type=instrument_type,
+                                                    feature=feature,
+                                                    transport=TransportKind.WS,
+                                                    constraints=constraints,
+                                                    source="endpoint",
+                                                )
+                                                capabilities.append(capability)
+                        except Exception:
+                            continue
+
+            # Also check for build_spec functions in endpoint modules
+            for endpoint_name in [
+                "ohlcv",
+                "trades",
+                "order_book",
+                "open_interest",
+                "mark_price",
+                "liquidations",
+            ]:
+                try:
+                    endpoint_module_path = f"{module_path}.{endpoint_name}"
+                    endpoint_module = importlib.import_module(endpoint_module_path)
+                    if hasattr(endpoint_module, "build_spec"):
+                        build_spec = endpoint_module.build_spec
+                        for market_type in market_types:
+                            try:
+                                spec = build_spec(market_type)
+                                if hasattr(spec, "id"):
+                                    endpoint_id = spec.id
+                                    feature = self._map_endpoint_id_to_feature(endpoint_id)
+                                    if feature:
+                                        instrument_types = self._infer_instrument_types(
+                                            market_type, feature
+                                        )
+                                        for instrument_type in instrument_types:
+                                            if not self._has_handler_capability(
+                                                exchange,
+                                                market_type,
+                                                instrument_type,
+                                                feature,
+                                                TransportKind.WS,
+                                            ):
+                                                constraints: dict[str, Any] = {}
+                                                if hasattr(spec, "max_streams_per_connection"):
+                                                    constraints["max_streams"] = (
+                                                        spec.max_streams_per_connection
+                                                    )
+                                                if hasattr(spec, "combined_supported"):
+                                                    constraints["combined_streams"] = (
+                                                        spec.combined_supported
+                                                    )
+
+                                                capability = DiscoveredCapability(
+                                                    exchange=exchange,
+                                                    market_type=market_type,
+                                                    instrument_type=instrument_type,
+                                                    feature=feature,
+                                                    transport=TransportKind.WS,
+                                                    constraints=constraints,
+                                                    source="endpoint",
+                                                )
+                                                capabilities.append(capability)
+                            except Exception:
+                                continue
+                except ImportError:
+                    continue
+
+        except ImportError:
+            # Connector endpoints module doesn't exist, skip
+            pass
+
+        return capabilities
+
+    def _discover_ws_endpoints_from_providers(
+        self, exchange: str, market_types: list[MarketType]
+    ) -> list[DiscoveredCapability]:
+        """Discover WebSocket endpoints from providers/{exchange}/ws/endpoints (legacy)."""
         capabilities: list[DiscoveredCapability] = []
 
         try:

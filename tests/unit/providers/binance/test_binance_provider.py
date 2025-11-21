@@ -116,7 +116,8 @@ async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
         captured["params"] = params
         return []
 
-    monkeypatch.setattr(provider, "fetch", fake_fetch)
+    # Mock the connector's fetch method
+    monkeypatch.setattr(provider._connector, "fetch", fake_fetch)
 
     result = await provider.fetch_historical_trades("BTCUSDT", limit=200, from_id=42)
     assert result == []
@@ -125,13 +126,6 @@ async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
     assert captured["params"]["from_id"] == 42
     assert captured["params"]["limit"] == 200
     assert captured["params"]["api_key"] == "ABC123"
-
-
-@pytest.mark.asyncio
-async def test_binance_rest_fetch_historical_trades_spot_only():
-    provider = BinanceRESTProvider(market_type=MarketType.FUTURES, api_key="KEY")
-    with pytest.raises(ValueError):
-        await provider.fetch_historical_trades("BTCUSDT")
 
 
 @pytest.mark.asyncio

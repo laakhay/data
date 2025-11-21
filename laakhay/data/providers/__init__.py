@@ -6,13 +6,14 @@ ProviderRegistry and setting up feature handlers.
 
 from __future__ import annotations
 
+# Import URM from connectors
+from laakhay.data.connectors.binance.urm import BinanceURM
 from laakhay.data.core import MarketType
 
 # Explicitly import and re-export all public classes from provider modules
 from laakhay.data.providers.binance import (
     BinanceProvider,
     BinanceRESTProvider,
-    BinanceURM,
     BinanceWSProvider,
 )
 from laakhay.data.providers.bybit import (

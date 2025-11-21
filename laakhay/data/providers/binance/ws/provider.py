@@ -1,54 +1,35 @@
-"""Binance WebSocket-only provider.
+"""Binance WebSocket-only provider (shim for backward compatibility).
 
-Implements the WSProvider interface using shared transport/runner with
-Binance-specific endpoint specs and adapters.
+This module is a shim that wraps the connector-based WS provider.
+The actual implementation has been moved to connectors/binance/ws/provider.py.
 """
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
+
+from laakhay.data.connectors.binance.ws.provider import BinanceWSConnector
 
 from ....core import MarketType, Timeframe
 from ....models.streaming_bar import StreamingBar
-from ....runtime.ws import MessageAdapter, StreamRunner, WSProvider
-from .adapters import (
-    FundingRateAdapter,
-    LiquidationsAdapter,
-    MarkPriceAdapter,
-    OhlcvAdapter,
-    OpenInterestAdapter,
-    OrderBookAdapter,
-    TradesAdapter,
-)
-from .endpoints import (
-    liquidations_spec,
-    mark_price_spec,
-    ohlcv_spec,
-    open_interest_spec,
-    order_book_spec,
-    trades_spec,
-)
+from ....runtime.ws import WSProvider
 
 if TYPE_CHECKING:
     from ....models import FundingRate, Liquidation, MarkPrice, OpenInterest, OrderBook, Trade
 
 
 class BinanceWSProvider(WSProvider):
-    """Streaming-only provider for Binance Spot or Futures."""
+    """Streaming-only provider for Binance Spot or Futures (shim)."""
 
     def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
+        """Initialize WS provider shim.
+
+        Args:
+            market_type: Market type (spot or futures)
+        """
         self.market_type = market_type
-        # Endpoint registry: key -> (spec_builder, adapter_class)
-        self._ENDPOINTS: dict[str, tuple[Callable[[MarketType], Any], type[MessageAdapter]]] = {
-            "ohlcv": (ohlcv_spec, OhlcvAdapter),
-            "trades": (trades_spec, TradesAdapter),
-            "open_interest": (open_interest_spec, OpenInterestAdapter),
-            "funding_rate": (mark_price_spec, FundingRateAdapter),
-            "mark_price": (mark_price_spec, MarkPriceAdapter),
-            "order_book": (order_book_spec, OrderBookAdapter),
-            "liquidations": (liquidations_spec, LiquidationsAdapter),
-        }
+        self._connector = BinanceWSConnector(market_type=market_type)
 
     async def stream_ohlcv(  # type: ignore[override,misc]
         self,
@@ -59,16 +40,15 @@ class BinanceWSProvider(WSProvider):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        # Delegate to registry-backed stream(); dedupe handled in stream()
-        async for obj in self.stream(
-            "ohlcv",
-            [symbol],
-            {"interval": interval},
+        """Stream OHLCV bars (delegates to connector)."""
+        async for bar in self._connector.stream_ohlcv(
+            symbol=symbol,
+            interval=interval,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
-            dedupe_key=None,
+            dedupe_same_candle=dedupe_same_candle,
         ):
-            yield obj
+            yield bar
 
     async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
@@ -79,121 +59,72 @@ class BinanceWSProvider(WSProvider):
         throttle_ms: int | None = None,
         dedupe_same_candle: bool = False,
     ) -> AsyncIterator[StreamingBar]:
-        # Delegate to registry-backed stream(); dedupe handled in stream()
-        async for obj in self.stream(
-            "ohlcv",
-            symbols,
-            {"interval": interval},
-            only_closed=only_closed,
-            throttle_ms=throttle_ms,
-            dedupe_key=None,
-        ):
-            yield obj
-
-    async def close(self) -> None:
-        # No persistent sockets to close beyond task cancellation handled by callers
-        return None
-
-    async def _stream(
-        self,
-        spec: Any,
-        adapter: MessageAdapter,
-        symbols: list[str],
-        params: dict[str, Any],
-        *,
-        only_closed: bool = False,
-        throttle_ms: int | None = None,
-        dedupe_key: Any | None = None,
-    ) -> AsyncIterator[Any]:
-        runner = StreamRunner()
-        async for obj in runner.run(
-            spec=spec,
-            adapter=adapter,
+        """Stream OHLCV bars for multiple symbols (delegates to connector)."""
+        async for bar in self._connector.stream_ohlcv_multi(
             symbols=symbols,
-            params=params,
+            interval=interval,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
-            dedupe_key=dedupe_key,
+            dedupe_same_candle=dedupe_same_candle,
         ):
-            yield obj
+            yield bar
 
-    async def stream(
-        self,
-        endpoint: str,
-        symbols: list[str],
-        params: dict[str, Any],
-        *,
-        only_closed: bool = False,
-        throttle_ms: int | None = None,
-        dedupe_key: Any | None = None,
-    ) -> AsyncIterator[Any]:
-        if endpoint not in self._ENDPOINTS:
-            raise ValueError(f"Unknown endpoint: {endpoint}")
-        spec_fn, adapter_cls = self._ENDPOINTS[endpoint]
-        spec = spec_fn(self.market_type)
-        adapter = adapter_cls()
-        # Apply endpoint-specific defaults
-        if endpoint == "ohlcv" and not only_closed and dedupe_key is None:
-
-            def _ohlcv_key(obj) -> tuple[str, int, str]:
-                return (obj.symbol, int(obj.timestamp.timestamp() * 1000), str(obj.close))
-
-            dedupe_key = _ohlcv_key
-        async for obj in self._stream(
-            spec,
-            adapter,
-            symbols,
-            params,
-            only_closed=only_closed,
-            throttle_ms=throttle_ms,
-            dedupe_key=dedupe_key,
-        ):
-            yield obj
-
-    # --- Trades ---
     async def stream_trades(self, symbol: str) -> AsyncIterator[Trade]:
-        async for obj in self.stream("trades", [symbol], {}):
-            yield obj
+        """Stream trades (delegates to connector)."""
+        async for trade in self._connector.stream_trades(symbol=symbol):
+            yield trade
 
     async def stream_trades_multi(self, symbols: list[str]) -> AsyncIterator[Trade]:
-        async for obj in self.stream("trades", symbols, {}):
-            yield obj
+        """Stream trades for multiple symbols (delegates to connector)."""
+        async for trade in self._connector.stream_trades_multi(symbols=symbols):
+            yield trade
 
-    # --- Open Interest ---
     async def stream_open_interest(
         self, symbols: list[str], period: str = "5m"
     ) -> AsyncIterator[OpenInterest]:
-        async for obj in self.stream("open_interest", symbols, {"period": period}):
-            yield obj
+        """Stream open interest (delegates to connector)."""
+        async for oi in self._connector.stream_open_interest(symbols=symbols, period=period):
+            yield oi
 
-    # --- Funding Rate (predicted via markPrice stream) ---
     async def stream_funding_rate(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator[FundingRate]:
-        async for obj in self.stream("funding_rate", symbols, {"update_speed": update_speed}):
-            yield obj
+        """Stream funding rate (delegates to connector)."""
+        async for fr in self._connector.stream_funding_rate(
+            symbols=symbols, update_speed=update_speed
+        ):
+            yield fr
 
-    # --- Mark Price ---
     async def stream_mark_price(
         self, symbols: list[str], update_speed: str = "1s"
     ) -> AsyncIterator[MarkPrice]:
-        async for obj in self.stream("mark_price", symbols, {"update_speed": update_speed}):
-            yield obj
+        """Stream mark price (delegates to connector)."""
+        async for mp in self._connector.stream_mark_price(
+            symbols=symbols, update_speed=update_speed
+        ):
+            yield mp
 
-    # --- Order Book ---
     async def stream_order_book(
         self, symbol: str, update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
-        async for obj in self.stream("order_book", [symbol], {"update_speed": update_speed}):
-            yield obj
+        """Stream order book (delegates to connector)."""
+        async for ob in self._connector.stream_order_book(symbol=symbol, update_speed=update_speed):
+            yield ob
 
     async def stream_order_book_multi(
         self, symbols: list[str], update_speed: str = "100ms"
     ) -> AsyncIterator[OrderBook]:
-        async for obj in self.stream("order_book", symbols, {"update_speed": update_speed}):
-            yield obj
+        """Stream order book for multiple symbols (delegates to connector)."""
+        async for ob in self._connector.stream_order_book_multi(
+            symbols=symbols, update_speed=update_speed
+        ):
+            yield ob
 
-    # --- Liquidations (Futures) ---
     async def stream_liquidations(self) -> AsyncIterator[Liquidation]:
-        async for obj in self.stream("liquidations", ["!forceOrder@arr"], {}):
-            yield obj
+        """Stream liquidations (delegates to connector)."""
+        async for liq in self._connector.stream_liquidations():
+            yield liq
+
+    async def close(self) -> None:
+        """Close underlying resources."""
+        await self._connector.close()

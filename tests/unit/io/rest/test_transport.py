@@ -38,7 +38,7 @@ class TestRESTTransport:
         result = await transport.get("/test", params={"key": "value"})
 
         assert result == {"data": "test"}
-        transport._http.get.assert_called_once_with("/test", params={"key": "value"})
+        transport._http.get.assert_called_once_with("/test", params={"key": "value"}, headers=None)
 
     @pytest.mark.asyncio
     async def test_post_delegates_to_http_client(self):
@@ -49,7 +49,7 @@ class TestRESTTransport:
         result = await transport.post("/test", json_body={"key": "value"})
 
         assert result == {"data": "created"}
-        transport._http.post.assert_called_once_with("/test", json={"key": "value"})
+        transport._http.post.assert_called_once_with("/test", json={"key": "value"}, headers=None)
 
     @pytest.mark.asyncio
     async def test_close_delegates_to_http_client(self):
