@@ -103,6 +103,9 @@ def open_interest_spec(market_type: MarketType) -> WSEndpointSpec:
 
 def funding_rate_spec(market_type: MarketType) -> WSEndpointSpec:
     """Legacy function for test compatibility."""
+    # Funding rate is Futures-only
+    if market_type != MarketType.FUTURES:
+        raise ValueError("Funding rate WebSocket is Futures-only on Kraken")
     # Funding rate uses mark_price endpoint
     return build_mark_price_spec(market_type)
 
