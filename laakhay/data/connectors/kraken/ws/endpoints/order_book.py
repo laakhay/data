@@ -62,7 +62,9 @@ class Adapter(MessageAdapter):
         """Check if payload is a relevant order book message."""
         if isinstance(payload, dict):
             channel = payload.get("channel") or payload.get("feed")
-            return channel and ("book" in str(channel).lower() or "orderbook" in str(channel).lower())
+            return channel and (
+                "book" in str(channel).lower() or "orderbook" in str(channel).lower()
+            )
         return False
 
     def parse(self, payload: Any) -> list[OrderBook]:
@@ -92,10 +94,14 @@ class Adapter(MessageAdapter):
                 time_ms = payload.get("time", 0)
 
                 bids: list[tuple[Decimal, Decimal]] = [
-                    (Decimal(str(b[0])), Decimal(str(b[1]))) for b in bids_data if isinstance(b, list) and len(b) >= 2
+                    (Decimal(str(b[0])), Decimal(str(b[1])))
+                    for b in bids_data
+                    if isinstance(b, list) and len(b) >= 2
                 ]
                 asks: list[tuple[Decimal, Decimal]] = [
-                    (Decimal(str(a[0])), Decimal(str(a[1]))) for a in asks_data if isinstance(a, list) and len(a) >= 2
+                    (Decimal(str(a[0])), Decimal(str(a[1])))
+                    for a in asks_data
+                    if isinstance(a, list) and len(a) >= 2
                 ]
 
                 if bids or asks:
@@ -141,4 +147,3 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
-

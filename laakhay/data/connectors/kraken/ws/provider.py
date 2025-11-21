@@ -277,4 +277,3 @@ class KrakenWSConnector(WSProvider):
         """Close any underlying streaming resources."""
         # No persistent sockets to close beyond task cancellation handled by callers
         return None
-
