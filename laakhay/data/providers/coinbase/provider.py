@@ -15,8 +15,6 @@ from laakhay.data.connectors.coinbase.rest.provider import CoinbaseRESTConnector
 from laakhay.data.connectors.coinbase.ws.provider import CoinbaseWSConnector
 
 from ...capability.registry import CapabilityStatus
-from ..coinbase.rest.provider import CoinbaseRESTProvider
-from ..coinbase.ws.provider import CoinbaseWSProvider
 from ...core import (
     BaseProvider,
     DataFeature,
@@ -27,6 +25,8 @@ from ...core import (
     register_feature_handler,
 )
 from ...models import OHLCV, OrderBook, StreamingBar, Symbol, Trade
+from ..coinbase.rest.provider import CoinbaseRESTProvider
+from ..coinbase.ws.provider import CoinbaseWSProvider
 
 
 class CoinbaseProvider(BaseProvider):
