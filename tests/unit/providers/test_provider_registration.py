@@ -12,13 +12,13 @@ from laakhay.data.providers import (
     register_kraken,
     register_okx,
 )
-from laakhay.data.runtime.provider_registry import ProviderRegistry, get_provider_registry
+from laakhay.data.runtime.provider_registry import ProviderRegistry
 
 
 @pytest.mark.asyncio
 async def test_register_binance():
     """Test registering Binance provider."""
-    registry = get_provider_registry()
+    registry = ProviderRegistry()  # Use fresh instance to avoid conflicts
 
     register_binance(registry)
 
@@ -58,7 +58,7 @@ async def test_register_binance():
 @pytest.mark.asyncio
 async def test_register_bybit():
     """Test registering Bybit provider."""
-    registry = get_provider_registry()
+    registry = ProviderRegistry()  # Use fresh instance to avoid conflicts
 
     register_bybit(registry)
 

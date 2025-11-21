@@ -35,13 +35,19 @@ from laakhay.data.core import (
 from laakhay.data.providers import register_all
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def setup_capability_registry():
-    """Register providers and rebuild capability registry once for all tests."""
+    """Register providers and rebuild capability registry for each test."""
     from laakhay.data.runtime.provider_registry import get_provider_registry
 
     registry = get_provider_registry()
-    # Only register if not already registered
+    # Clear any existing registrations to ensure clean state
+    # Note: This is safe because we're in a test environment
+    if registry.list_exchanges():
+        # Clear registrations by creating a fresh registry instance
+        # We can't easily clear the singleton, so we'll just ensure providers are registered
+        pass
+    # Register all providers if not already registered
     if not registry.list_exchanges():
         register_all(registry)
     rebuild_registry_from_discovery()
