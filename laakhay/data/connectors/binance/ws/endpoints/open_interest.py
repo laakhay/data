@@ -9,8 +9,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.core import MarketType
 from laakhay.data.connectors.binance.config import WS_COMBINED_URLS, WS_SINGLE_URLS
+from laakhay.data.core import MarketType
 from laakhay.data.models import OpenInterest
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
 
