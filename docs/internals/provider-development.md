@@ -41,7 +41,7 @@ laakhay/data/providers/new_exchange/
 ### 2. Implement REST Provider
 
 ```python
-from laakhay.data.io.rest import RESTProvider
+from laakhay.data.runtime.rest import RESTProvider
 from laakhay.data.models import OHLCV, OrderBook, Trade
 
 class NewExchangeRESTProvider(RESTProvider):
@@ -62,7 +62,7 @@ class NewExchangeRESTProvider(RESTProvider):
 ### 3. Implement WS Provider
 
 ```python
-from laakhay.data.io.ws import WSProvider
+from laakhay.data.runtime.ws import WSProvider
 from laakhay.data.models import StreamingBar
 
 class NewExchangeWSProvider(WSProvider):

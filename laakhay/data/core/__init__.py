@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from ..io import RESTProvider, WSProvider
 from .base import BaseProvider
 from .enums import (
     DataFeature,
@@ -115,6 +114,8 @@ _PROVIDER_REGISTRY_EXPORTS = {
 
 _RUNTIME_EXPORTS = {"DataRouter"}
 _API_EXPORTS = {"DataAPI"}
+_REST_EXPORTS = {"RESTProvider"}
+_WS_EXPORTS = {"WSProvider"}
 
 
 def __getattr__(name: str) -> Any:
@@ -134,6 +135,14 @@ def __getattr__(name: str) -> Any:
         from .. import api as _api
 
         value = getattr(_api, name)
+    elif name in _REST_EXPORTS:
+        from ..runtime import rest as _rest
+
+        value = getattr(_rest, name)
+    elif name in _WS_EXPORTS:
+        from ..runtime import ws as _ws
+
+        value = getattr(_ws, name)
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
@@ -142,5 +151,12 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__() -> list[str]:
-    dynamic = _CAPABILITY_EXPORTS | _PROVIDER_REGISTRY_EXPORTS | _RUNTIME_EXPORTS | _API_EXPORTS
+    dynamic = (
+        _CAPABILITY_EXPORTS
+        | _PROVIDER_REGISTRY_EXPORTS
+        | _RUNTIME_EXPORTS
+        | _API_EXPORTS
+        | _REST_EXPORTS
+        | _WS_EXPORTS
+    )
     return sorted(set(globals().keys()) | dynamic)
