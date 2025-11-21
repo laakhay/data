@@ -72,11 +72,6 @@ from .providers.kraken import (
     KrakenRESTProvider,
     KrakenWSProvider,
 )
-from .providers.okx import (
-    OKXProvider,
-    OKXRESTProvider,
-    OKXWSProvider,
-)
 
 __version__ = "0.1.0"
 
@@ -105,9 +100,6 @@ __all__ = [
     "KrakenProvider",
     "KrakenRESTProvider",
     "KrakenWSProvider",
-    "OKXProvider",
-    "OKXRESTProvider",
-    "OKXWSProvider",
     # Models
     "Bar",
     "OHLCV",

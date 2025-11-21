@@ -40,12 +40,6 @@ from laakhay.data.providers.kraken import (
     KrakenURM,
     KrakenWSProvider,
 )
-from laakhay.data.providers.okx import (
-    OKXURM,
-    OKXProvider,
-    OKXRESTProvider,
-    OKXWSProvider,
-)
 from laakhay.data.runtime.provider_registry import (
     ProviderRegistry,
     collect_feature_handlers,
@@ -79,18 +73,12 @@ __all__ = [
     "KrakenRESTProvider",
     "KrakenURM",
     "KrakenWSProvider",
-    # OKX
-    "OKXProvider",
-    "OKXRESTProvider",
-    "OKXURM",
-    "OKXWSProvider",
     # Registration functions
     "register_binance",
     "register_bybit",
     "register_coinbase",
     "register_hyperliquid",
     "register_kraken",
-    "register_okx",
     "register_all",
 ]
 
@@ -133,27 +121,6 @@ def register_bybit(registry: ProviderRegistry | None = None) -> None:
         BybitProvider,  # noqa: F405
         market_types=[MarketType.SPOT, MarketType.FUTURES],
         urm_mapper=BybitURM(),  # noqa: F405
-        feature_handlers=feature_handlers,
-    )
-
-
-def register_okx(registry: ProviderRegistry | None = None) -> None:
-    """Register OKX provider with the registry.
-
-    Args:
-        registry: Optional registry instance (defaults to global singleton)
-    """
-    if registry is None:
-        registry = get_provider_registry()
-
-    # Collect feature handlers from decorators
-    feature_handlers = collect_feature_handlers(OKXProvider)  # noqa: F405
-
-    registry.register(
-        "okx",
-        OKXProvider,  # noqa: F405
-        market_types=[MarketType.SPOT, MarketType.FUTURES],
-        urm_mapper=OKXURM(),  # noqa: F405
         feature_handlers=feature_handlers,
     )
 
@@ -231,7 +198,6 @@ def register_all(registry: ProviderRegistry | None = None) -> None:
     """
     register_binance(registry)
     register_bybit(registry)
-    register_okx(registry)
     register_kraken(registry)
     register_hyperliquid(registry)
     register_coinbase(registry)
