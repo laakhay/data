@@ -52,7 +52,7 @@ class BinanceRESTConnector(RESTProvider):
 
     def __init__(
         self,
-        market_type: MarketType,
+        market_type: MarketType = MarketType.SPOT,
         *,
         api_key: str | None = None,
         api_secret: str | None = None,

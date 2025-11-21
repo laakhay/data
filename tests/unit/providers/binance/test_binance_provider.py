@@ -121,7 +121,7 @@ async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
         return []
 
     # Mock the connector's fetch method
-    monkeypatch.setattr(provider._connector, "fetch", fake_fetch)
+    monkeypatch.setattr(provider, "fetch", fake_fetch)
 
     result = await provider.fetch_historical_trades("BTCUSDT", limit=200, from_id=42)
     assert result == []
@@ -138,7 +138,7 @@ async def test_binance_provider_fetch_historical_trades():
     rest.fetch_historical_trades = AsyncMock(return_value=["trade"])
     ws = MagicMock()
 
-    provider = BinanceProvider(rest_provider=rest, ws_provider=ws)
+    provider = BinanceProvider(rest_connector=rest, ws_connector=ws)
     result = await provider.fetch_historical_trades("BTCUSDT", limit=100, from_id=20)
     assert result == ["trade"]
     rest.fetch_historical_trades.assert_awaited_once_with(symbol="BTCUSDT", limit=100, from_id=20)

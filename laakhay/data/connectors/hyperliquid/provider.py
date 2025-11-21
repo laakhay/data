@@ -47,6 +47,7 @@ class HyperliquidProvider(BaseProvider):
         ws_provider: HyperliquidWSProvider | None = None,
     ) -> None:
         super().__init__(name="hyperliquid")
+        self.name = "hyperliquid"
         self.market_type = market_type
         self._rest = rest_provider or HyperliquidRESTProvider(
             market_type=market_type, api_key=api_key, api_secret=api_secret

@@ -59,6 +59,7 @@ class KrakenProvider:
             ws_connector: Optional WebSocket connector instance
         """
         self.name = "kraken"
+        self.name = "kraken"
         self.market_type = market_type
         self._rest = rest_connector or KrakenRESTConnector(
             market_type=market_type, api_key=api_key, api_secret=api_secret

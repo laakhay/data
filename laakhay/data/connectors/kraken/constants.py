@@ -40,6 +40,10 @@ def normalize_symbol_to_kraken(symbol: str, market_type: MarketType) -> str:
             quote = qc
             break
 
+    # Kraken futures only support USD, not USDT - convert USDT to USD for futures
+    if market_type == MarketType.FUTURES and quote == "USDT":
+        quote = "USD"
+
     # Create spec
     instrument_type = (
         InstrumentType.SPOT if market_type == MarketType.SPOT else InstrumentType.PERPETUAL
