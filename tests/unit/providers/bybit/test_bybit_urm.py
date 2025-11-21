@@ -3,7 +3,7 @@
 import pytest
 
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
-from laakhay.data.providers.bybit.urm import BybitURM
+from laakhay.data.connectors.bybit.urm import BybitURM
 
 
 def test_bybit_urm_spot_to_spec():
