@@ -191,21 +191,21 @@ class BinanceRESTConnector(RESTProvider):
         limit: int | None = None,
         from_id: int | None = None,
     ) -> list[Trade]:
-        """Fetch historical trades (Spot-only, requires API key).
+        """Fetch historical trades (available for both Spot and Futures, requires API key).
 
         Args:
             symbol: Trading symbol
             limit: Optional limit on number of trades
+                - Spot: default 100, max 1000
+                - Futures: default 100, max 500
             from_id: Optional trade ID to start from
 
         Returns:
             List of Trade objects
 
         Raises:
-            ValueError: If not spot market or API key missing
+            ValueError: If API key missing
         """
-        if self.market_type != MarketType.SPOT:
-            raise ValueError("Historical trades are only available for Spot on Binance")
         if not self._api_key:
             raise ValueError("api_key is required to use Binance historical trades endpoint")
 

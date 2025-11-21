@@ -6,14 +6,18 @@ from the modular endpoint structure.
 
 from __future__ import annotations
 
-from typing import Any
-
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 from .common.exchange_info import SPEC as ExchangeInfoSpec
 
 # Import all endpoint modules
 from .common.exchange_info import Adapter as ExchangeInfoAdapter
+from .common.historical_trades import (
+    SPEC as HistoricalTradesSpec,
+)
+from .common.historical_trades import (
+    Adapter as HistoricalTradesAdapter,
+)
 from .common.ohlcv import SPEC as OHLCVSpec
 from .common.ohlcv import Adapter as OHLCVAdapter
 from .common.order_book import SPEC as OrderBookSpec
@@ -33,12 +37,6 @@ from .futures.open_interest_hist import (
 )
 from .futures.open_interest_hist import (
     Adapter as OpenInterestHistAdapter,
-)
-from .spot.historical_trades import (
-    SPEC as HistoricalTradesSpec,
-)
-from .spot.historical_trades import (
-    Adapter as HistoricalTradesAdapter,
 )
 
 # Registry mapping endpoint IDs to specs and adapters

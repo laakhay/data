@@ -1,6 +1,6 @@
 """Binance historical trades endpoint definition and adapter.
 
-This endpoint is Spot-only (requires API key).
+This endpoint is available for both Spot and Futures (requires API key).
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
 def build_path(params: dict[str, Any]) -> str:
-    """Build the historicalTrades path (spot only)."""
+    """Build the historicalTrades path (supports both Spot and Futures)."""
     market: MarketType = params["market_type"]
-    if market != MarketType.SPOT:
-        raise ValueError("Historical trades endpoint is Spot-only on Binance")
+    if market == MarketType.FUTURES:
+        return "/fapi/v1/historicalTrades"
     return "/api/v3/historicalTrades"
 
 
@@ -27,7 +27,9 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
     q: dict[str, Any] = {"symbol": params["symbol"].upper()}
     if params.get("limit") is not None:
         limit = int(params["limit"])
-        q["limit"] = max(1, min(limit, 1000))
+        # Max limit is 500 for Futures, 1000 for Spot
+        max_limit = 500 if params["market_type"] == MarketType.FUTURES else 1000
+        q["limit"] = max(1, min(limit, max_limit))
     if params.get("from_id") is not None:
         q["fromId"] = int(params["from_id"])
     return q

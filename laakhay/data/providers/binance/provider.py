@@ -9,6 +9,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 
+from laakhay.data.connectors.binance.provider import BinanceProvider as BinanceConnectorProvider
+from laakhay.data.connectors.binance.rest.provider import BinanceRESTConnector
+from laakhay.data.connectors.binance.ws.provider import BinanceWSConnector
+
 from ...capability.registry import CapabilityStatus, supports
 from ...core import (
     BaseProvider,
@@ -30,9 +34,6 @@ from ...models import (
     Symbol,
     Trade,
 )
-from laakhay.data.connectors.binance.provider import BinanceProvider as BinanceConnectorProvider
-from laakhay.data.connectors.binance.rest.provider import BinanceRESTConnector
-from laakhay.data.connectors.binance.ws.provider import BinanceWSConnector
 
 
 class BinanceProvider(BaseProvider):
@@ -85,9 +86,9 @@ class BinanceProvider(BaseProvider):
     ) -> OHLCV:
         # Convert string timeframe to Timeframe if needed
         if isinstance(timeframe, str):
-            from ...core import Timeframe as TF
+            from ...core import Timeframe
 
-            tf = TF.from_str(timeframe)
+            tf = Timeframe.from_str(timeframe)
             if tf is None:
                 raise ValueError(f"Invalid timeframe: {timeframe}")
             timeframe = tf

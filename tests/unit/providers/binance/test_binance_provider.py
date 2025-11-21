@@ -129,13 +129,6 @@ async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_binance_rest_fetch_historical_trades_spot_only():
-    provider = BinanceRESTProvider(market_type=MarketType.FUTURES, api_key="KEY")
-    with pytest.raises(ValueError):
-        await provider.fetch_historical_trades("BTCUSDT")
-
-
-@pytest.mark.asyncio
 async def test_binance_provider_fetch_historical_trades():
     rest = MagicMock()
     rest.fetch_historical_trades = AsyncMock(return_value=["trade"])
