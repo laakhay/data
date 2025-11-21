@@ -43,7 +43,7 @@ runtime/chunking/
   - Return list of chunk plans (start_time, end_time, limit per chunk)
 
 ### Phase 3: Implement Chunk Executor
-- [ ] **chunking/executors.py: create ChunkExecutor**
+- [x] **chunking/executors.py: create ChunkExecutor**
   - `execute()` method: takes chunk plans + fetch function + adapter
   - For each chunk: call fetch, parse with adapter, deduplicate
   - Deduplicate using (symbol, timeframe, timestamp) key

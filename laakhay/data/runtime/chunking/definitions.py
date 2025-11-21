@@ -10,8 +10,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from ..rest.runner import RestEndpointSpec
-
 
 @dataclass(frozen=True)
 class ChunkPolicy:
@@ -87,21 +85,21 @@ class ChunkPlan:
     """Plan for a single chunk.
 
     Attributes:
+        limit: Limit for this chunk
         start_time: Start time for this chunk (None if cursor-based)
         end_time: End time for this chunk (None if cursor-based)
-        limit: Limit for this chunk
         cursor: Cursor for this chunk (None if time-based)
         chunk_index: Zero-based index of this chunk in the overall plan
     """
 
+    limit: int
     start_time: datetime | None = None
     end_time: datetime | None = None
-    limit: int
     cursor: dict[str, Any] | None = None
     chunk_index: int = 0
 
 
-def extract_chunk_policy(spec: RestEndpointSpec) -> ChunkPolicy | None:
+def extract_chunk_policy(spec: Any) -> ChunkPolicy | None:
     """Extract chunk policy from endpoint specification.
 
     This function looks for chunk metadata in the endpoint spec. If the spec
@@ -119,7 +117,7 @@ def extract_chunk_policy(spec: RestEndpointSpec) -> ChunkPolicy | None:
     return None
 
 
-def extract_chunk_hint(spec: RestEndpointSpec) -> ChunkHint | None:
+def extract_chunk_hint(spec: Any) -> ChunkHint | None:
     """Extract chunk hints from endpoint specification.
 
     This function looks for chunk hints in the endpoint spec. If the spec
