@@ -903,7 +903,7 @@ async def test_hyperliquid_ws_transport_builds_subscription_messages():
 
     # Patch websockets.connect to use our mock (not async, returns context manager directly)
     with patch(
-        "laakhay.data.providers.hyperliquid.ws.transport.websockets.connect", new=mock_connect
+        "laakhay.data.connectors.hyperliquid.ws.transport.websockets.connect", new=mock_connect
     ):
         # Start streaming with timeout to prevent hanging
         message_count = 0
