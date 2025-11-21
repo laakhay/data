@@ -143,4 +143,3 @@ class Adapter(ResponseAdapter):
             )
 
         return out
-

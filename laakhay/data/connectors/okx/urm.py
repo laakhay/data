@@ -100,4 +100,3 @@ class OKXURM:
                     market_type=market_type,
                 )
             return symbol
-

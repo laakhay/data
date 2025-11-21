@@ -142,4 +142,3 @@ class Adapter(ResponseAdapter):
             asks=asks,
             timestamp=timestamp,
         )
-

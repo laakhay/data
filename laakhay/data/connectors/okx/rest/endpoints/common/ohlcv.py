@@ -146,4 +146,3 @@ class Adapter(ResponseAdapter):
         bars.reverse()
 
         return OHLCV(meta=meta, bars=bars)
-
