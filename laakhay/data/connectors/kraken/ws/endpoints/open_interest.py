@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.connectors.kraken.config import WS_COMBINED_URLS, WS_SINGLE_URLS
+from laakhay.data.connectors.kraken.constants import normalize_symbol_from_kraken
 from laakhay.data.core import MarketType
 from laakhay.data.models import OpenInterest
 from laakhay.data.runtime.ws.runner import MessageAdapter, WSEndpointSpec
@@ -83,10 +84,21 @@ class Adapter(MessageAdapter):
 
         try:
             # Kraken Futures format: {"feed": "open_interest", "symbol": "...", "openInterest": ..., "time": ...}
-            symbol = str(payload.get("symbol", ""))
+            # Or: {"channel": "open_interest", "symbol": "...", "data": {"openInterest": ..., ...}}
+            raw_symbol = str(payload.get("symbol", ""))
+            # Infer market type and normalize symbol
+            market_type = MarketType.FUTURES if raw_symbol.startswith("PI_") else MarketType.SPOT
+            symbol = normalize_symbol_from_kraken(raw_symbol, market_type) if raw_symbol else ""
             oi_str = payload.get("openInterest") or payload.get("open_interest")
             time_ms = payload.get("time", 0)
             oi_value_str = payload.get("openInterestValue")
+
+            # Check if data is in nested "data" field
+            data = payload.get("data")
+            if isinstance(data, dict):
+                oi_str = oi_str or data.get("openInterest") or data.get("open_interest")
+                oi_value_str = oi_value_str or data.get("openInterestValue")
+                time_ms = time_ms or data.get("time", 0)
 
             if symbol and oi_str is not None:
                 out.append(
