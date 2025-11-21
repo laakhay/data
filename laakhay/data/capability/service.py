@@ -24,10 +24,10 @@ See Also:
 
 from __future__ import annotations
 
-from .capabilities import CapabilityKey, CapabilityStatus, supports
-from .enums import DataFeature, InstrumentType, MarketType, TransportKind
-from .exceptions import CapabilityError
-from .request import DataRequest
+from ..core.enums import DataFeature, InstrumentType, MarketType, TransportKind
+from ..core.exceptions import CapabilityError
+from ..core.request import DataRequest
+from .registry import CapabilityKey, CapabilityStatus, supports
 
 
 class CapabilityService:

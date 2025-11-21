@@ -2,13 +2,7 @@
 
 import pytest
 
-from laakhay.data.core import (
-    DataFeature,
-    MarketType,
-    ProviderRegistry,
-    TransportKind,
-    get_provider_registry,
-)
+from laakhay.data.core import DataFeature, MarketType, TransportKind
 from laakhay.data.providers import (
     register_all,
     register_binance,
@@ -18,6 +12,7 @@ from laakhay.data.providers import (
     register_kraken,
     register_okx,
 )
+from laakhay.data.runtime.provider_registry import ProviderRegistry, get_provider_registry
 
 
 @pytest.mark.asyncio

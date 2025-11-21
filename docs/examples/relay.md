@@ -4,7 +4,9 @@
 
 ```python
 import asyncio
-from laakhay.data.core import StreamRelay, DataRequest, DataFeature, TransportKind, MarketType
+from laakhay.data.core.enums import DataFeature, MarketType, TransportKind
+from laakhay.data.core.request import DataRequest
+from laakhay.data.runtime.relay import StreamRelay
 from laakhay.data.sinks import InMemorySink
 
 async def basic_relay():

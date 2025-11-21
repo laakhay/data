@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, TypedDict
 
-from .enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
+from ..core.enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
 
 
 # Capability primitives

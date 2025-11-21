@@ -39,13 +39,13 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
-from .capability_service import CapabilityService
-from .exceptions import ProviderError
-from .request import DataRequest
-from .urm import get_urm_registry
+from ..capability.service import CapabilityService
+from ..core.exceptions import ProviderError
+from ..core.request import DataRequest
+from ..core.urm import get_urm_registry
 
 if TYPE_CHECKING:
-    from .registry import ProviderRegistry
+    from .provider_registry import ProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class DataRouter:
             singletons for normal operation. URM registry is always a singleton
             (shared across all router instances).
         """
-        from .registry import get_provider_registry
+        from .provider_registry import get_provider_registry
 
         # Architecture: Dependency injection for testability
         # Default to global singleton for normal operation
@@ -202,7 +202,7 @@ class DataRouter:
             SymbolResolutionError: If symbol cannot be resolved
             ProviderError: If provider lookup or invocation fails
         """
-        from .enums import TransportKind
+        from ..core.enums import TransportKind
 
         if request.transport != TransportKind.WS:
             raise ValueError("route_stream() requires transport=TransportKind.WS")
@@ -334,8 +334,8 @@ class DataRouter:
                 Requiring BASE/QUOTE format ensures all symbols go through URM,
                 providing consistent behavior and better error messages.
             """
-            from .enums import InstrumentSpec, InstrumentType, MarketType
-            from .exceptions import SymbolResolutionError
+            from ..core.enums import InstrumentSpec, InstrumentType, MarketType
+            from ..core.exceptions import SymbolResolutionError
 
             # Architecture: Reject URM IDs - require Laakhay format for simplicity
             # URM IDs add complexity without significant benefit for most users

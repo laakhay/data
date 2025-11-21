@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from laakhay.data.core.capability_service import CapabilityService
+from laakhay.data.capability.service import CapabilityService
 from laakhay.data.core.enums import (
     DataFeature,
     InstrumentType,
@@ -24,10 +24,10 @@ from laakhay.data.core.request import DataRequest
 class TestCapabilityServiceValidateRequest:
     """Test CapabilityService.validate_request method."""
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_validate_request_supported(self, mock_supports):
         """Test validation passes for supported capability."""
-        from laakhay.data.core.capabilities import CapabilityStatus
+        from laakhay.data.capability.registry import CapabilityStatus
 
         # Mock supported status
         mock_status = CapabilityStatus(supported=True, reason=None)
@@ -53,10 +53,10 @@ class TestCapabilityServiceValidateRequest:
             instrument_type=InstrumentType.SPOT,
         )
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_validate_request_unsupported_raises_error(self, mock_supports):
         """Test validation raises CapabilityError for unsupported capability."""
-        from laakhay.data.core.capabilities import CapabilityStatus
+        from laakhay.data.capability.registry import CapabilityStatus
 
         # Mock unsupported status
         mock_status = CapabilityStatus(
@@ -81,10 +81,10 @@ class TestCapabilityServiceValidateRequest:
         assert "coinbase" in str(exc_info.value)
         assert exc_info.value.status == mock_status
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_validate_request_with_recommendations(self, mock_supports):
         """Test validation includes recommendations in error."""
-        from laakhay.data.core.capabilities import CapabilityStatus, FallbackOption
+        from laakhay.data.capability.registry import CapabilityStatus, FallbackOption
 
         # Mock unsupported status with recommendations
         recommendation = FallbackOption(
@@ -120,10 +120,10 @@ class TestCapabilityServiceValidateRequest:
 class TestCapabilityServiceCheckCapability:
     """Test CapabilityService.check_capability method."""
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_check_capability_supported(self, mock_supports):
         """Test check_capability returns supported status."""
-        from laakhay.data.core.capabilities import CapabilityStatus
+        from laakhay.data.capability.registry import CapabilityStatus
 
         mock_status = CapabilityStatus(supported=True, reason=None)
         mock_supports.return_value = mock_status
@@ -146,10 +146,10 @@ class TestCapabilityServiceCheckCapability:
             instrument_type=InstrumentType.SPOT,
         )
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_check_capability_unsupported_no_error(self, mock_supports):
         """Test check_capability returns unsupported status without raising."""
-        from laakhay.data.core.capabilities import CapabilityStatus
+        from laakhay.data.capability.registry import CapabilityStatus
 
         mock_status = CapabilityStatus(
             supported=False,
@@ -168,10 +168,10 @@ class TestCapabilityServiceCheckCapability:
         assert result.supported is False
         # Should not raise an error
 
-    @patch("laakhay.data.core.capability_service.supports")
+    @patch("laakhay.data.capability.service.supports")
     def test_check_capability_default_instrument_type(self, mock_supports):
         """Test check_capability uses SPOT as default instrument type."""
-        from laakhay.data.core.capabilities import CapabilityStatus
+        from laakhay.data.capability.registry import CapabilityStatus
 
         mock_status = CapabilityStatus(supported=True)
         mock_supports.return_value = mock_status

@@ -35,7 +35,7 @@ from ..models import OHLCV
 from .enums import Timeframe
 
 if TYPE_CHECKING:
-    from .capabilities import CapabilityStatus
+    from ..capability.registry import CapabilityStatus
     from .enums import DataFeature, InstrumentType, MarketType, TransportKind
 
 
@@ -127,10 +127,10 @@ class BaseProvider(ABC):
             static capability registry. Providers can override to provide
             dynamic capability discovery.
         """
+        from ..capability.registry import CapabilityStatus
+
         # Architecture: Default implementation defers to static registry
         # Providers can override to provide runtime discovery (e.g., API queries)
-        from .capabilities import CapabilityStatus
-
         return CapabilityStatus(
             supported=False,
             reason="Runtime capability discovery not implemented for this provider",

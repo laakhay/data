@@ -31,7 +31,7 @@ Each `CapabilityStatus` includes:
 
 ## Maintenance
 
-- Update `core/capabilities.py` whenever providers gain/lose support for a
+- Update `capability/registry.py` whenever providers gain/lose support for a
   feature.
 - For dynamic capabilities (e.g., temporary outages), future work may include
   runtime overrides sourced from config or health checks.

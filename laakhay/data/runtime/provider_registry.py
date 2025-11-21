@@ -45,12 +45,12 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
-from .enums import DataFeature, MarketType, TransportKind
-from .exceptions import ProviderError
+from ..core.enums import DataFeature, MarketType, TransportKind
+from ..core.exceptions import ProviderError
 
 if TYPE_CHECKING:
-    from .base import BaseProvider
-    from .urm import UniversalRepresentationMapper
+    from ..core.base import BaseProvider
+    from ..core.urm import UniversalRepresentationMapper
 
 
 @dataclass

@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from datetime import datetime
 
+from ...capability.registry import CapabilityStatus, supports
 from ...core import (
     BaseProvider,
     DataFeature,
@@ -18,7 +19,6 @@ from ...core import (
     TransportKind,
     register_feature_handler,
 )
-from ...core.capabilities import CapabilityStatus, supports
 from ...models import (
     OHLCV,
     FundingRate,

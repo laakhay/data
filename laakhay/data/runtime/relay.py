@@ -38,9 +38,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
 
-from .enums import TransportKind
-from .exceptions import RelayError
-from .request import DataRequest
+from ..core.enums import TransportKind
+from ..core.exceptions import RelayError
+from ..core.request import DataRequest
 from .router import DataRouter
 
 logger = logging.getLogger(__name__)
