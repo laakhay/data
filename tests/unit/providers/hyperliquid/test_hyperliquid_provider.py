@@ -22,19 +22,19 @@ from laakhay.data.providers import (
     HyperliquidRESTProvider,
     HyperliquidWSProvider,
 )
-from laakhay.data.providers.hyperliquid.constants import INTERVAL_MAP
-from laakhay.data.providers.hyperliquid.rest.adapters import (
+from laakhay.data.connectors.hyperliquid.constants import INTERVAL_MAP
+from laakhay.data.connectors.hyperliquid.rest.adapters import (
     CandlesResponseAdapter,
     ExchangeInfoSymbolsAdapter,
     OrderBookResponseAdapter,
     _extract_result,
 )
-from laakhay.data.providers.hyperliquid.rest.endpoints import (
+from laakhay.data.connectors.hyperliquid.rest.endpoints import (
     candles_spec,
     exchange_info_spec,
     order_book_spec,
 )
-from laakhay.data.providers.hyperliquid.ws.adapters import (
+from laakhay.data.connectors.hyperliquid.ws.adapters import (
     FundingRateAdapter,
     MarkPriceAdapter,
     OhlcvAdapter,
@@ -42,14 +42,14 @@ from laakhay.data.providers.hyperliquid.ws.adapters import (
     OrderBookAdapter,
     TradesAdapter,
 )
-from laakhay.data.providers.hyperliquid.ws.endpoints import (
+from laakhay.data.connectors.hyperliquid.ws.endpoints import (
     ohlcv_spec,
     trades_spec,
 )
-from laakhay.data.providers.hyperliquid.ws.endpoints import (
+from laakhay.data.connectors.hyperliquid.ws.endpoints import (
     order_book_spec as ws_order_book_spec,
 )
-from laakhay.data.providers.hyperliquid.ws.transport import HyperliquidWebSocketTransport
+from laakhay.data.connectors.hyperliquid.ws.transport import HyperliquidWebSocketTransport
 
 # ============================================================================
 # Provider Instantiation Tests
@@ -1022,7 +1022,7 @@ def test_hyperliquid_rest_provider_raises_on_futures_only_endpoint():
     """REST provider raises ValueError for futures-only endpoints with spot market."""
     with pytest.raises(ValueError, match="Futures-only"):
         # This would be called internally, but we can test the endpoint spec
-        from laakhay.data.providers.hyperliquid.rest.endpoints import funding_rate_spec
+        from laakhay.data.connectors.hyperliquid.rest.endpoints import funding_rate_spec
 
         spec = funding_rate_spec()
         spec.build_path({"market_type": MarketType.SPOT})

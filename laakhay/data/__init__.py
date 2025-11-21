@@ -47,33 +47,33 @@ from .models import (
     StreamingBar,
     Symbol,
 )
-from .providers.binance import (
+# All exchanges moved to connectors
+from .connectors.binance import (
     BinanceProvider,
     BinanceRESTProvider,
     BinanceWSProvider,
 )
-from .providers.bybit import (
+from .connectors.bybit import (
     BybitProvider,
     BybitRESTProvider,
     BybitWSProvider,
 )
-from .providers.coinbase import (
+from .connectors.coinbase import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
     CoinbaseWSProvider,
 )
-from .providers.hyperliquid import (
+from .connectors.hyperliquid import (
     HyperliquidProvider,
     HyperliquidRESTProvider,
     HyperliquidWSProvider,
 )
-from .providers.kraken import (
-    KrakenURM,
+from .connectors.kraken import (
+    KrakenProvider,
+    KrakenRESTProvider,
+    KrakenWSProvider,
 )
-
-# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-# once the connector implementation is complete
-from .providers.okx import (
+from .connectors.okx import (
     OKXProvider,
     OKXRESTProvider,
     OKXWSProvider,
@@ -103,9 +103,9 @@ __all__ = [
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
-    "KrakenURM",
-    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-    # once the connector implementation is complete
+    "KrakenProvider",
+    "KrakenRESTProvider",
+    "KrakenWSProvider",
     "OKXProvider",
     "OKXRESTProvider",
     "OKXWSProvider",

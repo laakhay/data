@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
-from laakhay.data.providers.binance.urm import BinanceURM
+from laakhay.data.connectors.binance.urm import BinanceURM
 
 
 def test_binance_urm_spot_to_spec():

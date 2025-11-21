@@ -2,50 +2,51 @@
 
 This module provides utilities for registering providers with the global
 ProviderRegistry and setting up feature handlers.
+
+All exchanges have been migrated to connectors/. This module now imports
+from connectors/ and re-exports for backward compatibility.
 """
 
 from __future__ import annotations
 
-# Import URM from connectors
-from laakhay.data.connectors.binance.urm import BinanceURM
-from laakhay.data.connectors.bybit.urm import BybitURM
-from laakhay.data.core import MarketType
-
-# Explicitly import and re-export all public classes from provider modules
-from laakhay.data.providers.binance import (
+# All exchanges moved to connectors - import from there
+from laakhay.data.connectors.binance import (
     BinanceProvider,
     BinanceRESTProvider,
     BinanceWSProvider,
 )
-from laakhay.data.providers.bybit import (
+from laakhay.data.connectors.binance.urm import BinanceURM
+from laakhay.data.connectors.bybit import (
     BybitProvider,
     BybitRESTProvider,
     BybitWSProvider,
 )
-from laakhay.data.providers.coinbase import (
+from laakhay.data.connectors.bybit.urm import BybitURM
+from laakhay.data.connectors.coinbase import (
     CoinbaseProvider,
     CoinbaseRESTProvider,
     CoinbaseURM,
     CoinbaseWSProvider,
 )
-from laakhay.data.providers.hyperliquid import (
+from laakhay.data.connectors.hyperliquid import (
     HyperliquidProvider,
     HyperliquidRESTProvider,
     HyperliquidURM,
     HyperliquidWSProvider,
 )
-from laakhay.data.providers.kraken import (
+from laakhay.data.connectors.kraken import (
+    KrakenProvider,
+    KrakenRESTProvider,
     KrakenURM,
+    KrakenWSProvider,
 )
-
-# Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-# once the connector implementation is complete
-from laakhay.data.providers.okx import (
-    OKXURM,
+from laakhay.data.connectors.okx import (
     OKXProvider,
     OKXRESTProvider,
+    OKXURM,
     OKXWSProvider,
 )
+from laakhay.data.core import MarketType
 from laakhay.data.runtime.provider_registry import (
     ProviderRegistry,
     collect_feature_handlers,
@@ -75,9 +76,10 @@ __all__ = [
     "HyperliquidURM",
     "HyperliquidWSProvider",
     # Kraken
+    "KrakenProvider",
+    "KrakenRESTProvider",
     "KrakenURM",
-    # Note: KrakenProvider, KrakenRESTProvider, KrakenWSProvider will be available
-    # once the connector implementation is complete
+    "KrakenWSProvider",
     # OKX
     "OKXProvider",
     "OKXRESTProvider",
@@ -165,11 +167,6 @@ def register_kraken(registry: ProviderRegistry | None = None) -> None:
     """
     if registry is None:
         registry = get_provider_registry()
-
-    # Import URM from providers shim
-    # Import provider from connectors (full implementation)
-    from laakhay.data.connectors.kraken.provider import KrakenProvider
-    from laakhay.data.providers.kraken import KrakenURM
 
     # Collect feature handlers from decorators
     feature_handlers = collect_feature_handlers(KrakenProvider)  # noqa: F405

@@ -3,7 +3,7 @@
 import pytest
 
 from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
-from laakhay.data.providers.hyperliquid.urm import HyperliquidURM
+from laakhay.data.connectors.hyperliquid.urm import HyperliquidURM
 
 
 def test_hyperliquid_urm_futures_to_spec():

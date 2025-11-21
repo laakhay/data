@@ -8,7 +8,7 @@ import pytest
 
 from laakhay.data.core import MarketType
 from laakhay.data.models.funding_rate import FundingRate
-from laakhay.data.providers.binance.provider import BinanceProvider
+from laakhay.data.connectors.binance import BinanceProvider
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LAAKHAY_NETWORK_TESTS") != "1",
