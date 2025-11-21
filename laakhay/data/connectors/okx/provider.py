@@ -253,4 +253,3 @@ class OKXProvider:
             await self._rest.close()
         if self._owns_ws:
             await self._ws.close()
-

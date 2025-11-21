@@ -7,12 +7,12 @@ from typing import Any
 
 import pytest
 
-from laakhay.data.core import MarketType, Timeframe
-from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.connectors.okx.config import INTERVAL_MAP
 from laakhay.data.connectors.okx.provider import OKXProvider
 from laakhay.data.connectors.okx.rest.provider import OKXRESTConnector
 from laakhay.data.connectors.okx.ws.provider import OKXWSConnector
+from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.models import OHLCV, Bar, SeriesMeta
 
 
 def test_okx_rest_provider_instantiation_defaults_to_spot():

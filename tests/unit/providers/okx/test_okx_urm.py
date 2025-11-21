@@ -2,8 +2,8 @@
 
 import pytest
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
 from laakhay.data.connectors.okx.urm import OKXURM
+from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType, SymbolResolutionError
 
 
 def test_okx_urm_spot_to_spec():

@@ -105,4 +105,3 @@ class Adapter(ResponseAdapter):
             ]
         except (ValueError, TypeError):
             return []
-

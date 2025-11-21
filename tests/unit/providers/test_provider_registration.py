@@ -186,8 +186,6 @@ async def test_register_all_exchanges():
         assert urm is not None, f"{exchange} should have URM mapper"
 
 
-
-
 @pytest.mark.asyncio
 async def test_register_kraken():
     """Test registering Kraken provider."""

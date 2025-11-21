@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from laakhay.data.core import MarketType
 from laakhay.data.connectors.okx.provider import OKXProvider
+from laakhay.data.core import MarketType
 from laakhay.data.providers import (
     BinanceProvider,
     BybitProvider,
