@@ -1,7 +1,6 @@
 """Laakhay Data - Multi-exchange market data aggregation library."""
 
 from .capability import (
-    EXCHANGE_METADATA,
     CapabilityKey,
     CapabilityService,
     CapabilityStatus,
@@ -131,7 +130,6 @@ __all__ = [
     "CapabilityError",
     "CapabilityService",
     # Capabilities API
-    "EXCHANGE_METADATA",
     "CapabilityKey",
     "CapabilityStatus",
     "FallbackOption",

@@ -56,7 +56,6 @@ __all__ = [
     "spec_to_urm_id",
     "validate_urm_id",
     # Capabilities API
-    "EXCHANGE_METADATA",
     "CapabilityKey",
     "CapabilityStatus",
     "FallbackOption",
@@ -85,7 +84,6 @@ __all__ = [
 ]
 
 _CAPABILITY_EXPORTS = {
-    "EXCHANGE_METADATA",
     "CapabilityKey",
     "CapabilityStatus",
     "FallbackOption",

@@ -1,17 +1,18 @@
 """Capabilities API for discovering supported exchanges, market types, timeframes, and data types.
 
 This module provides a consistent API for querying laakhay-data capabilities without
-instantiating providers. All metadata is static and based on the library's supported features.
+instantiating providers. Capabilities are discovered from actual provider code implementations.
 
 Architecture:
     This module implements a hierarchical capability registry that maps:
     Exchange → MarketType → InstrumentType → DataFeature → TransportKind → CapabilityStatus
 
-    The registry is built from EXCHANGE_METADATA (flat structure) into a hierarchical
+    The registry is built from code discovery (inspecting provider implementations) into a hierarchical
     structure that includes instrument types and stream metadata.
 
 Design Decisions:
-    - Static registry: Fast lookups, no provider instantiation needed
+    - Discovery-based registry: Capabilities are derived from actual code, ensuring accuracy
+    - Lazy initialization: Registry is built on first access, after providers are registered
     - Hierarchical structure: Supports fine-grained capability queries
     - Stream metadata: Includes symbol scope, combo support, constraints
     - Fallback options: Provides alternative suggestions when capability unsupported
@@ -32,7 +33,7 @@ See Also:
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal, TypedDict
+from typing import Any, TypedDict
 
 from ..core.enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
 
@@ -70,7 +71,6 @@ class CapabilityStatus:
     reason: str | None = None
     constraints: dict[str, Any] = field(default_factory=dict)  # e.g., {"max_depth": 500}
     recommendations: list[FallbackOption] = field(default_factory=list)
-    source: Literal["static", "runtime"] = "static"
     last_verified_at: datetime | None = None
     stream_metadata: dict[str, Any] = field(
         default_factory=dict
@@ -90,120 +90,8 @@ class ExchangeCapability(TypedDict):
     notes: str | None  # Additional notes or restrictions
 
 
-# Exchange metadata registry
-# Based on actual provider implementations and README.md
-EXCHANGE_METADATA: dict[str, ExchangeCapability] = {
-    "binance": {
-        "name": "binance",
-        "display_name": "Binance",
-        "supported_market_types": ["spot", "futures"],
-        "default_market_type": "spot",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "health": {"rest": True, "ws": False},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": True},
-            "open_interest": {"rest": True, "ws": True},
-            "funding_rates": {"rest": True, "ws": True},
-            "mark_price": {"rest": False, "ws": True},
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": None,
-    },
-    "bybit": {
-        "name": "bybit",
-        "display_name": "Bybit",
-        "supported_market_types": ["spot", "futures"],
-        "default_market_type": "spot",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "historical_trades": {"rest": True, "ws": False},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": True},
-            "open_interest": {"rest": True, "ws": True},
-            "funding_rates": {"rest": True, "ws": True},
-            "mark_price": {"rest": False, "ws": True},
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": None,
-    },
-    "okx": {
-        "name": "okx",
-        "display_name": "OKX",
-        "supported_market_types": ["spot", "futures"],
-        "default_market_type": "spot",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": True},
-            "open_interest": {"rest": True, "ws": True},
-            "funding_rates": {"rest": True, "ws": True},
-            "mark_price": {"rest": False, "ws": True},
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": None,
-    },
-    "hyperliquid": {
-        "name": "hyperliquid",
-        "display_name": "Hyperliquid",
-        "supported_market_types": ["futures"],  # Primarily futures-focused
-        "default_market_type": "futures",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": True},
-            "open_interest": {"rest": True, "ws": True},
-            "funding_rates": {"rest": True, "ws": True},
-            "mark_price": {"rest": False, "ws": True},
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": "Futures-focused exchange. Library supports both spot and futures, but futures is primary.",
-    },
-    "kraken": {
-        "name": "kraken",
-        "display_name": "Kraken",
-        "supported_market_types": ["spot", "futures"],
-        "default_market_type": "spot",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": True},
-            "open_interest": {"rest": True, "ws": True},
-            "funding_rates": {"rest": True, "ws": True},
-            "mark_price": {"rest": False, "ws": True},
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": None,
-    },
-    "coinbase": {
-        "name": "coinbase",
-        "display_name": "Coinbase",
-        "supported_market_types": ["spot"],  # Coinbase Advanced Trade API only supports Spot
-        "default_market_type": "spot",
-        "supported_timeframes": [tf.value for tf in Timeframe],
-        "data_types": {
-            "ohlcv": {"rest": True, "ws": True},
-            "order_book": {"rest": True, "ws": True},
-            "trades": {"rest": True, "ws": True},
-            "liquidations": {"rest": False, "ws": False},  # Not supported (spot only)
-            "open_interest": {"rest": False, "ws": False},  # Not supported (spot only)
-            "funding_rates": {"rest": False, "ws": False},  # Not supported (spot only)
-            "mark_price": {"rest": False, "ws": False},  # Not supported (spot only)
-            "symbol_metadata": {"rest": True, "ws": False},
-        },
-        "notes": "Coinbase Advanced Trade API only supports Spot markets. Futures features are not available.",
-    },
-}
+# EXCHANGE_METADATA removed - capabilities are now discovered from code
+# Use get_exchange_capability() or get_all_capabilities() to get capability information
 
 
 def get_all_exchanges() -> list[str]:
@@ -212,7 +100,8 @@ def get_all_exchanges() -> list[str]:
     Returns:
         List of exchange names (e.g., ["binance", "bybit", "okx", ...])
     """
-    return list(EXCHANGE_METADATA.keys())
+    _ensure_registry_initialized()
+    return list(_CAPABILITY_REGISTRY.keys())
 
 
 def get_exchange_capability(exchange: str) -> ExchangeCapability | None:
@@ -224,7 +113,55 @@ def get_exchange_capability(exchange: str) -> ExchangeCapability | None:
     Returns:
         ExchangeCapability dict if exchange exists, None otherwise
     """
-    return EXCHANGE_METADATA.get(exchange.lower())
+    _ensure_registry_initialized()
+    exchange_lower = exchange.lower()
+    if exchange_lower not in _CAPABILITY_REGISTRY:
+        return None
+
+    # Build ExchangeCapability from registry
+    exchange_data = _CAPABILITY_REGISTRY[exchange_lower]
+    market_types = [mt.value for mt in exchange_data]
+
+    # Collect all features and transports
+    data_types: dict[str, dict[str, bool]] = {}
+    for _market_type, instrument_data in exchange_data.items():
+        for _instrument_type, feature_data in instrument_data.items():
+            for feature, transport_data in feature_data.items():
+                feature_key = _feature_to_data_type_key(feature)
+                if feature_key not in data_types:
+                    data_types[feature_key] = {"rest": False, "ws": False}
+
+                for transport, status in transport_data.items():
+                    if status.supported:
+                        transport_str = "rest" if transport == TransportKind.REST else "ws"
+                        data_types[feature_key][transport_str] = True
+
+    return ExchangeCapability(
+        name=exchange_lower,
+        display_name=exchange_lower.capitalize(),
+        supported_market_types=market_types,
+        default_market_type=market_types[0] if market_types else None,
+        supported_timeframes=[tf.value for tf in Timeframe],
+        data_types=data_types,
+        notes=None,
+    )
+
+
+def _feature_to_data_type_key(feature: DataFeature) -> str:
+    """Convert DataFeature to data_type key for ExchangeCapability."""
+    mapping = {
+        DataFeature.OHLCV: "ohlcv",
+        DataFeature.HEALTH: "health",
+        DataFeature.ORDER_BOOK: "order_book",
+        DataFeature.TRADES: "trades",
+        DataFeature.HISTORICAL_TRADES: "historical_trades",
+        DataFeature.LIQUIDATIONS: "liquidations",
+        DataFeature.OPEN_INTEREST: "open_interest",
+        DataFeature.FUNDING_RATE: "funding_rates",
+        DataFeature.MARK_PRICE: "mark_price",
+        DataFeature.SYMBOL_METADATA: "symbol_metadata",
+    }
+    return mapping.get(feature, feature.value)
 
 
 def get_all_capabilities() -> dict[str, ExchangeCapability]:
@@ -233,7 +170,13 @@ def get_all_capabilities() -> dict[str, ExchangeCapability]:
     Returns:
         Dictionary mapping exchange names to their capabilities
     """
-    return EXCHANGE_METADATA.copy()
+    _ensure_registry_initialized()
+    result: dict[str, ExchangeCapability] = {}
+    for exchange in _CAPABILITY_REGISTRY:
+        capability = get_exchange_capability(exchange)
+        if capability:
+            result[exchange] = capability
+    return result
 
 
 def get_supported_market_types(exchange: str) -> list[str] | None:
@@ -284,9 +227,10 @@ def get_all_supported_market_types() -> list[str]:
     Returns:
         List of unique market types (e.g., ["spot", "futures"])
     """
+    _ensure_registry_initialized()
     all_types = set()
-    for capability in EXCHANGE_METADATA.values():
-        all_types.update(capability["supported_market_types"])
+    for exchange_data in _CAPABILITY_REGISTRY.values():
+        all_types.update(mt.value for mt in exchange_data)
     return sorted(all_types)
 
 
@@ -299,7 +243,8 @@ def is_exchange_supported(exchange: str) -> bool:
     Returns:
         True if exchange is supported, False otherwise
     """
-    return exchange.lower() in EXCHANGE_METADATA
+    _ensure_registry_initialized()
+    return exchange.lower() in _CAPABILITY_REGISTRY
 
 
 def supports_market_type(exchange: str, market_type: str) -> bool:
@@ -341,7 +286,7 @@ def supports_data_type(exchange: str, data_type: str, method: str = "rest") -> b
 # Architecture: Hierarchical capability registry
 # Structure: exchange -> market_type -> instrument_type -> feature -> transport -> CapabilityStatus
 # This nested structure allows O(1) lookups at each level while supporting fine-grained queries
-# Built from EXCHANGE_METADATA at module import time via _build_capability_registry()
+# Built from code discovery via _build_capability_registry_from_discovery()
 _CAPABILITY_REGISTRY: dict[
     str,
     dict[
@@ -350,193 +295,169 @@ _CAPABILITY_REGISTRY: dict[
 ] = {}
 
 
-def _build_capability_registry() -> None:
-    """Build the hierarchical capability registry from EXCHANGE_METADATA.
+# _build_capability_registry() removed - capabilities are now discovered from code
+# Use _build_capability_registry_from_discovery() instead
 
-    This function converts the flat EXCHANGE_METADATA structure into the new
-    hierarchical format that includes instrument types and stream descriptors.
+
+def _build_capability_registry_from_discovery() -> None:
+    """Build the hierarchical capability registry from code discovery.
+
+    This function uses CapabilityDiscovery to inspect provider code and
+    build capabilities from actual implementations instead of static metadata.
 
     Architecture:
-        This function is called at module import time to build the hierarchical registry.
-        It transforms the flat EXCHANGE_METADATA into a nested structure that supports:
-        - Instrument type differentiation (SPOT, PERPETUAL, FUTURE)
-        - Stream metadata (symbol scope, combo support, constraints)
-        - Feature/instrument validation (e.g., liquidations only for futures)
+        This function discovers capabilities by:
+        1. Inspecting provider registrations (feature handlers)
+        2. Inspecting endpoint modules (rest/endpoints.py, ws/endpoints.py)
+        3. Building hierarchical registry from discovered capabilities
 
     Design Decision:
-        Building at import time trades memory for lookup speed. The registry is
-        read-only after initialization, making it safe for concurrent access.
+        Discovery-based building derives capabilities from actual code,
+        eliminating the need for manual EXCHANGE_METADATA maintenance.
+        This ensures capabilities always match implementation.
     """
     global _CAPABILITY_REGISTRY
 
-    # Architecture: Map flat data_types keys to DataFeature enum
-    # This allows EXCHANGE_METADATA to use string keys while registry uses enums
-    feature_map = {
-        "ohlcv": DataFeature.OHLCV,
-        "health": DataFeature.HEALTH,
-        "order_book": DataFeature.ORDER_BOOK,
-        "trades": DataFeature.TRADES,
-        "historical_trades": DataFeature.HISTORICAL_TRADES,
-        "liquidations": DataFeature.LIQUIDATIONS,
-        "open_interest": DataFeature.OPEN_INTEREST,
-        "funding_rates": DataFeature.FUNDING_RATE,
-        "mark_price": DataFeature.MARK_PRICE,
-        "symbol_metadata": DataFeature.SYMBOL_METADATA,
-    }
+    # Lazy import to avoid circular dependency
+    from .discovery import CapabilityDiscovery
 
-    # Transport mapping
-    transport_map = {"rest": TransportKind.REST, "ws": TransportKind.WS}
+    discovery = CapabilityDiscovery()
+    discovered = discovery.discover_all()
 
-    for exchange_name, capability in EXCHANGE_METADATA.items():
-        exchange_registry: dict[
-            MarketType,
-            dict[InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]],
-        ] = {}
+    # Build hierarchical registry from discovered capabilities
+    for cap in discovered:
+        exchange_name = cap.exchange
+        market_type = cap.market_type
+        instrument_type = cap.instrument_type
+        feature = cap.feature
+        transport = cap.transport
 
-        for market_type_str in capability["supported_market_types"]:
-            market_type = MarketType(market_type_str)
-            instrument_type_map: dict[
-                InstrumentType, dict[DataFeature, dict[TransportKind, CapabilityStatus]]
-            ] = {}
+        # Initialize exchange registry if needed
+        if exchange_name not in _CAPABILITY_REGISTRY:
+            _CAPABILITY_REGISTRY[exchange_name] = {}
 
-            # Architecture: Infer instrument types from market type
-            # SPOT markets only have SPOT instruments
-            # FUTURES markets have both PERPETUAL and FUTURE instruments
-            # This allows capability queries to distinguish between perpetuals and futures
-            if market_type == MarketType.SPOT:
-                instrument_types = [InstrumentType.SPOT]
-            else:  # FUTURES
-                instrument_types = [InstrumentType.PERPETUAL, InstrumentType.FUTURE]
+        # Initialize market type registry if needed
+        if market_type not in _CAPABILITY_REGISTRY[exchange_name]:
+            _CAPABILITY_REGISTRY[exchange_name][market_type] = {}
 
-            for instrument_type in instrument_types:
-                feature_registry: dict[DataFeature, dict[TransportKind, CapabilityStatus]] = {}
+        # Initialize instrument type registry if needed
+        if instrument_type not in _CAPABILITY_REGISTRY[exchange_name][market_type]:
+            _CAPABILITY_REGISTRY[exchange_name][market_type][instrument_type] = {}
 
-                for data_type_key, transport_dict in capability["data_types"].items():
-                    feature = feature_map.get(data_type_key)
-                    if not feature:
-                        continue
+        # Initialize feature registry if needed
+        if feature not in _CAPABILITY_REGISTRY[exchange_name][market_type][instrument_type]:
+            _CAPABILITY_REGISTRY[exchange_name][market_type][instrument_type][feature] = {}
 
-                    transport_status: dict[TransportKind, CapabilityStatus] = {}
+        # Build stream metadata
+        stream_metadata: dict[str, Any] = {}
+        if transport == TransportKind.WS:
+            # Extract stream metadata from constraints
+            if "max_streams" in cap.constraints:
+                stream_metadata["max_streams"] = cap.constraints["max_streams"]
+            if "combined_streams" in cap.constraints:
+                stream_metadata["combined_supported"] = cap.constraints["combined_streams"]
 
-                    for transport_str, supported in transport_dict.items():
-                        transport = transport_map.get(transport_str)
-                        if not transport:
-                            continue
+            # Add feature-specific metadata
+            if feature == DataFeature.OHLCV:
+                stream_metadata["symbol_scope"] = "symbol"
+                stream_metadata["timeframe_options"] = [tf.value for tf in Timeframe]
+            elif feature == DataFeature.TRADES:
+                stream_metadata["symbol_scope"] = "symbol"
+            elif feature == DataFeature.LIQUIDATIONS:
+                stream_metadata["symbol_scope"] = (
+                    "global" if exchange_name == "binance" else "symbol"
+                )
+            elif feature == DataFeature.ORDER_BOOK:
+                stream_metadata["symbol_scope"] = "symbol"
+            else:
+                stream_metadata["symbol_scope"] = "symbol"
 
-                        # Architecture: Validate feature/instrument compatibility
-                        # Some features are only available for specific instrument types
-                        # This enforces logical constraints (e.g., liquidations only for futures)
-                        if (
-                            feature == DataFeature.LIQUIDATIONS
-                            and instrument_type == InstrumentType.SPOT
-                        ):
-                            # Liquidations don't exist in spot markets
-                            supported = False
-                            reason = "Liquidations are only available for futures/perpetual markets"
-                        elif feature in (
-                            DataFeature.OPEN_INTEREST,
-                            DataFeature.FUNDING_RATE,
-                            DataFeature.MARK_PRICE,
-                        ):
-                            # Futures-specific features
-                            if instrument_type == InstrumentType.SPOT:
-                                supported = False
-                                reason = f"{feature.value} is only available for futures/perpetual markets"
-                            else:
-                                reason = None
-                        else:
-                            reason = None
+        # Validate feature/instrument compatibility
+        reason: str | None = None
+        supported = True
+        if feature == DataFeature.LIQUIDATIONS and instrument_type == InstrumentType.SPOT:
+            supported = False
+            reason = "Liquidations are only available for futures/perpetual markets"
+        elif feature in (
+            DataFeature.OPEN_INTEREST,
+            DataFeature.FUNDING_RATE,
+            DataFeature.MARK_PRICE,
+        ):
+            if instrument_type == InstrumentType.SPOT:
+                supported = False
+                reason = f"{feature.value} is only available for futures/perpetual markets"
 
-                        # Architecture: Build stream metadata for WebSocket features
-                        # Stream metadata includes symbol scope, combo support, and constraints
-                        # This information helps users understand streaming capabilities
-                        stream_metadata: dict[str, Any] = {}
-                        if feature == DataFeature.OHLCV:
-                            stream_metadata["symbol_scope"] = "symbol"
-                            stream_metadata["timeframe_options"] = [tf.value for tf in Timeframe]
-                            stream_metadata["combo"] = []  # OHLCV doesn't support combos
-                            stream_metadata["combo_exchanges"] = []
-                        elif feature == DataFeature.TRADES:
-                            stream_metadata["symbol_scope"] = "symbol"
-                            # Architecture: Combo streams allow multiple features in one connection
-                            # Some exchanges support trades+liquidations combo streams
-                            if exchange_name in ("binance", "bybit", "okx"):
-                                stream_metadata["combo"] = ["trades", "liquidations"]
-                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
-                            else:
-                                stream_metadata["combo"] = []
-                                stream_metadata["combo_exchanges"] = []
-                        elif feature == DataFeature.LIQUIDATIONS:
-                            # Architecture: Symbol scope varies by exchange
-                            # Binance has global liquidations (all symbols), others are symbol-scoped
-                            stream_metadata["symbol_scope"] = (
-                                "global" if exchange_name == "binance" else "symbol"
-                            )
-                            # Liquidations can be combined with trades on some exchanges
-                            if exchange_name in ("binance", "bybit", "okx"):
-                                stream_metadata["combo"] = ["trades", "liquidations"]
-                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
-                            else:
-                                stream_metadata["combo"] = []
-                                stream_metadata["combo_exchanges"] = []
-                        elif feature == DataFeature.ORDER_BOOK:
-                            stream_metadata["symbol_scope"] = "symbol"
-                            # Architecture: Constraints provide limits (e.g., max depth)
-                            stream_metadata["max_depth"] = 500  # Example constraint
-                            stream_metadata["combo"] = []
-                            stream_metadata["combo_exchanges"] = []
-                        elif feature in (
-                            DataFeature.OPEN_INTEREST,
-                            DataFeature.FUNDING_RATE,
-                            DataFeature.MARK_PRICE,
-                        ):
-                            # Architecture: Some features can be combined in single stream
-                            # Reduces connection overhead when subscribing to multiple features
-                            stream_metadata["symbol_scope"] = "symbol"
-                            if exchange_name in ("binance", "bybit", "okx"):
-                                stream_metadata["combo"] = [
-                                    "open_interest",
-                                    "funding_rates",
-                                    "mark_price",
-                                ]
-                                stream_metadata["combo_exchanges"] = ["binance", "bybit", "okx"]
-                            else:
-                                stream_metadata["combo"] = []
-                                stream_metadata["combo_exchanges"] = []
-                        else:
-                            # Architecture: Default metadata for features without special requirements
-                            stream_metadata["symbol_scope"] = "symbol"
-                            stream_metadata["combo"] = []
-                            stream_metadata["combo_exchanges"] = []
+        status = CapabilityStatus(
+            supported=supported,
+            reason=reason,
+            constraints=cap.constraints.copy(),
+            recommendations=[],
+            stream_metadata=stream_metadata,
+        )
 
-                        status = CapabilityStatus(
-                            supported=supported,
-                            reason=reason,
-                            constraints={},
-                            recommendations=[],
-                            source="static",
-                            stream_metadata=stream_metadata,
-                        )
-
-                        transport_status[transport] = status
-
-                    if transport_status:
-                        feature_registry[feature] = transport_status
-
-                if feature_registry:
-                    instrument_type_map[instrument_type] = feature_registry
-
-            if instrument_type_map:
-                exchange_registry[market_type] = instrument_type_map
-
-        if exchange_registry:
-            _CAPABILITY_REGISTRY[exchange_name] = exchange_registry
+        _CAPABILITY_REGISTRY[exchange_name][market_type][instrument_type][feature][transport] = (
+            status
+        )
 
 
-# Architecture: Initialize registry at module import time
-# This builds the hierarchical structure once, allowing fast O(1) lookups
-# Registry is read-only after initialization, safe for concurrent access
-_build_capability_registry()
+# Architecture: Lazy registry initialization
+# Registry is built on first access, allowing discovery to work after providers are registered
+# This enables code-driven capability discovery without requiring providers at import time
+_REGISTRY_INITIALIZED = False
+
+
+def _ensure_registry_initialized() -> None:
+    """Ensure the capability registry is initialized.
+
+    This function lazily initializes the registry from discovery if providers
+    are registered, otherwise builds an empty registry.
+
+    Architecture:
+        Lazy initialization allows the registry to be built after providers
+        are registered, enabling code-driven capability discovery. The registry
+        is built on first access rather than at import time.
+    """
+    global _CAPABILITY_REGISTRY, _REGISTRY_INITIALIZED
+
+    if _REGISTRY_INITIALIZED:
+        return
+
+    # Try to build from discovery first (code-driven)
+    try:
+        from ..runtime.provider_registry import get_provider_registry
+
+        registry = get_provider_registry()
+        # Check if any providers are registered
+        if registry.list_exchanges():
+            _build_capability_registry_from_discovery()
+            _REGISTRY_INITIALIZED = True
+            return
+    except Exception:
+        # If discovery fails, continue to build empty registry
+        pass
+
+    # If no providers registered or discovery fails, build empty registry
+    # This allows the module to import even if providers aren't registered yet
+    _CAPABILITY_REGISTRY = {}
+    _REGISTRY_INITIALIZED = True
+
+
+def rebuild_registry_from_discovery() -> None:
+    """Rebuild the capability registry from code discovery.
+
+    This function should be called after providers are registered to rebuild
+    the registry from actual code instead of static metadata.
+
+    Architecture:
+        This allows the registry to be rebuilt after providers are registered,
+        enabling code-driven capability discovery. The registry is cleared and
+        rebuilt from discovery results.
+    """
+    global _CAPABILITY_REGISTRY, _REGISTRY_INITIALIZED
+
+    _CAPABILITY_REGISTRY.clear()
+    _build_capability_registry_from_discovery()
+    _REGISTRY_INITIALIZED = True
 
 
 def supports(
@@ -561,6 +482,7 @@ def supports(
     Returns:
         CapabilityStatus indicating support status and metadata
     """
+    _ensure_registry_initialized()
     # Architecture: Hierarchical lookup with early exit on unsupported levels
     # Each level is O(1) dictionary lookup, total complexity is O(1)
     exchange_lower = exchange.lower()
@@ -569,7 +491,6 @@ def supports(
         return CapabilityStatus(
             supported=False,
             reason=f"Exchange '{exchange}' not found in capability registry",
-            source="static",
         )
 
     exchange_data = _CAPABILITY_REGISTRY[exchange_lower]
@@ -578,7 +499,6 @@ def supports(
         return CapabilityStatus(
             supported=False,
             reason=f"Market type '{market_type.value}' not supported for exchange '{exchange}'",
-            source="static",
         )
 
     instrument_data = exchange_data[market_type]
@@ -587,7 +507,6 @@ def supports(
         return CapabilityStatus(
             supported=False,
             reason=f"Instrument type '{instrument_type.value}' not supported for {exchange}/{market_type.value}",
-            source="static",
         )
     # Architecture: Auto-select instrument type if not specified
     # For SPOT markets, selects SPOT. For FUTURES, selects first available (PERPETUAL or FUTURE)
@@ -596,7 +515,6 @@ def supports(
             return CapabilityStatus(
                 supported=False,
                 reason=f"No instrument types available for {exchange}/{market_type.value}",
-                source="static",
             )
         instrument_type = next(iter(instrument_data.keys()))
 
@@ -606,7 +524,6 @@ def supports(
         return CapabilityStatus(
             supported=False,
             reason=f"Feature '{feature.value}' not supported for {exchange}/{market_type.value}/{instrument_type.value}",
-            source="static",
         )
 
     transport_data = feature_data[feature]
@@ -615,7 +532,6 @@ def supports(
         return CapabilityStatus(
             supported=False,
             reason=f"Transport '{transport.value}' not supported for {feature.value} on {exchange}/{market_type.value}/{instrument_type.value}",
-            source="static",
         )
 
     # Architecture: Return capability status with full metadata
