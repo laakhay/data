@@ -139,4 +139,7 @@ class Adapter(ResponseAdapter):
                 # Skip invalid candles
                 continue
 
+        # Sort bars by timestamp (required by OHLCV model)
+        bars.sort(key=lambda b: b.timestamp)
+
         return OHLCV(meta=meta, bars=bars)
