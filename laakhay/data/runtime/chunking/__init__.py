@@ -18,14 +18,13 @@ Usage:
 
 from __future__ import annotations
 
-from .definitions import ChunkHint, ChunkPolicy, ChunkResult
-from .executors import ChunkExecutor
+from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult
 from .planners import ChunkPlanner
 
 __all__ = [
     "ChunkPolicy",
     "ChunkHint",
     "ChunkResult",
+    "ChunkPlan",
     "ChunkPlanner",
-    "ChunkExecutor",
 ]

@@ -28,14 +28,14 @@ runtime/chunking/
 ## Task Breakdown
 
 ### Phase 1: Define Chunking Abstractions
-- [ ] **chunking/definitions.py: create chunk metadata structures**
+- [x] **chunking/definitions.py: create chunk metadata structures**
   - Define `ChunkPolicy` dataclass (max_points, max_chunks, requires_start_time, supports_auto_chunking)
   - Define `ChunkHint` dataclass (cursor_field, timestamp_key, limit_field)
   - Define `ChunkResult` dataclass (aggregated data, chunks_used, weight_consumed, throttle_applied)
   - Helper to extract chunk metadata from `RestEndpointSpec`
 
 ### Phase 2: Implement Chunk Planner
-- [ ] **chunking/planners.py: create ChunkPlanner**
+- [x] **chunking/planners.py: create ChunkPlanner**
   - `plan()` method: takes user request (limit, start_time, end_time) + chunk policy
   - Determine base page size = min(limit_policy.max_points, user_limit)
   - If time range provided, align windows on timeframe boundaries
