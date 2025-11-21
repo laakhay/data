@@ -1,6 +1,6 @@
-"""Backward-compatible shim for provider registry exports."""
+"""Runtime orchestration components."""
 
-from ..runtime.provider_registry import (
+from .provider_registry import (
     FeatureHandler,
     ProviderRegistration,
     ProviderRegistry,
@@ -8,8 +8,13 @@ from ..runtime.provider_registry import (
     get_provider_registry,
     register_feature_handler,
 )
+from .relay import RelayMetrics, StreamRelay
+from .router import DataRouter
 
 __all__ = [
+    "DataRouter",
+    "StreamRelay",
+    "RelayMetrics",
     "ProviderRegistry",
     "ProviderRegistration",
     "FeatureHandler",

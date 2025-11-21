@@ -6,7 +6,8 @@
 
 ```python
 import asyncio
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async def stream_ohlcv():
     async with DataAPI() as api:

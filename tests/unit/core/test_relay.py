@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from laakhay.data.core.enums import DataFeature, MarketType, Timeframe, TransportKind
-from laakhay.data.core.relay import StreamRelay
 from laakhay.data.core.request import DataRequest
-from laakhay.data.core.router import DataRouter
+from laakhay.data.runtime.relay import StreamRelay
+from laakhay.data.runtime.router import DataRouter
 from laakhay.data.sinks.in_memory import InMemorySink
 
 

@@ -2,12 +2,12 @@
 
 ## Capability Helpers
 
-Located in `laakhay.data.core.capabilities`.
+Located in `laakhay.data.capability`.
 
 ### supports
 
 ```python
-from laakhay.data.core.capabilities import supports
+from laakhay.data.capability import supports
 from laakhay.data.core import DataFeature, TransportKind, MarketType
 
 status = supports(
@@ -27,7 +27,7 @@ Returns `CapabilityStatus` with fields:
 ### is_exchange_supported
 
 ```python
-from laakhay.data.core.capabilities import is_exchange_supported
+from laakhay.data.capability import is_exchange_supported
 
 if not is_exchange_supported("hyperliquid"):
     ...
@@ -38,7 +38,7 @@ if not is_exchange_supported("hyperliquid"):
 Retrieve the full capability entry for introspection (e.g., building UI).
 
 ```python
-from laakhay.data.core.capabilities import get_exchange_capability
+from laakhay.data.capability import get_exchange_capability
 
 cap = get_exchange_capability("binance")
 ```

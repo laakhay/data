@@ -7,7 +7,8 @@
 ## Class: DataAPI
 
 ```python
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async with DataAPI(
     default_exchange: str | None = None,
@@ -239,7 +240,8 @@ async for trade in api.stream_trades(
 ### Basic Usage
 
 ```python
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async with DataAPI(
     default_exchange="binance",

@@ -22,7 +22,7 @@ Unit tests should not make network calls. Use mocks instead.
 ```python
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from laakhay.data.core import DataAPI
+from laakhay.data.api import DataAPI
 from laakhay.data.models import OHLCV, SeriesMeta, Bar
 
 @pytest.mark.asyncio

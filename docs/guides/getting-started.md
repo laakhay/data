@@ -19,7 +19,8 @@ pip install laakhay-data
 
 ```python
 import asyncio
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async def main():
     async with DataAPI() as api:
@@ -42,7 +43,8 @@ asyncio.run(main())
 
 ```python
 import asyncio
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async def main():
     async with DataAPI() as api:
@@ -63,7 +65,8 @@ asyncio.run(main())
 
 ```python
 import asyncio
-from laakhay.data.core import DataAPI, MarketType, Timeframe
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
 
 async def main():
     async with DataAPI() as api:

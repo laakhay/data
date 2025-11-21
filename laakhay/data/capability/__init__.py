@@ -1,6 +1,6 @@
-"""Backward-compatible shim for capability registry exports."""
+"""Capability registry and service exports."""
 
-from ..capability import (
+from .registry import (
     EXCHANGE_METADATA,
     CapabilityKey,
     CapabilityStatus,
@@ -19,8 +19,10 @@ from ..capability import (
     supports_data_type,
     supports_market_type,
 )
+from .service import CapabilityService
 
 __all__ = [
+    "CapabilityService",
     "EXCHANGE_METADATA",
     "CapabilityKey",
     "CapabilityStatus",

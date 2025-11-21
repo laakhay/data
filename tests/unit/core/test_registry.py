@@ -2,15 +2,8 @@
 
 import pytest
 
-from laakhay.data.core import (
-    BaseProvider,
-    DataFeature,
-    MarketType,
-    ProviderError,
-    ProviderRegistry,
-    TransportKind,
-)
-from laakhay.data.core.registry import FeatureHandler
+from laakhay.data.core import BaseProvider, DataFeature, MarketType, ProviderError, TransportKind
+from laakhay.data.runtime.provider_registry import FeatureHandler, ProviderRegistry
 
 
 class MockProvider(BaseProvider):
@@ -330,7 +323,7 @@ async def test_registry_close_all_idempotent():
 @pytest.mark.asyncio
 async def test_get_provider_registry_singleton():
     """Test that get_provider_registry returns singleton."""
-    from laakhay.data.core.registry import get_provider_registry
+    from laakhay.data.runtime.provider_registry import get_provider_registry
 
     registry1 = get_provider_registry()
     registry2 = get_provider_registry()
@@ -341,7 +334,7 @@ async def test_get_provider_registry_singleton():
 @pytest.mark.asyncio
 async def test_register_feature_handler_decorator():
     """Test register_feature_handler decorator."""
-    from laakhay.data.core.registry import register_feature_handler
+    from laakhay.data.runtime.provider_registry import register_feature_handler
 
     @register_feature_handler(DataFeature.OHLCV, TransportKind.REST)
     async def test_method(self, symbol: str):
@@ -357,7 +350,7 @@ async def test_register_feature_handler_decorator():
 @pytest.mark.asyncio
 async def test_register_feature_handler_with_constraints():
     """Test register_feature_handler with constraints."""
-    from laakhay.data.core.registry import register_feature_handler
+    from laakhay.data.runtime.provider_registry import register_feature_handler
 
     @register_feature_handler(
         DataFeature.OHLCV, TransportKind.REST, constraints={"max_limit": 1000}
@@ -372,7 +365,7 @@ async def test_register_feature_handler_with_constraints():
 @pytest.mark.asyncio
 async def test_collect_feature_handlers():
     """Test collecting feature handlers from provider class."""
-    from laakhay.data.core.registry import (
+    from laakhay.data.runtime.provider_registry import (
         collect_feature_handlers,
         register_feature_handler,
     )

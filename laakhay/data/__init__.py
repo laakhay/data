@@ -1,25 +1,11 @@
 """Laakhay Data - Multi-exchange market data aggregation library."""
 
-from .clients.ohlcv_feed import OHLCVFeed
-from .core import (
+from .capability import (
     EXCHANGE_METADATA,
-    BaseProvider,
-    CapabilityError,
     CapabilityKey,
+    CapabilityService,
     CapabilityStatus,
-    DataError,
-    DataFeature,
     FallbackOption,
-    InstrumentSpec,
-    InstrumentType,
-    InvalidIntervalError,
-    InvalidSymbolError,
-    MarketType,
-    ProviderError,
-    RateLimitError,
-    Timeframe,
-    TransportKind,
-    ValidationError,
     describe_exchange,
     get_all_capabilities,
     get_all_exchanges,
@@ -33,6 +19,23 @@ from .core import (
     supports,
     supports_data_type,
     supports_market_type,
+)
+from .clients.ohlcv_feed import OHLCVFeed
+from .core import (
+    BaseProvider,
+    CapabilityError,
+    DataError,
+    DataFeature,
+    InstrumentSpec,
+    InstrumentType,
+    InvalidIntervalError,
+    InvalidSymbolError,
+    MarketType,
+    ProviderError,
+    RateLimitError,
+    Timeframe,
+    TransportKind,
+    ValidationError,
 )
 from .models import (
     OHLCV,
@@ -126,6 +129,7 @@ __all__ = [
     "InvalidIntervalError",
     "ValidationError",
     "CapabilityError",
+    "CapabilityService",
     # Capabilities API
     "EXCHANGE_METADATA",
     "CapabilityKey",

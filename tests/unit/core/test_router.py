@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from laakhay.data.core.capability_service import CapabilityService
+from laakhay.data.capability.service import CapabilityService
 from laakhay.data.core.enums import (
     DataFeature,
     InstrumentType,
@@ -16,9 +16,9 @@ from laakhay.data.core.enums import (
     TransportKind,
 )
 from laakhay.data.core.exceptions import CapabilityError, ProviderError
-from laakhay.data.core.registry import FeatureHandler, ProviderRegistry
 from laakhay.data.core.request import DataRequest
-from laakhay.data.core.router import DataRouter
+from laakhay.data.runtime.provider_registry import FeatureHandler, ProviderRegistry
+from laakhay.data.runtime.router import DataRouter
 
 
 class MockProvider:

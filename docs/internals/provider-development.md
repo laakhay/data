@@ -110,8 +110,8 @@ class NewExchangeURMMapper:
 ### 5. Register Provider
 
 ```python
-from laakhay.data.core import get_provider_registry, get_urm_registry
-from laakhay.data.core.registry import collect_feature_handlers
+from laakhay.data.core import get_urm_registry
+from laakhay.data.runtime.provider_registry import collect_feature_handlers, get_provider_registry
 
 # Register provider
 registry = get_provider_registry()
@@ -133,7 +133,7 @@ urm_registry.register("new_exchange", NewExchangeURMMapper())
 Use decorators to register feature handlers:
 
 ```python
-from laakhay.data.core.registry import register_feature_handler
+from laakhay.data.runtime.provider_registry import register_feature_handler
 from laakhay.data.core.enums import DataFeature, TransportKind
 
 class NewExchangeRESTProvider(RESTProvider):

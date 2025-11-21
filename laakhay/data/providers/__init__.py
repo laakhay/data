@@ -6,12 +6,7 @@ ProviderRegistry and setting up feature handlers.
 
 from __future__ import annotations
 
-from laakhay.data.core import (
-    MarketType,
-    ProviderRegistry,
-    collect_feature_handlers,
-    get_provider_registry,
-)
+from laakhay.data.core import MarketType
 
 # Explicitly import and re-export all public classes from provider modules
 from laakhay.data.providers.binance import (
@@ -49,6 +44,11 @@ from laakhay.data.providers.okx import (
     OKXProvider,
     OKXRESTProvider,
     OKXWSProvider,
+)
+from laakhay.data.runtime.provider_registry import (
+    ProviderRegistry,
+    collect_feature_handlers,
+    get_provider_registry,
 )
 
 # Explicit re-exports to satisfy ruff (these are exported via __all__)

@@ -5,14 +5,14 @@ links to the detailed references for each layer.
 
 ## High-Level Facade
 
-- **`laakhay.data.core.DataAPI`** – Primary entry point for most users. Handles
+- **`laakhay.data.api.DataAPI`** – Primary entry point for most users. Handles
   capability validation, URM normalization, provider routing, and exposes
   `fetch_*` / `stream_*` methods. See
   [DataAPI reference](./api-reference/data-api.md).
 
 ## Capability & Symbol Utilities
 
-- **Capability helpers** in `laakhay.data.core.capabilities`:
+- **Capability helpers** in `laakhay.data.capability`:
   - `supports(...)`, `is_exchange_supported(...)`, `get_exchange_capability(...)`.
   - Use these to tailor UX or pre-flight validation. See
     [Capability reference](./api-reference/capabilities.md).
@@ -44,8 +44,8 @@ links to the detailed references for each layer.
 
 ## Developer-Facing Modules
 
-- **Provider registry & router**: `laakhay.data.core.registry`,
-  `laakhay.data.core.router`.
+- **Provider registry & router**: `laakhay.data.runtime.provider_registry`,
+  `laakhay.data.runtime.router`.
 - **Testing helpers** documented in [Internals → Testing](./internals/testing.md).
 - **Provider development** guide: [Internals → Provider Development](./internals/provider-development.md).
 

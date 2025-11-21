@@ -7,7 +7,7 @@ This guide covers patterns that go beyond the basic REST/streaming examples.
 Use capability helpers to tailor user interfaces or automated planners:
 
 ```python
-from laakhay.data.core.capabilities import supports
+from laakhay.data.capability import supports
 from laakhay.data.core import DataFeature, TransportKind, MarketType
 
 status = supports(
@@ -74,7 +74,7 @@ await feed.start(symbols=["BTC/USDT", "ETH/USDT"], interval=Timeframe.M1)
 `StreamRelay` forwards stream events to multiple sinks/callbacks:
 
 ```python
-from laakhay.data.core.relay import StreamRelay
+from laakhay.data.runtime.relay import StreamRelay
 
 relay = StreamRelay()
 relay.add_sink(my_sink)
@@ -103,7 +103,7 @@ Mock routers/providers when unit testing application code:
 
 ```python
 from unittest.mock import AsyncMock
-from laakhay.data.core import DataAPI
+from laakhay.data.api import DataAPI
 
 mock_router = AsyncMock()
 mock_router.route.return_value = fake_ohlcv

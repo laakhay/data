@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from laakhay.data.core.api import DataAPI
+from laakhay.data.api import DataAPI
 from laakhay.data.core.enums import (
     DataFeature,
     InstrumentType,
@@ -31,7 +31,7 @@ from laakhay.data.core.exceptions import (
     SymbolResolutionError,
 )
 from laakhay.data.core.request import DataRequest
-from laakhay.data.core.router import DataRouter
+from laakhay.data.runtime.router import DataRouter
 
 
 @pytest.fixture
