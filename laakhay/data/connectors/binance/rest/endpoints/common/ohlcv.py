@@ -11,6 +11,7 @@ from typing import Any
 
 from laakhay.data.core import MarketType
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
+from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
@@ -35,12 +36,32 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
     return q
 
 
+# Chunking policy: Binance allows max 1000 bars per request
+CHUNK_POLICY = ChunkPolicy(
+    max_points=1000,
+    max_chunks=None,  # No hard limit
+    requires_start_time=False,
+    supports_auto_chunking=True,
+    weight_per_request=1,
+)
+
+# Chunk hints for time-based chunking
+CHUNK_HINT = ChunkHint(
+    timestamp_key="timestamp",
+    limit_field="limit",
+    start_time_field="start_time",
+    end_time_field="end_time",
+    timeframe_field="interval",
+)
+
 # Endpoint specification
 SPEC = RestEndpointSpec(
     id="ohlcv",
     method="GET",
     build_path=_klines_path,
     build_query=build_query,
+    chunk_policy=CHUNK_POLICY,
+    chunk_hint=CHUNK_HINT,
 )
 
 
