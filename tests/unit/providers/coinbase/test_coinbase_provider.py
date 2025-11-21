@@ -1176,7 +1176,8 @@ async def test_coinbase_rest_fetch_ohlcv_chunking(monkeypatch):
 
     assert calls[0]["limit"] == 300  # First chunk uses max
     assert calls[1]["limit"] == 200  # Second chunk uses remaining
-    assert calls[1]["start_time"] == base_time + timedelta(minutes=300)
+    # Chunk planner adds 1 interval to avoid overlap between chunks
+    assert calls[1]["start_time"] == base_time + timedelta(minutes=300 + 1)
 
 
 @pytest.mark.asyncio
