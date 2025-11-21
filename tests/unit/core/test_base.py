@@ -118,7 +118,6 @@ class TestBaseProvider:
 
         assert status.supported is False
         assert "Runtime capability discovery not implemented" in status.reason
-        assert status.source == "static"
 
     @pytest.mark.asyncio
     async def test_context_manager(self):

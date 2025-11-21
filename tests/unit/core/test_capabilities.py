@@ -6,6 +6,9 @@ Trivial enum/dataclass tests removed - focus on meaningful functionality.
 
 from datetime import datetime
 
+import pytest
+
+from laakhay.data.capability.registry import rebuild_registry_from_discovery
 from laakhay.data.core import (
     CapabilityError,
     CapabilityStatus,
@@ -29,6 +32,19 @@ from laakhay.data.core import (
     supports_data_type,
     supports_market_type,
 )
+from laakhay.data.providers import register_all
+
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_capability_registry():
+    """Register providers and rebuild capability registry once for all tests."""
+    from laakhay.data.runtime.provider_registry import get_provider_registry
+
+    registry = get_provider_registry()
+    # Only register if not already registered
+    if not registry.list_exchanges():
+        register_all(registry)
+    rebuild_registry_from_discovery()
 
 
 def test_instrument_spec_with_optional_fields():
@@ -57,7 +73,6 @@ def test_supports_function():
         instrument_type=InstrumentType.SPOT,
     )
     assert status.supported is True
-    assert status.source == "static"
 
     # Test unsupported capability (liquidations on spot)
     status2 = supports(
@@ -289,7 +304,6 @@ def test_capability_status_with_recommendations():
         reason="Not supported on this exchange",
         constraints={"max_depth": 500},
         recommendations=[fallback],
-        source="runtime",
         last_verified_at=datetime.now(),
         stream_metadata={"symbol_scope": "symbol"},
     )
@@ -313,7 +327,6 @@ def test_capability_error_with_context():
     status = CapabilityStatus(
         supported=False,
         reason="Liquidations are only available for futures/perpetual markets",
-        source="static",
     )
     error = CapabilityError(
         "Capability not supported",
