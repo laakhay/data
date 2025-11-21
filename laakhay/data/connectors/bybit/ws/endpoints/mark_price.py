@@ -108,7 +108,9 @@ class Adapter(MessageAdapter):
                     index_price=index_price,
                     estimated_settle_price=None,  # Bybit doesn't provide
                     last_funding_rate=(
-                        Decimal(str(data.get("fundingRate", "0"))) if data.get("fundingRate") else None
+                        Decimal(str(data.get("fundingRate", "0")))
+                        if data.get("fundingRate")
+                        else None
                     ),
                     next_funding_time=(
                         datetime.fromtimestamp(int(data["nextFundingTime"]) / 1000, tz=UTC)
@@ -121,4 +123,3 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
-

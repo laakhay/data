@@ -110,4 +110,3 @@ class Adapter(ResponseAdapter):
                 continue
 
         return out
-

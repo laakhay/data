@@ -113,4 +113,3 @@ class Adapter(MessageAdapter):
         except Exception:
             return []
         return out
-
