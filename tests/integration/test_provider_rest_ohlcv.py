@@ -6,13 +6,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.connectors.okx.provider import OKXProvider
 from laakhay.data.providers import (
     BinanceProvider,
     BybitProvider,
     CoinbaseProvider,
     HyperliquidProvider,
     KrakenProvider,
-    OKXProvider,
 )
 
 pytestmark = pytest.mark.skipif(

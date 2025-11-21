@@ -10,7 +10,6 @@ from laakhay.data.providers import (
     register_coinbase,
     register_hyperliquid,
     register_kraken,
-    register_okx,
 )
 from laakhay.data.runtime.provider_registry import ProviderRegistry
 
@@ -178,7 +177,7 @@ async def test_register_all_exchanges():
 
     register_all(registry)
 
-    expected_exchanges = ["binance", "bybit", "okx", "kraken", "hyperliquid", "coinbase"]
+    expected_exchanges = ["binance", "bybit", "kraken", "hyperliquid", "coinbase"]
     assert set(registry.list_exchanges()) == set(expected_exchanges)
 
     # Verify all have URM mappers
@@ -187,21 +186,6 @@ async def test_register_all_exchanges():
         assert urm is not None, f"{exchange} should have URM mapper"
 
 
-@pytest.mark.asyncio
-async def test_register_okx():
-    """Test registering OKX provider."""
-    registry = ProviderRegistry()
-
-    register_okx(registry)
-
-    assert registry.is_registered("okx")
-    urm = registry.get_urm_mapper("okx")
-    assert urm is not None
-
-    # Test provider retrieval
-    spot_provider = await registry.get_provider("okx", MarketType.SPOT)
-    assert spot_provider.name == "okx"
-    assert spot_provider.market_type == MarketType.SPOT
 
 
 @pytest.mark.asyncio

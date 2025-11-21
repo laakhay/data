@@ -5,13 +5,13 @@ import os
 import pytest
 
 from laakhay.data.core import MarketType
+from laakhay.data.connectors.okx.provider import OKXProvider
 from laakhay.data.providers import (
     BinanceProvider,
     BybitProvider,
     CoinbaseProvider,
     HyperliquidProvider,
     KrakenProvider,
-    OKXProvider,
 )
 
 pytestmark = pytest.mark.skipif(
