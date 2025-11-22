@@ -9,8 +9,8 @@ import pytest
 
 from laakhay.data.connectors.kraken import (
     KrakenProvider,
-    KrakenRESTProvider,
-    KrakenWSProvider,
+    KrakenRESTConnector,
+    KrakenWSConnector,
 )
 from laakhay.data.connectors.kraken.config import INTERVAL_MAP
 from laakhay.data.connectors.kraken.constants import (
@@ -69,22 +69,22 @@ from laakhay.data.models import (
 
 def test_kraken_rest_provider_instantiation_defaults_to_spot():
     """REST provider defaults to SPOT market type."""
-    provider = KrakenRESTProvider()
+    provider = KrakenRESTConnector()
     assert provider.market_type == MarketType.SPOT
 
 
 def test_kraken_rest_provider_instantiation_futures():
     """REST provider can be instantiated with FUTURES market type."""
-    provider = KrakenRESTProvider(market_type=MarketType.FUTURES)
+    provider = KrakenRESTConnector(market_type=MarketType.FUTURES)
     assert provider.market_type == MarketType.FUTURES
 
 
 def test_kraken_ws_provider_instantiation():
     """WebSocket provider defaults to SPOT and can be configured."""
-    ws = KrakenWSProvider()
+    ws = KrakenWSConnector()
     assert ws.market_type == MarketType.SPOT
 
-    ws_fut = KrakenWSProvider(market_type=MarketType.FUTURES)
+    ws_fut = KrakenWSConnector(market_type=MarketType.FUTURES)
     assert ws_fut.market_type == MarketType.FUTURES
 
 
@@ -921,7 +921,7 @@ def test_liquidations_adapter_parses_valid_message():
 @pytest.mark.asyncio
 async def test_kraken_rest_fetch_ohlcv_chunking(monkeypatch):
     """REST provider handles chunking for large candle requests."""
-    provider = KrakenRESTProvider()
+    provider = KrakenRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
@@ -968,7 +968,7 @@ async def test_kraken_rest_fetch_ohlcv_chunking(monkeypatch):
 @pytest.mark.asyncio
 async def test_kraken_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
     """REST provider respects max_chunks limit."""
-    provider = KrakenRESTProvider()
+    provider = KrakenRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
@@ -1129,8 +1129,8 @@ def test_kraken_provider_unified_interface():
     assert provider._ws.market_type == MarketType.SPOT
 
     # Verify both providers are accessible
-    assert isinstance(provider._rest, KrakenRESTProvider)
-    assert isinstance(provider._ws, KrakenWSProvider)
+    assert isinstance(provider._rest, KrakenRESTConnector)
+    assert isinstance(provider._ws, KrakenWSConnector)
 
 
 def test_kraken_ws_provider_stream_ohlcv_format():

@@ -24,18 +24,18 @@ from .clients.ohlcv_feed import OHLCVFeed
 # All exchanges moved to connectors
 from .connectors.binance import (
     BinanceProvider,
-    BinanceRESTProvider,
-    BinanceWSProvider,
+    BinanceRESTConnector,
+    BinanceWSConnector,
 )
 from .connectors.bybit import (
     BybitProvider,
-    BybitRESTProvider,
-    BybitWSProvider,
+    BybitRESTConnector,
+    BybitWSConnector,
 )
 from .connectors.coinbase import (
     CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseWSProvider,
+    CoinbaseRESTConnector,
+    CoinbaseWSConnector,
 )
 from .connectors.hyperliquid import (
     HyperliquidProvider,
@@ -44,13 +44,13 @@ from .connectors.hyperliquid import (
 )
 from .connectors.kraken import (
     KrakenProvider,
-    KrakenRESTProvider,
-    KrakenWSProvider,
+    KrakenRESTConnector,
+    KrakenWSConnector,
 )
 from .connectors.okx import (
     OKXProvider,
-    OKXRESTProvider,
-    OKXWSProvider,
+    OKXRESTConnector,
+    OKXWSConnector,
 )
 from .core import (
     BaseProvider,
@@ -93,23 +93,23 @@ __all__ = [
     # Providers
     "BaseProvider",
     "BinanceProvider",
-    "BinanceRESTProvider",
-    "BinanceWSProvider",
+    "BinanceRESTConnector",
+    "BinanceWSConnector",
     "BybitProvider",
-    "BybitRESTProvider",
-    "BybitWSProvider",
+    "BybitRESTConnector",
+    "BybitWSConnector",
     "CoinbaseProvider",
-    "CoinbaseRESTProvider",
-    "CoinbaseWSProvider",
+    "CoinbaseRESTConnector",
+    "CoinbaseWSConnector",
     "HyperliquidProvider",
     "HyperliquidRESTProvider",
     "HyperliquidWSProvider",
     "KrakenProvider",
-    "KrakenRESTProvider",
-    "KrakenWSProvider",
+    "KrakenRESTConnector",
+    "KrakenWSConnector",
     "OKXProvider",
-    "OKXRESTProvider",
-    "OKXWSProvider",
+    "OKXRESTConnector",
+    "OKXWSConnector",
     # Models
     "Bar",
     "OHLCV",

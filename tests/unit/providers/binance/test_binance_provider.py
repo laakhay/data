@@ -10,8 +10,8 @@ import pytest
 
 from laakhay.data.connectors.binance import (
     BinanceProvider,
-    BinanceRESTProvider,
-    BinanceWSProvider,
+    BinanceRESTConnector,
+    BinanceWSConnector,
 )
 from laakhay.data.connectors.binance.config import INTERVAL_MAP
 from laakhay.data.core import MarketType, Timeframe
@@ -19,12 +19,12 @@ from laakhay.data.models import OHLCV, Bar, SeriesMeta
 
 
 def test_binance_rest_provider_instantiation_defaults_to_spot():
-    provider = BinanceRESTProvider()
+    provider = BinanceRESTConnector()
     assert provider.market_type == MarketType.SPOT
 
 
 def test_binance_rest_provider_instantiation_futures():
-    provider = BinanceRESTProvider(market_type=MarketType.FUTURES)
+    provider = BinanceRESTConnector(market_type=MarketType.FUTURES)
     assert provider.market_type == MarketType.FUTURES
 
 
@@ -36,10 +36,10 @@ def test_binance_interval_mapping_constants():
 
 
 def test_binance_ws_provider_instantiation():
-    ws = BinanceWSProvider()
+    ws = BinanceWSConnector()
     assert ws.market_type == MarketType.SPOT
 
-    ws_fut = BinanceWSProvider(market_type=MarketType.FUTURES)
+    ws_fut = BinanceWSConnector(market_type=MarketType.FUTURES)
     assert ws_fut.market_type == MarketType.FUTURES
 
 
@@ -75,7 +75,7 @@ async def test_binance_provider_fetch_health(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_health_paths(monkeypatch):
-    provider = BinanceRESTProvider()
+    provider = BinanceRESTConnector()
     called = []
 
     async def fake_get(path, *, params=None):
@@ -90,7 +90,7 @@ async def test_binance_rest_fetch_health_paths(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_health_futures(monkeypatch):
-    provider = BinanceRESTProvider(market_type=MarketType.FUTURES)
+    provider = BinanceRESTConnector(market_type=MarketType.FUTURES)
     called = []
 
     async def fake_get(path, *, params=None):
@@ -105,14 +105,14 @@ async def test_binance_rest_fetch_health_futures(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_historical_trades_requires_api_key():
-    provider = BinanceRESTProvider()
+    provider = BinanceRESTConnector()
     with pytest.raises(ValueError):
         await provider.fetch_historical_trades("BTCUSDT")
 
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_historical_trades_params(monkeypatch):
-    provider = BinanceRESTProvider(api_key="ABC123")
+    provider = BinanceRESTConnector(api_key="ABC123")
     captured: dict[str, Any] = {}
 
     async def fake_fetch(endpoint: str, params: dict[str, Any]) -> list[Any]:
@@ -146,7 +146,7 @@ async def test_binance_provider_fetch_historical_trades():
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
-    provider = BinanceRESTProvider()
+    provider = BinanceRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
@@ -197,7 +197,7 @@ async def test_binance_rest_fetch_ohlcv_chunking(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_binance_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
-    provider = BinanceRESTProvider()
+    provider = BinanceRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:

@@ -9,8 +9,8 @@ import pytest
 
 from laakhay.data.connectors.coinbase import (
     CoinbaseProvider,
-    CoinbaseRESTProvider,
-    CoinbaseWSProvider,
+    CoinbaseRESTConnector,
+    CoinbaseWSConnector,
 )
 from laakhay.data.connectors.coinbase.config import (
     INTERVAL_MAP,
@@ -105,32 +105,32 @@ def ws_order_book_spec(market_type):
 
 def test_coinbase_rest_provider_instantiation_defaults_to_spot():
     """REST provider defaults to SPOT market type."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
     assert provider.market_type == MarketType.SPOT
 
 
 def test_coinbase_rest_provider_instantiation_spot():
     """REST provider can be instantiated with SPOT market type."""
-    provider = CoinbaseRESTProvider(market_type=MarketType.SPOT)
+    provider = CoinbaseRESTConnector(market_type=MarketType.SPOT)
     assert provider.market_type == MarketType.SPOT
 
 
 def test_coinbase_rest_provider_raises_on_futures():
     """REST provider raises ValueError for FUTURES market type."""
     with pytest.raises(ValueError, match="only supports Spot markets"):
-        CoinbaseRESTProvider(market_type=MarketType.FUTURES)
+        CoinbaseRESTConnector(market_type=MarketType.FUTURES)
 
 
 def test_coinbase_ws_provider_instantiation():
     """WebSocket provider defaults to SPOT and rejects FUTURES."""
-    ws = CoinbaseWSProvider()
+    ws = CoinbaseWSConnector()
     assert ws.market_type == MarketType.SPOT
 
-    ws_spot = CoinbaseWSProvider(market_type=MarketType.SPOT)
+    ws_spot = CoinbaseWSConnector(market_type=MarketType.SPOT)
     assert ws_spot.market_type == MarketType.SPOT
 
     with pytest.raises(ValueError, match="only supports Spot markets"):
-        CoinbaseWSProvider(market_type=MarketType.FUTURES)
+        CoinbaseWSConnector(market_type=MarketType.FUTURES)
 
 
 def test_coinbase_provider_instantiation_defaults_to_spot():
@@ -1131,7 +1131,7 @@ def test_order_book_adapter_skips_invalid_changes():
 @pytest.mark.asyncio
 async def test_coinbase_rest_fetch_ohlcv_chunking(monkeypatch):
     """REST provider handles Coinbase's 300 candle limit with chunking."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
@@ -1183,7 +1183,7 @@ async def test_coinbase_rest_fetch_ohlcv_chunking(monkeypatch):
 @pytest.mark.asyncio
 async def test_coinbase_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
     """REST provider respects max_chunks parameter."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
     base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     def make_chunk(start_index: int, count: int) -> OHLCV:
@@ -1228,7 +1228,7 @@ async def test_coinbase_rest_fetch_ohlcv_respects_max_chunks(monkeypatch):
 @pytest.mark.asyncio
 async def test_coinbase_rest_get_symbols(monkeypatch):
     """REST provider fetches symbols correctly."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     async def fake_fetch(endpoint: str, params: dict[str, Any]) -> list[Symbol]:
         return [
@@ -1258,7 +1258,7 @@ async def test_coinbase_rest_get_symbols(monkeypatch):
 @pytest.mark.asyncio
 async def test_coinbase_rest_get_symbols_filters_by_quote_asset(monkeypatch):
     """REST provider filters symbols by quote asset."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     async def fake_fetch(endpoint: str, params: dict[str, Any]) -> list[Symbol]:
         all_symbols = [
@@ -1290,7 +1290,7 @@ async def test_coinbase_rest_get_symbols_filters_by_quote_asset(monkeypatch):
 @pytest.mark.asyncio
 async def test_coinbase_rest_get_funding_rate_raises():
     """REST provider raises NotImplementedError for funding rate."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     with pytest.raises(NotImplementedError, match="does not support funding rates"):
         await provider.get_funding_rate("BTCUSD")
@@ -1299,7 +1299,7 @@ async def test_coinbase_rest_get_funding_rate_raises():
 @pytest.mark.asyncio
 async def test_coinbase_rest_get_open_interest_raises():
     """REST provider raises NotImplementedError for open interest."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     with pytest.raises(NotImplementedError, match="does not support open interest"):
         await provider.get_open_interest("BTCUSD")
@@ -1308,7 +1308,7 @@ async def test_coinbase_rest_get_open_interest_raises():
 @pytest.mark.asyncio
 async def test_coinbase_ws_stream_open_interest_raises():
     """WebSocket provider raises NotImplementedError for open interest."""
-    provider = CoinbaseWSProvider()
+    provider = CoinbaseWSConnector()
 
     # The method raises immediately when called (it's an async function, not an async generator)
     with pytest.raises(NotImplementedError, match="does not support open interest"):
@@ -1318,7 +1318,7 @@ async def test_coinbase_ws_stream_open_interest_raises():
 @pytest.mark.asyncio
 async def test_coinbase_ws_stream_funding_rate_raises():
     """WebSocket provider raises NotImplementedError for funding rate."""
-    provider = CoinbaseWSProvider()
+    provider = CoinbaseWSConnector()
 
     # The method raises immediately when called (it's an async function, not an async generator)
     with pytest.raises(NotImplementedError, match="does not support funding rates"):
@@ -1328,7 +1328,7 @@ async def test_coinbase_ws_stream_funding_rate_raises():
 @pytest.mark.asyncio
 async def test_coinbase_ws_stream_liquidations_raises():
     """WebSocket provider raises NotImplementedError for liquidations."""
-    provider = CoinbaseWSProvider()
+    provider = CoinbaseWSConnector()
 
     # The method raises immediately when called (it's an async function, not an async generator)
     with pytest.raises(NotImplementedError, match="does not support liquidations"):
@@ -1473,8 +1473,8 @@ def test_coinbase_provider_unified_interface():
     assert provider._ws.market_type == MarketType.SPOT
 
     # Verify both providers are accessible
-    assert isinstance(provider._rest, CoinbaseRESTProvider)
-    assert isinstance(provider._ws, CoinbaseWSProvider)
+    assert isinstance(provider._rest, CoinbaseRESTConnector)
+    assert isinstance(provider._ws, CoinbaseWSConnector)
 
 
 def test_coinbase_provider_get_timeframes():
@@ -1504,7 +1504,7 @@ async def test_coinbase_provider_close():
 
 def test_coinbase_rest_provider_fetch_unknown_endpoint():
     """REST provider raises ValueError for unknown endpoint."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     async def run():
         with pytest.raises(ValueError, match="Unknown REST endpoint"):
@@ -1515,7 +1515,7 @@ def test_coinbase_rest_provider_fetch_unknown_endpoint():
 
 def test_coinbase_rest_provider_fetch_ohlcv_invalid_timeframe():
     """REST provider raises ValueError for invalid timeframe."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     async def run():
         with pytest.raises(ValueError, match="Invalid timeframe"):
@@ -1527,7 +1527,7 @@ def test_coinbase_rest_provider_fetch_ohlcv_invalid_timeframe():
 
 def test_coinbase_rest_provider_fetch_ohlcv_invalid_max_chunks():
     """REST provider raises ValueError for invalid max_chunks."""
-    provider = CoinbaseRESTProvider()
+    provider = CoinbaseRESTConnector()
 
     async def run():
         with pytest.raises(ValueError, match="max_chunks must be None or a positive integer"):
@@ -1543,7 +1543,7 @@ def test_coinbase_rest_provider_fetch_ohlcv_invalid_max_chunks():
 
 def test_coinbase_ws_provider_stream_unknown_endpoint():
     """WebSocket provider raises ValueError for unknown endpoint."""
-    provider = CoinbaseWSProvider()
+    provider = CoinbaseWSConnector()
 
     async def run():
         with pytest.raises(ValueError, match="Unknown endpoint"):
