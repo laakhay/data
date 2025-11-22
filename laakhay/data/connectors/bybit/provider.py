@@ -16,6 +16,7 @@ from laakhay.data.connectors.bybit.ws.provider import BybitWSConnector
 from laakhay.data.core import (
     DataFeature,
     MarketType,
+    MarketVariant,
     Timeframe,
     TransportKind,
     register_feature_handler,
@@ -44,6 +45,7 @@ class BybitProvider:
         self,
         *,
         market_type: MarketType = MarketType.SPOT,
+        market_variant: MarketVariant | None = None,
         api_key: str | None = None,
         api_secret: str | None = None,
         rest_connector: BybitRESTConnector | None = None,
@@ -53,18 +55,33 @@ class BybitProvider:
 
         Args:
             market_type: Market type (spot or futures)
+            market_variant: Optional market variant. If not provided, derived from
+                          market_type with smart defaults:
+                          - SPOT → SPOT
+                          - FUTURES → LINEAR_PERP (can be overridden)
+                          - OPTIONS → OPTIONS
             api_key: Optional API key for authenticated endpoints
             api_secret: Optional API secret (not currently used)
             rest_connector: Optional REST connector instance
             ws_connector: Optional WebSocket connector instance
         """
         self.name = "bybit"
-        self.name = "bybit"
         self.market_type = market_type
+        # Derive market_variant from market_type if not provided (backward compatibility)
+        if market_variant is None:
+            self.market_variant = MarketVariant.from_market_type(market_type)
+        else:
+            self.market_variant = market_variant
+
         self._rest = rest_connector or BybitRESTConnector(
-            market_type=market_type, api_key=api_key, api_secret=api_secret
+            market_type=market_type,
+            market_variant=self.market_variant,
+            api_key=api_key,
+            api_secret=api_secret,
         )
-        self._ws = ws_connector or BybitWSConnector(market_type=market_type)
+        self._ws = ws_connector or BybitWSConnector(
+            market_type=market_type, market_variant=self.market_variant
+        )
         self._owns_rest = rest_connector is None
         self._owns_ws = ws_connector is None
         self._closed = False
