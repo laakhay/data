@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
-from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.core import MarketType, MarketVariant, Timeframe
 from laakhay.data.models.streaming_bar import StreamingBar
 from laakhay.data.runtime.ws import StreamRunner, WSProvider
 
@@ -40,13 +40,25 @@ class BinanceWSConnector(WSProvider):
     endpoint spec and adapter resolution.
     """
 
-    def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
+    def __init__(
+        self,
+        *,
+        market_type: MarketType = MarketType.SPOT,
+        market_variant: MarketVariant | None = None,
+    ) -> None:
         """Initialize Binance WebSocket connector.
 
         Args:
             market_type: Market type (spot or futures)
+            market_variant: For FUTURES, specify "linear_perp" (USD-M) or "inverse_perp" (COIN-M).
+                           Defaults to LINEAR_PERP for FUTURES. Ignored for SPOT.
         """
         self.market_type = market_type
+        # Derive market_variant from market_type if not provided (backward compatibility)
+        if market_variant is None:
+            self.market_variant = MarketVariant.from_market_type(market_type)
+        else:
+            self.market_variant = market_variant
 
     async def stream_ohlcv(
         self,
@@ -244,7 +256,7 @@ class BinanceWSConnector(WSProvider):
         Raises:
             ValueError: If endpoint_id is not found in registry
         """
-        spec = get_endpoint_spec(endpoint_id, self.market_type)
+        spec = get_endpoint_spec(endpoint_id, self.market_type, self.market_variant)
         if spec is None:
             raise ValueError(f"Unknown WebSocket endpoint: {endpoint_id}")
 
@@ -255,6 +267,13 @@ class BinanceWSConnector(WSProvider):
         # Apply endpoint-specific defaults
         if endpoint_id == "ohlcv" and not only_closed and dedupe_key is None:
             dedupe_key = self._ohlcv_key
+
+        # Ensure market_type and market_variant are in params
+        params = {
+            **params,
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+        }
 
         adapter = adapter_cls()
         runner = StreamRunner()
