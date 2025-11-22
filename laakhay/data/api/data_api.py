@@ -31,8 +31,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from ..core.enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
-from ..core.request import DataRequest
 from ..runtime.router import DataRouter
+from .request_builder import APIRequestBuilder
 
 if TYPE_CHECKING:
     from ..models import (
@@ -134,6 +134,51 @@ class DataAPI:
             return instrument_type
         return self._default_instrument_type
 
+    def _create_request_builder(
+        self,
+        feature: DataFeature,
+        transport: TransportKind,
+        *,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> APIRequestBuilder:
+        """Create an APIRequestBuilder with resolved defaults.
+
+        Architecture:
+            Helper method encapsulates the pattern of resolving defaults and
+            creating a request builder. This reduces boilerplate in methods
+            while maintaining the same functionality.
+
+        Args:
+            feature: Data feature to request
+            transport: Transport kind (REST or WS)
+            exchange: Exchange name (uses default if not provided)
+            market_type: Market type (uses default if not provided)
+            instrument_type: Instrument type (uses default if not provided)
+
+        Returns:
+            APIRequestBuilder configured with defaults and resolved parameters
+
+        Design Decision:
+            Returns builder instead of DataRequest to allow method chaining
+            in calling methods for feature-specific parameters. The _from_dataapi
+            flag ensures DataAPI-style error messages are always used.
+        """
+        return (
+            APIRequestBuilder.with_defaults(
+                default_exchange=self._default_exchange,
+                default_market_type=self._default_market_type,
+                default_instrument_type=self._default_instrument_type,
+                _from_dataapi=True,  # Always use DataAPI-style error messages
+            )
+            .feature(feature)
+            .transport(transport)
+            .exchange(exchange)
+            .market_type(market_type)
+            .instrument_type(instrument_type)
+        )
+
     # --- REST / Historical Methods -------------------------------------------
 
     async def fetch_health(
@@ -144,13 +189,13 @@ class DataAPI:
         instrument_type: InstrumentType | None = None,
     ) -> dict[str, Any]:
         """Fetch exchange health information."""
-        request = DataRequest(
-            feature=DataFeature.HEALTH,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-        )
+        request = self._create_request_builder(
+            DataFeature.HEALTH,
+            TransportKind.REST,
+            exchange=exchange,
+            market_type=market_type,
+            instrument_type=instrument_type,
+        ).build()
         logger.debug(
             "Fetching health",
             extra={
@@ -193,20 +238,23 @@ class DataAPI:
             CapabilityError: If OHLCV REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        # Architecture: Build DataRequest from method parameters
-        # This encapsulates all routing parameters in a single immutable model
-        request = DataRequest(
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            timeframe=timeframe,
-            start_time=start_time,
-            end_time=end_time,
-            limit=limit,
-            max_chunks=max_chunks,
+        # Architecture: Build DataRequest using builder pattern
+        # This reduces boilerplate while maintaining same functionality
+        request = (
+            self._create_request_builder(
+                DataFeature.OHLCV,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .timeframe(timeframe)
+            .start_time(start_time)
+            .end_time(end_time)
+            .limit(limit)
+            .max_chunks(max_chunks)
+            .build()
         )
         logger.debug(
             "Fetching OHLCV",
@@ -245,14 +293,17 @@ class DataAPI:
             CapabilityError: If order book REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            depth=depth,
+        request = (
+            self._create_request_builder(
+                DataFeature.ORDER_BOOK,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .depth(depth)
+            .build()
         )
         logger.debug(
             "Fetching order book",
@@ -285,14 +336,17 @@ class DataAPI:
             CapabilityError: If trades REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.TRADES,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            limit=limit,
+        request = (
+            self._create_request_builder(
+                DataFeature.TRADES,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .limit(limit)
+            .build()
         )
         logger.debug(
             "Fetching recent trades",
@@ -311,15 +365,18 @@ class DataAPI:
         instrument_type: InstrumentType | None = None,
     ) -> list[Trade]:
         """Fetch historical trades with exchange pagination support."""
-        request = DataRequest(
-            feature=DataFeature.HISTORICAL_TRADES,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            limit=limit,
-            from_id=from_id,
+        request = (
+            self._create_request_builder(
+                DataFeature.HISTORICAL_TRADES,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .limit(limit)
+            .from_id(from_id)
+            .build()
         )
         logger.debug(
             "Fetching historical trades",
@@ -354,13 +411,17 @@ class DataAPI:
         Raises:
             CapabilityError: If symbol metadata REST is not supported
         """
-        request = DataRequest(
-            feature=DataFeature.SYMBOL_METADATA,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=InstrumentType.SPOT,  # Symbol metadata doesn't use instrument_type
-            extra_params={"quote_asset": quote_asset, "use_cache": use_cache},
+        request = (
+            self._create_request_builder(
+                DataFeature.SYMBOL_METADATA,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=InstrumentType.SPOT,  # Symbol metadata doesn't use instrument_type
+            )
+            .extra_param("quote_asset", quote_asset)
+            .extra_param("use_cache", use_cache)
+            .build()
         )
         logger.debug(
             "Fetching symbols",
@@ -401,18 +462,21 @@ class DataAPI:
             CapabilityError: If open interest REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=market_type,
-            instrument_type=instrument_type,
-            symbol=symbol,
-            historical=historical,
-            period=period,
-            start_time=start_time,
-            end_time=end_time,
-            limit=limit,
+        request = (
+            self._create_request_builder(
+                DataFeature.OPEN_INTEREST,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .historical(historical)
+            .period(period)
+            .start_time(start_time)
+            .end_time(end_time)
+            .limit(limit)
+            .build()
         )
         logger.debug(
             "Fetching open interest",
@@ -453,16 +517,19 @@ class DataAPI:
             CapabilityError: If funding rate REST is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.REST,
-            exchange=self._resolve_exchange(exchange),
-            market_type=market_type,
-            instrument_type=instrument_type,
-            symbol=symbol,
-            start_time=start_time,
-            end_time=end_time,
-            limit=limit,
+        request = (
+            self._create_request_builder(
+                DataFeature.FUNDING_RATE,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .start_time(start_time)
+            .end_time(end_time)
+            .limit(limit)
+            .build()
         )
         logger.debug(
             "Fetching funding rates",
@@ -503,17 +570,20 @@ class DataAPI:
             CapabilityError: If OHLCV WS is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.OHLCV,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            timeframe=timeframe,
-            only_closed=only_closed,
-            throttle_ms=throttle_ms,
-            dedupe_same_candle=dedupe_same_candle,
+        request = (
+            self._create_request_builder(
+                DataFeature.OHLCV,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .timeframe(timeframe)
+            .only_closed(only_closed)
+            .throttle_ms(throttle_ms)
+            .dedupe_same_candle(dedupe_same_candle)
+            .build()
         )
         logger.debug(
             "Streaming OHLCV",
@@ -549,13 +619,16 @@ class DataAPI:
             CapabilityError: If trades WS is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.TRADES,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
+        request = (
+            self._create_request_builder(
+                DataFeature.TRADES,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .build()
         )
         logger.debug(
             "Streaming trades",
@@ -620,14 +693,17 @@ class DataAPI:
         # Architecture: Validate capability using first symbol as representative
         # All symbols should have the same capability for multi-symbol streams
         if symbols:
-            request = DataRequest(
-                feature=DataFeature.OHLCV,
-                transport=TransportKind.WS,
-                exchange=exchange_name,
-                market_type=market_type_resolved,
-                instrument_type=instrument_type_resolved,
-                symbol=symbols[0],
-                timeframe=timeframe,
+            request = (
+                self._create_request_builder(
+                    DataFeature.OHLCV,
+                    TransportKind.WS,
+                    exchange=exchange_name,
+                    market_type=market_type_resolved,
+                    instrument_type=instrument_type_resolved,
+                )
+                .symbol(symbols[0])
+                .timeframe(timeframe)
+                .build()
             )
             self._router._capability_service.validate_request(request)
 
@@ -693,13 +769,16 @@ class DataAPI:
 
         # Validate capability for first symbol (all should have same capability)
         if symbols:
-            request = DataRequest(
-                feature=DataFeature.TRADES,
-                transport=TransportKind.WS,
-                exchange=exchange_name,
-                market_type=market_type_resolved,
-                instrument_type=instrument_type_resolved,
-                symbol=symbols[0],
+            request = (
+                self._create_request_builder(
+                    DataFeature.TRADES,
+                    TransportKind.WS,
+                    exchange=exchange_name,
+                    market_type=market_type_resolved,
+                    instrument_type=instrument_type_resolved,
+                )
+                .symbol(symbols[0])
+                .build()
             )
             self._router._capability_service.validate_request(request)
 
@@ -738,15 +817,18 @@ class DataAPI:
             CapabilityError: If order book WS is not supported
             SymbolResolutionError: If symbol cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.ORDER_BOOK,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=self._resolve_market_type(market_type),
-            instrument_type=self._resolve_instrument_type(instrument_type),
-            symbol=symbol,
-            depth=depth,
-            update_speed=update_speed,
+        request = (
+            self._create_request_builder(
+                DataFeature.ORDER_BOOK,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .depth(depth)
+            .update_speed(update_speed)
+            .build()
         )
         logger.debug(
             "Streaming order book",
@@ -802,14 +884,17 @@ class DataAPI:
 
         # Validate capability for first symbol (all should have same capability)
         if symbols:
-            request = DataRequest(
-                feature=DataFeature.ORDER_BOOK,
-                transport=TransportKind.WS,
-                exchange=exchange_name,
-                market_type=market_type_resolved,
-                instrument_type=instrument_type_resolved,
-                symbol=symbols[0],
-                update_speed=update_speed,
+            request = (
+                self._create_request_builder(
+                    DataFeature.ORDER_BOOK,
+                    TransportKind.WS,
+                    exchange=exchange_name,
+                    market_type=market_type_resolved,
+                    instrument_type=instrument_type_resolved,
+                )
+                .symbol(symbols[0])
+                .update_speed(update_speed)
+                .build()
             )
             self._router._capability_service.validate_request(request)
 
@@ -847,13 +932,13 @@ class DataAPI:
         Raises:
             CapabilityError: If liquidations WS is not supported
         """
-        request = DataRequest(
-            feature=DataFeature.LIQUIDATIONS,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
+        request = self._create_request_builder(
+            DataFeature.LIQUIDATIONS,
+            TransportKind.WS,
+            exchange=exchange,
             market_type=market_type,
             instrument_type=instrument_type,
-        )
+        ).build()
         logger.debug("Streaming liquidations", extra={"exchange": request.exchange})
         async for item in self._router.route_stream(request):
             yield item
@@ -883,14 +968,17 @@ class DataAPI:
             CapabilityError: If open interest WS is not supported
             SymbolResolutionError: If symbols cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.OPEN_INTEREST,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=market_type,
-            instrument_type=instrument_type,
-            symbols=symbols,
-            period=period,
+        request = (
+            self._create_request_builder(
+                DataFeature.OPEN_INTEREST,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbols(symbols)
+            .period(period)
+            .build()
         )
         logger.debug(
             "Streaming open interest",
@@ -924,14 +1012,17 @@ class DataAPI:
             CapabilityError: If funding rate WS is not supported
             SymbolResolutionError: If symbols cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.FUNDING_RATE,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=market_type,
-            instrument_type=instrument_type,
-            symbols=symbols,
-            update_speed=update_speed,
+        request = (
+            self._create_request_builder(
+                DataFeature.FUNDING_RATE,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbols(symbols)
+            .update_speed(update_speed)
+            .build()
         )
         logger.debug(
             "Streaming funding rates",
@@ -965,14 +1056,17 @@ class DataAPI:
             CapabilityError: If mark price WS is not supported
             SymbolResolutionError: If symbols cannot be resolved
         """
-        request = DataRequest(
-            feature=DataFeature.MARK_PRICE,
-            transport=TransportKind.WS,
-            exchange=self._resolve_exchange(exchange),
-            market_type=market_type,
-            instrument_type=instrument_type,
-            symbols=symbols,
-            update_speed=update_speed,
+        request = (
+            self._create_request_builder(
+                DataFeature.MARK_PRICE,
+                TransportKind.WS,
+                exchange=exchange,
+                market_type=market_type,
+                instrument_type=instrument_type,
+            )
+            .symbols(symbols)
+            .update_speed(update_speed)
+            .build()
         )
         logger.debug(
             "Streaming mark price",
