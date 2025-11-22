@@ -37,7 +37,6 @@ def test_market_variant_values():
     assert MarketVariant.INVERSE_DELIVERY.value == "inverse_delivery"
     assert MarketVariant.OPTIONS.value == "options"
     assert MarketVariant.EQUITY.value == "equity"
-    assert MarketVariant.FX_SPOT.value == "fx_spot"
 
 
 def test_market_variant_from_market_type_spot():
@@ -69,14 +68,13 @@ def test_market_variant_from_market_type_equity():
 
 
 def test_market_variant_from_market_type_fx():
-    """Test from_market_type for FX."""
-    assert MarketVariant.from_market_type(MarketType.FX) == MarketVariant.FX_SPOT
+    """Test from_market_type for FX maps to SPOT."""
+    assert MarketVariant.from_market_type(MarketType.FX) == MarketVariant.SPOT
 
 
 def test_market_variant_to_market_type_spot():
     """Test to_market_type for spot variants."""
     assert MarketVariant.SPOT.to_market_type() == MarketType.SPOT
-    assert MarketVariant.FX_SPOT.to_market_type() == MarketType.SPOT
 
 
 def test_market_variant_to_market_type_futures():

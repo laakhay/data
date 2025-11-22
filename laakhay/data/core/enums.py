@@ -144,7 +144,6 @@ class MarketVariant(str, Enum):
     INVERSE_DELIVERY = "inverse_delivery"  # expiring coin futures
     OPTIONS = "options"  # any options (equity or crypto)
     EQUITY = "equity"  # cash equities (optional if you want to distinguish)
-    FX_SPOT = "fx_spot"  # optional if FX spot uses different endpoints
 
     def __str__(self) -> str:
         """String representation returns the value."""
@@ -181,7 +180,7 @@ class MarketVariant(str, Enum):
         if market_type == MarketType.EQUITY:
             return cls.EQUITY
         if market_type == MarketType.FX:
-            return cls.FX_SPOT
+            return cls.SPOT  # FX spot uses the same SPOT variant
         raise ValueError(f"Unsupported market type: {market_type}")
 
     def to_market_type(self) -> MarketType:
@@ -196,7 +195,7 @@ class MarketVariant(str, Enum):
             >>> MarketVariant.SPOT.to_market_type()
             <MarketType.SPOT: 'spot'>
         """
-        if self in (MarketVariant.SPOT, MarketVariant.FX_SPOT):
+        if self == MarketVariant.SPOT:
             return MarketType.SPOT
         if self in (
             MarketVariant.LINEAR_PERP,
