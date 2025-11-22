@@ -236,6 +236,11 @@ class ProviderRegistry:
             else:
                 return provider
 
+        # Architecture: Ensure lock exists for this key (lazy initialization)
+        # This handles keys with market_variant that weren't pre-initialized in register()
+        if key not in self._pool_locks:
+            self._pool_locks[key] = asyncio.Lock()
+
         # Architecture: Thread-safe instance creation
         # Lock prevents multiple concurrent requests from creating duplicate instances
         async with self._pool_locks[key]:
@@ -247,7 +252,7 @@ class ProviderRegistry:
             # Architecture: Lazy instantiation
             # Provider created on-demand, not at registration time
             # This defers expensive initialization until actually needed
-            # Pass market_variant if provided (providers that support it will use it)
+            # Pass market_variant only if provider supports it (checked via try/except)
             provider_kwargs: dict[str, Any] = {
                 "market_type": market_type,
                 "api_key": api_key,
@@ -256,7 +261,13 @@ class ProviderRegistry:
             if market_variant is not None:
                 provider_kwargs["market_variant"] = market_variant
 
-            provider = registration.provider_class(**provider_kwargs)
+            # Try to create provider with market_variant, fallback without if not supported
+            try:
+                provider = registration.provider_class(**provider_kwargs)
+            except TypeError:
+                # Provider doesn't accept market_variant, create without it
+                provider_kwargs.pop("market_variant", None)
+                provider = registration.provider_class(**provider_kwargs)
 
             # Architecture: Enter async context automatically
             # Providers are async context managers (HTTP sessions, WebSocket connections)
