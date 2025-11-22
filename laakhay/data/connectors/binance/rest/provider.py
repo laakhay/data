@@ -16,8 +16,12 @@ from datetime import datetime
 from time import perf_counter
 from typing import Any
 
-from laakhay.data.connectors.binance.config import BASE_URLS, INTERVAL_MAP
-from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.connectors.binance.config import (
+    INTERVAL_MAP,
+    get_api_path_prefix,
+    get_base_url,
+)
+from laakhay.data.core import MarketType, MarketVariant, Timeframe
 from laakhay.data.models import (
     OHLCV,
     FundingRate,
@@ -54,6 +58,7 @@ class BinanceRESTConnector(RESTProvider):
         self,
         market_type: MarketType = MarketType.SPOT,
         *,
+        market_variant: MarketVariant | None = None,
         api_key: str | None = None,
         api_secret: str | None = None,
     ) -> None:
@@ -61,17 +66,27 @@ class BinanceRESTConnector(RESTProvider):
 
         Args:
             market_type: Market type (spot or futures)
+            market_variant: For FUTURES, specify "linear_perp" (USD-M) or "inverse_perp" (COIN-M).
+                           Defaults to LINEAR_PERP for FUTURES. Ignored for SPOT.
             api_key: Optional API key for authenticated endpoints
             api_secret: Optional API secret (not currently used)
         """
         self.market_type = market_type
+        # Derive market_variant from market_type if not provided (backward compatibility)
+        if market_variant is None:
+            self.market_variant = MarketVariant.from_market_type(market_type)
+        else:
+            self.market_variant = market_variant
+
         self._api_key = api_key
-        self._transport = RESTTransport(base_url=BASE_URLS[market_type])
+        # Use market_variant to select base URL (fapi for linear, dapi for inverse)
+        self._transport = RESTTransport(base_url=get_base_url(market_type, self.market_variant))
         self._runner = RestRunner(self._transport)
+        self._api_path_prefix = get_api_path_prefix(market_type, self.market_variant)
 
     async def fetch_health(self) -> dict[str, object]:
         """Ping Binance REST API to verify connectivity."""
-        path = "/fapi/v1/ping" if self.market_type == MarketType.FUTURES else "/api/v3/ping"
+        path = f"{self._api_path_prefix}/ping"
         start = perf_counter()
         await self._transport.get(path)
         latency_ms = (perf_counter() - start) * 1000.0
@@ -104,8 +119,12 @@ class BinanceRESTConnector(RESTProvider):
         if adapter_cls is None:
             raise ValueError(f"No adapter found for endpoint: {endpoint_id}")
 
-        # Ensure market_type is in params
-        params = {**params, "market_type": self.market_type}
+        # Ensure market_type and market_variant are in params
+        params = {
+            **params,
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+        }
 
         adapter = adapter_cls()
         return await self._runner.run(spec=spec, adapter=adapter, params=params)
@@ -186,8 +205,8 @@ class BinanceRESTConnector(RESTProvider):
         chunk_policy: Any,
         chunk_hint: Any,
     ) -> OHLCV:
-        """Fetch OHLCV using generic chunking layer."""
-        from laakhay.data.runtime.chunking import ChunkExecutor, ChunkPlanner
+        """Fetch OHLCV using chunking layer with backward pagination for limit-based requests."""
+        from laakhay.data.runtime.chunking import ChunkPlanner
 
         planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
         plans = planner.plan(
@@ -198,6 +217,74 @@ class BinanceRESTConnector(RESTProvider):
             max_chunks=max_chunks,
         )
 
+        # Check if we need backward pagination (no time range provided)
+        needs_backward_pagination = start_time is None and end_time is None
+
+        if needs_backward_pagination:
+            aggregated_bars: list[Any] = []
+            chunks_used = 0
+            current_end_time: datetime | None = None
+
+            for plan in plans:
+                if max_chunks is not None and chunks_used >= max_chunks:
+                    break
+
+                remaining = limit - len(aggregated_bars)
+                if remaining <= 0:
+                    break
+
+                chunk_limit = min(plan.limit, remaining)
+
+                params = {
+                    "market_type": self.market_type,
+                    "symbol": symbol,
+                    "interval": timeframe,
+                    "interval_str": INTERVAL_MAP[timeframe],
+                    "end_time": current_end_time,
+                    "limit": chunk_limit,
+                }
+                chunk_result: OHLCV = await self.fetch("ohlcv", params)
+
+                if not chunk_result.bars:
+                    break
+
+                chunk_bars = chunk_result.bars
+                if chunk_bars:
+                    # Deduplicate: remove bars that overlap with oldest aggregated bar
+                    if aggregated_bars:
+                        oldest_aggregated_ts = aggregated_bars[0].timestamp
+                        chunk_bars = [b for b in chunk_bars if b.timestamp < oldest_aggregated_ts]
+
+                    if chunk_bars:
+                        aggregated_bars = chunk_bars + aggregated_bars
+                        # Subtract 1ms to prevent boundary overlap between chunks
+                        from datetime import timedelta
+
+                        current_end_time = chunk_bars[0].timestamp - timedelta(milliseconds=1)
+                    elif aggregated_bars:
+                        from datetime import timedelta
+
+                        current_end_time = aggregated_bars[0].timestamp - timedelta(milliseconds=1)
+
+                chunks_used += 1  # noqa: SIM113
+
+                if len(aggregated_bars) >= limit:
+                    break
+
+                if len(chunk_result.bars) < chunk_limit and not chunk_result.bars:
+                    break
+
+            aggregated_bars.sort(key=lambda b: b.timestamp)
+
+            if len(aggregated_bars) > limit:
+                aggregated_bars = aggregated_bars[-limit:]
+
+            from laakhay.data.models import SeriesMeta
+
+            meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
+            return OHLCV(meta=meta, bars=aggregated_bars)
+
+        # Time-based chunking (has start_time or end_time) - fetch in parallel
         async def fetch_chunk(plan: Any) -> OHLCV:
             params = {
                 "market_type": self.market_type,
@@ -210,37 +297,36 @@ class BinanceRESTConnector(RESTProvider):
             }
             return await self.fetch("ohlcv", params)
 
-        executor = ChunkExecutor(policy=chunk_policy, hint=chunk_hint)
-        result = await executor.execute(
-            plans=plans,
-            fetch_chunk=fetch_chunk,
-        )
+        import asyncio
 
-        # Executor extracts bars and aggregates them as a list
-        # We need to reconstruct OHLCV from aggregated bars
-        if isinstance(result.data, list):
-            # Executor returned list of bars
-            # Get metadata from first chunk by fetching it (or use first bar's metadata)
-            if result.data:
-                # Create metadata for OHLCV
-                from laakhay.data.models import SeriesMeta
+        # Fetch all chunks in parallel
+        chunk_results = await asyncio.gather(*[fetch_chunk(plan) for plan in plans])
 
-                meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
-                return OHLCV(meta=meta, bars=result.data)
-            else:
-                # Fallback: fetch first chunk for metadata only if no data
-                first_chunk = await fetch_chunk(plans[0])
-                return OHLCV(meta=first_chunk.meta, bars=result.data)
+        # Aggregate all bars
+        aggregated_bars: list[Any] = []
+        for chunk_result in chunk_results:
+            if chunk_result.bars:
+                aggregated_bars.extend(chunk_result.bars)
 
-        # If executor preserved OHLCV structure (shouldn't happen with current impl)
-        if isinstance(result.data, OHLCV):
-            return result.data
+        # Deduplicate and sort by timestamp
+        seen = set()
+        unique_bars = []
+        for bar in aggregated_bars:
+            bar_key = (bar.timestamp, bar.open, bar.high, bar.low, bar.close)
+            if bar_key not in seen:
+                seen.add(bar_key)
+                unique_bars.append(bar)
 
-        # Fallback: try to extract bars
-        if hasattr(result.data, "bars") and hasattr(result.data, "meta"):
-            return OHLCV(meta=result.data.meta, bars=result.data.bars)
+        unique_bars.sort(key=lambda b: b.timestamp)
 
-        raise ValueError(f"Unexpected result type: {type(result.data)}")
+        # Limit to requested amount
+        if len(unique_bars) > limit:
+            unique_bars = unique_bars[-limit:]
+
+        from laakhay.data.models import SeriesMeta
+
+        meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
+        return OHLCV(meta=meta, bars=unique_bars)
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True
@@ -394,6 +480,14 @@ class BinanceRESTConnector(RESTProvider):
             params = {"symbol": symbol}
             data = await self.fetch("open_interest_current", params)
         return list(data)
+
+    async def __aenter__(self) -> BinanceRESTConnector:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()
 
     async def close(self) -> None:
         """Close underlying HTTP resources."""
