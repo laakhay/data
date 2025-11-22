@@ -1,6 +1,8 @@
 """Bybit open interest (historical) endpoint definition and adapter.
 
-This endpoint is Futures-only.
+This endpoint works for both linear and inverse perpetuals via the category
+parameter. The endpoint path, query parameters, and response format are
+identical across both categories.
 """
 
 from __future__ import annotations
@@ -10,7 +12,7 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.connectors.bybit.config import OI_PERIOD_MAP, get_category
-from laakhay.data.core import MarketType, MarketVariant
+from laakhay.data.core import MarketType
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OpenInterest
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
@@ -36,21 +38,17 @@ def _extract_result(response: Any) -> Any:
 
 def build_path(params: dict[str, Any]) -> str:  # noqa: ARG001
     """Build the open-interest history path (futures only)."""
-    # Check if market_variant is provided and is a futures variant
-    market_variant: MarketVariant | None = params.get("market_variant")
-    if market_variant is None:
-        market: MarketType = params["market_type"]
-        if market != MarketType.FUTURES:
-            raise ValueError("Open interest historical endpoint is Futures-only on Bybit")
-    else:
-        if market_variant.to_market_type() != MarketType.FUTURES:
-            raise ValueError("Open interest historical endpoint is Futures-only on Bybit")
+    market: MarketType = params["market_type"]
+    if market != MarketType.FUTURES:
+        raise ValueError("Open interest historical endpoint is Futures-only on Bybit")
     return "/v5/market/open-interest"
 
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for open-interest history endpoint."""
-    category = get_category(params)
+    market: MarketType = params["market_type"]
+    futures_category = params.get("futures_category", "linear")
+    category = get_category(market, futures_category=futures_category)
     period = params.get("period", "5m")
     # Convert period to Bybit format
     interval_time = OI_PERIOD_MAP.get(period, "5min")

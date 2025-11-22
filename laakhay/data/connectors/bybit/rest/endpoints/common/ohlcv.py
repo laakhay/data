@@ -9,8 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.connectors.bybit.config import CATEGORY_MAP, INTERVAL_MAP
-from laakhay.data.core import MarketType
+from laakhay.data.connectors.bybit.config import INTERVAL_MAP, get_category
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
@@ -41,8 +40,7 @@ def build_path(_params: dict[str, Any]) -> str:
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for kline endpoint."""
-    market: MarketType = params["market_type"]
-    category = CATEGORY_MAP[market]
+    category = get_category(params)
     interval_str = INTERVAL_MAP[params["interval"]]
 
     q: dict[str, Any] = {

@@ -1,6 +1,8 @@
 """Bybit exchange info endpoint definition and adapter.
 
-This endpoint is available for both spot and futures markets.
+This endpoint works across all market types (spot, linear, inverse) via the
+category parameter. The endpoint path, query parameters, and response format
+are identical across all categories.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from decimal import Decimal
 from typing import Any
 
 from laakhay.data.connectors.bybit.config import get_category
+from laakhay.data.core import MarketType
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import Symbol
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
@@ -40,7 +43,9 @@ def build_path(_params: dict[str, Any]) -> str:
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for instruments-info endpoint."""
-    category = get_category(params)
+    market: MarketType = params["market_type"]
+    futures_category = params.get("futures_category", "linear")
+    category = get_category(market, futures_category=futures_category)
     # Bybit supports status filter, but we'll filter in adapter
     return {"category": category}
 

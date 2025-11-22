@@ -17,7 +17,7 @@ from time import perf_counter
 from typing import Any
 
 from laakhay.data.connectors.bybit.config import BASE_URLS, INTERVAL_MAP
-from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.core import MarketType, MarketVariant, Timeframe
 from laakhay.data.models import (
     OHLCV,
     FundingRate,
@@ -49,6 +49,7 @@ class BybitRESTConnector(RESTProvider):
         self,
         market_type: MarketType,
         *,
+        market_variant: MarketVariant | None = None,
         api_key: str | None = None,
         api_secret: str | None = None,  # noqa: ARG002
     ) -> None:
@@ -56,10 +57,20 @@ class BybitRESTConnector(RESTProvider):
 
         Args:
             market_type: Market type (spot or futures)
+            market_variant: Optional market variant. If not provided, derived from
+                          market_type with smart defaults:
+                          - SPOT → SPOT
+                          - FUTURES → LINEAR_PERP (can be overridden)
+                          - OPTIONS → OPTIONS
             api_key: Optional API key for authenticated endpoints
             api_secret: Optional API secret (not currently used)
         """
         self.market_type = market_type
+        # Derive market_variant from market_type if not provided (backward compatibility)
+        if market_variant is None:
+            self.market_variant = MarketVariant.from_market_type(market_type)
+        else:
+            self.market_variant = market_variant
         self._api_key = api_key
         self._transport = RESTTransport(base_url=BASE_URLS[market_type])
         self._runner = RestRunner(self._transport)
@@ -99,8 +110,12 @@ class BybitRESTConnector(RESTProvider):
         if adapter_cls is None:
             raise ValueError(f"No adapter found for endpoint: {endpoint_id}")
 
-        # Ensure market_type is in params
-        params = {**params, "market_type": self.market_type}
+        # Ensure market_type and market_variant are in params
+        params = {
+            **params,
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+        }
 
         adapter = adapter_cls()
         return await self._runner.run(spec=spec, adapter=adapter, params=params)

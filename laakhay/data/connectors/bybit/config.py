@@ -4,7 +4,11 @@ This module centralizes URLs and interval mappings used by the REST and
 WebSocket connectors so the main provider can stay small and focused.
 """
 
-from laakhay.data.core import MarketType, Timeframe
+from __future__ import annotations
+
+from typing import Any
+
+from laakhay.data.core import MarketType, MarketVariant, Timeframe
 
 # Market-specific REST base URLs
 # Bybit uses unified API v5 with category parameter
@@ -25,11 +29,73 @@ WS_COMBINED_URLS = {
     MarketType.FUTURES: "wss://stream.bybit.com/v5/public/linear",
 }
 
+
 # Category mapping for Bybit API v5
-# Bybit uses 'category' parameter to distinguish market types
+# Bybit uses 'category' parameter to distinguish market types:
+# - "spot": Spot trading
+# - "linear": USDT perpetuals (linear)
+# - "inverse": COIN-M perpetuals (inverse)
+def get_category_from_variant(market_variant: MarketVariant) -> str:
+    """Get Bybit category parameter from MarketVariant.
+
+    Args:
+        market_variant: The market variant to get category for
+
+    Returns:
+        Bybit category string: "spot", "linear", or "inverse"
+
+    Raises:
+        ValueError: If variant is not supported by Bybit
+    """
+    if market_variant == MarketVariant.SPOT:
+        return "spot"
+    if market_variant == MarketVariant.LINEAR_PERP:
+        return "linear"
+    if market_variant == MarketVariant.INVERSE_PERP:
+        return "inverse"
+    # For now, only support spot, linear, and inverse perpetuals
+    # Future variants (delivery, options, etc.) can be added as needed
+    raise ValueError(f"Unsupported market variant for Bybit: {market_variant}")
+
+
+def get_category(params: dict[str, Any]) -> str:
+    """Get Bybit category parameter from params dict.
+
+    Supports both old-style (market_type only) and new-style (market_variant)
+    parameter passing for backward compatibility.
+
+    Args:
+        params: Parameters dict containing either:
+               - market_variant: MarketVariant (preferred)
+               - market_type: MarketType (fallback for backward compatibility)
+
+    Returns:
+        Bybit category string: "spot", "linear", or "inverse"
+    """
+    # Prefer market_variant if provided
+    if "market_variant" in params:
+        market_variant = params["market_variant"]
+        if isinstance(market_variant, str):
+            market_variant = MarketVariant(market_variant)
+        return get_category_from_variant(market_variant)
+
+    # Fallback to market_type for backward compatibility
+    if "market_type" in params:
+        market_type = params["market_type"]
+        if isinstance(market_type, str):
+            market_type = MarketType(market_type)
+        # Derive variant from type
+        market_variant = MarketVariant.from_market_type(market_type)
+        return get_category_from_variant(market_variant)
+
+    raise ValueError("Either 'market_variant' or 'market_type' must be provided in params")
+
+
+# Legacy mapping for backwards compatibility
+# Use get_category() or get_category_from_variant() for new code
 CATEGORY_MAP = {
     MarketType.SPOT: "spot",
-    MarketType.FUTURES: "linear",  # USDT perpetuals
+    MarketType.FUTURES: "linear",  # Default to linear for backwards compatibility
 }
 
 # Bybit interval mapping

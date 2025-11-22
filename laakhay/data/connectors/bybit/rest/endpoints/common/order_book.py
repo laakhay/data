@@ -9,8 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.connectors.bybit.config import CATEGORY_MAP
-from laakhay.data.core import MarketType
+from laakhay.data.connectors.bybit.config import get_category
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OrderBook
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
@@ -41,8 +40,7 @@ def build_path(_params: dict[str, Any]) -> str:
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
     """Build query parameters for orderbook endpoint."""
-    market: MarketType = params["market_type"]
-    category = CATEGORY_MAP[market]
+    category = get_category(params)
     limit = int(params.get("limit", 50))
     # Bybit supports: 1, 25, 50, 100, 200
     # Map to nearest supported value
