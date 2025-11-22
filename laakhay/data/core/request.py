@@ -151,6 +151,7 @@ class DataRequestBuilder:
         self._transport: TransportKind | None = None
         self._exchange: str | None = None
         self._market_type: MarketType | None = None
+        self._market_variant: MarketVariant | None = None
         self._instrument_type: InstrumentType = InstrumentType.SPOT
         self._symbol: str | None = None
         self._symbols: list[str] | None = None
@@ -187,6 +188,11 @@ class DataRequestBuilder:
     def market_type(self, market_type: MarketType) -> DataRequestBuilder:
         """Set the market type."""
         self._market_type = market_type
+        return self
+
+    def market_variant(self, market_variant: MarketVariant) -> DataRequestBuilder:
+        """Set the market variant."""
+        self._market_variant = market_variant
         return self
 
     def instrument_type(self, instrument_type: InstrumentType) -> DataRequestBuilder:
@@ -292,6 +298,7 @@ class DataRequestBuilder:
             transport=self._transport,
             exchange=self._exchange,
             market_type=self._market_type,
+            market_variant=self._market_variant,
             instrument_type=self._instrument_type,
             symbol=self._symbol,
             symbols=self._symbols,
