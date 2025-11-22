@@ -136,9 +136,11 @@ class DataRouter:
         # Step 3: Get provider instance
         # Architecture: ProviderRegistry handles instance pooling and lifecycle
         # Returns cached instance or creates new one, entered into async context
+        # Pass market_variant if available (for providers that support it)
         provider = await self._provider_registry.get_provider(
             request.exchange,
             request.market_type,
+            market_variant=request.market_variant,
         )
         logger.debug("Provider instance retrieved", extra={"provider": provider.name})
 

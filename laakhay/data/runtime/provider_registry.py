@@ -45,7 +45,7 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
-from ..core.enums import DataFeature, MarketType, TransportKind
+from ..core.enums import DataFeature, MarketType, MarketVariant, TransportKind
 from ..core.exceptions import ProviderError
 
 if TYPE_CHECKING:
@@ -98,12 +98,13 @@ class ProviderRegistry:
         """
         # Architecture: Registration metadata (class, handlers, URM mapper)
         self._registrations: dict[str, ProviderRegistration] = {}
-        # Architecture: Instance pool - key is (exchange, market_type)
+        # Architecture: Instance pool - key is (exchange, market_type, market_variant)
         # Performance: Reuse instances to avoid expensive initialization
-        self._provider_pools: dict[tuple[str, MarketType], BaseProvider] = {}
+        # Note: market_variant can be None for backward compatibility
+        self._provider_pools: dict[tuple[str, MarketType, MarketVariant | None], BaseProvider] = {}
         # Architecture: Locks for thread-safe instance creation
         # Prevents race conditions when multiple requests create same provider
-        self._pool_locks: dict[tuple[str, MarketType], asyncio.Lock] = {}
+        self._pool_locks: dict[tuple[str, MarketType, MarketVariant | None], asyncio.Lock] = {}
         self._closed = False
 
     def register(
@@ -143,8 +144,9 @@ class ProviderRegistry:
         # Architecture: Pre-initialize locks for each market type
         # This ensures locks exist before any get_provider() calls
         # Performance: Lock creation is cheap, avoids lazy initialization overhead
+        # Note: Locks created with market_variant=None for backward compatibility
         for market_type in market_types:
-            key = (exchange, market_type)
+            key = (exchange, market_type, None)
             if key not in self._pool_locks:
                 self._pool_locks[key] = asyncio.Lock()
 
@@ -178,17 +180,19 @@ class ProviderRegistry:
         exchange: str,
         market_type: MarketType,
         *,
+        market_variant: MarketVariant | None = None,
         api_key: str | None = None,
         api_secret: str | None = None,
     ) -> BaseProvider:
         """Get or create a provider instance.
 
-        Uses a pool to reuse instances for the same (exchange, market_type) combination.
+        Uses a pool to reuse instances for the same (exchange, market_type, market_variant) combination.
         Providers are managed as async context managers.
 
         Args:
             exchange: Exchange name
             market_type: Market type (spot/futures)
+            market_variant: Optional market variant (e.g., linear_perp, inverse_perp)
             api_key: Optional API key for authenticated providers
             api_secret: Optional API secret for authenticated providers
 
@@ -211,7 +215,14 @@ class ProviderRegistry:
                 f"Market type '{market_type.value}' not supported for exchange '{exchange}'"
             )
 
-        key = (exchange, market_type)
+        # Architecture: Pool key includes market_variant if provided
+        # This ensures different variants get different provider instances
+        # Backward compatible: if market_variant is None, pool by (exchange, market_type) only
+        key = (
+            (exchange, market_type, market_variant)
+            if market_variant is not None
+            else (exchange, market_type, None)
+        )
 
         # Architecture: Check pool first (fast path)
         # Performance: Most requests hit cached instance, avoiding creation overhead
@@ -236,9 +247,16 @@ class ProviderRegistry:
             # Architecture: Lazy instantiation
             # Provider created on-demand, not at registration time
             # This defers expensive initialization until actually needed
-            provider = registration.provider_class(
-                market_type=market_type, api_key=api_key, api_secret=api_secret
-            )
+            # Pass market_variant if provided (providers that support it will use it)
+            provider_kwargs: dict[str, Any] = {
+                "market_type": market_type,
+                "api_key": api_key,
+                "api_secret": api_secret,
+            }
+            if market_variant is not None:
+                provider_kwargs["market_variant"] = market_variant
+
+            provider = registration.provider_class(**provider_kwargs)
 
             # Architecture: Enter async context automatically
             # Providers are async context managers (HTTP sessions, WebSocket connections)
