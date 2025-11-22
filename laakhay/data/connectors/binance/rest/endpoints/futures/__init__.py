@@ -1,3 +1,7 @@
-"""Binance Futures-specific REST endpoints."""
+"""Binance Futures-only REST endpoints.
+
+These endpoints are only available for futures markets (linear and inverse perpetuals),
+not for spot markets.
+"""
 
 __all__: list[str] = []
