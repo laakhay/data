@@ -30,7 +30,14 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from ..core.enums import DataFeature, InstrumentType, MarketType, MarketVariant, Timeframe, TransportKind
+from ..core.enums import (
+    DataFeature,
+    InstrumentType,
+    MarketType,
+    MarketVariant,
+    Timeframe,
+    TransportKind,
+)
 from ..runtime.router import DataRouter
 from .request_builder import APIRequestBuilder
 
@@ -133,7 +140,7 @@ class DataAPI:
 
     def _resolve_market_variant(self, market_variant: MarketVariant | None) -> MarketVariant | None:
         """Resolve market variant parameter.
-        
+
         Returns None if not provided and no default set (will be derived from market_type).
         """
         if market_variant is not None:
