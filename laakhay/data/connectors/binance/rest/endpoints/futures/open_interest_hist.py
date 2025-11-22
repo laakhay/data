@@ -11,6 +11,7 @@ from typing import Any
 
 from laakhay.data.core import MarketType
 from laakhay.data.models import OpenInterest
+from laakhay.data.runtime.chunking import WeightPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
@@ -36,12 +37,15 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
     return q
 
 
-# Endpoint specification
+OPEN_INTEREST_HIST_WEIGHT_POLICY = WeightPolicy(static_weight=1)
+
+
 SPEC = RestEndpointSpec(
     id="open_interest_hist",
     method="GET",
     build_path=build_path,
     build_query=build_query,
+    weight_policy=OPEN_INTEREST_HIST_WEIGHT_POLICY,
 )
 
 
@@ -57,6 +61,7 @@ class Adapter(ResponseAdapter):
 
         Returns:
             List of OpenInterest objects
+
         """
         symbol = params["symbol"].upper()
         out: list[OpenInterest] = []
@@ -71,6 +76,6 @@ class Adapter(ResponseAdapter):
                     timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                     open_interest=Decimal(str(oi_str)),
                     open_interest_value=None,
-                )
+                ),
             )
         return out

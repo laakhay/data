@@ -9,8 +9,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from laakhay.data.connectors.binance.config import get_api_path_prefix
 from laakhay.data.core import MarketType
 from laakhay.data.models import FundingRate
+from laakhay.data.runtime.chunking import WeightPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
@@ -19,7 +21,8 @@ def build_path(params: dict[str, Any]) -> str:
     market: MarketType = params["market_type"]
     if market != MarketType.FUTURES:
         raise ValueError("Funding rate endpoint is Futures-only on Binance")
-    return "/fapi/v1/fundingRate"
+    prefix = get_api_path_prefix(market, params.get("market_variant"))
+    return f"{prefix}/fundingRate"
 
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
@@ -35,12 +38,15 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
     return q
 
 
-# Endpoint specification
+FUNDING_RATE_WEIGHT_POLICY = WeightPolicy(static_weight=1)
+
+
 SPEC = RestEndpointSpec(
     id="funding_rate",
     method="GET",
     build_path=build_path,
     build_query=build_query,
+    weight_policy=FUNDING_RATE_WEIGHT_POLICY,
 )
 
 
@@ -56,6 +62,7 @@ class Adapter(ResponseAdapter):
 
         Returns:
             List of FundingRate objects
+
         """
         symbol = params["symbol"].upper()
         out: list[FundingRate] = []
@@ -72,6 +79,6 @@ class Adapter(ResponseAdapter):
                         if row.get("markPrice") is not None
                         else None
                     ),
-                )
+                ),
             )
         return out
