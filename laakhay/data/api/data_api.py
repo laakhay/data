@@ -30,7 +30,7 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from ..core.enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
+from ..core.enums import DataFeature, InstrumentType, MarketType, MarketVariant, Timeframe, TransportKind
 from ..runtime.router import DataRouter
 from .request_builder import APIRequestBuilder
 
@@ -81,6 +81,7 @@ class DataAPI:
         *,
         default_exchange: str | None = None,
         default_market_type: MarketType | None = None,
+        default_market_variant: MarketVariant | None = None,
         default_instrument_type: InstrumentType = InstrumentType.SPOT,
         router: DataRouter | None = None,
     ) -> None:
@@ -89,6 +90,7 @@ class DataAPI:
         Args:
             default_exchange: Default exchange to use if not specified in method calls
             default_market_type: Default market type to use if not specified
+            default_market_variant: Default market variant to use if not specified
             default_instrument_type: Default instrument type (default: SPOT)
             router: Optional DataRouter instance (creates new one if not provided)
 
@@ -98,6 +100,7 @@ class DataAPI:
         """
         self._default_exchange = default_exchange
         self._default_market_type = default_market_type
+        self._default_market_variant = default_market_variant
         self._default_instrument_type = default_instrument_type
         # Architecture: Router injection for testability (dependency injection pattern)
         self._owns_router = router is None
@@ -128,6 +131,15 @@ class DataAPI:
             return self._default_market_type
         raise ValueError("market_type must be provided (no default set)")
 
+    def _resolve_market_variant(self, market_variant: MarketVariant | None) -> MarketVariant | None:
+        """Resolve market variant parameter.
+        
+        Returns None if not provided and no default set (will be derived from market_type).
+        """
+        if market_variant is not None:
+            return market_variant
+        return self._default_market_variant
+
     def _resolve_instrument_type(self, instrument_type: InstrumentType | None) -> InstrumentType:
         """Resolve instrument type parameter."""
         if instrument_type is not None:
@@ -141,6 +153,7 @@ class DataAPI:
         *,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> APIRequestBuilder:
         """Create an APIRequestBuilder with resolved defaults.
@@ -155,6 +168,7 @@ class DataAPI:
             transport: Transport kind (REST or WS)
             exchange: Exchange name (uses default if not provided)
             market_type: Market type (uses default if not provided)
+            market_variant: Market variant (uses default if not provided, None if no default)
             instrument_type: Instrument type (uses default if not provided)
 
         Returns:
@@ -165,10 +179,12 @@ class DataAPI:
             in calling methods for feature-specific parameters. The _from_dataapi
             flag ensures DataAPI-style error messages are always used.
         """
-        return (
+        resolved_market_variant = self._resolve_market_variant(market_variant)
+        builder = (
             APIRequestBuilder.with_defaults(
                 default_exchange=self._default_exchange,
                 default_market_type=self._default_market_type,
+                default_market_variant=self._default_market_variant,
                 default_instrument_type=self._default_instrument_type,
                 _from_dataapi=True,  # Always use DataAPI-style error messages
             )
@@ -178,6 +194,9 @@ class DataAPI:
             .market_type(market_type)
             .instrument_type(instrument_type)
         )
+        if resolved_market_variant is not None:
+            builder = builder.market_variant(resolved_market_variant)
+        return builder
 
     # --- REST / Historical Methods -------------------------------------------
 
@@ -186,6 +205,7 @@ class DataAPI:
         *,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> dict[str, Any]:
         """Fetch exchange health information."""
@@ -194,6 +214,7 @@ class DataAPI:
             TransportKind.REST,
             exchange=exchange,
             market_type=market_type,
+            market_variant=market_variant,
             instrument_type=instrument_type,
         ).build()
         logger.debug(
@@ -216,6 +237,7 @@ class DataAPI:
         max_chunks: int | None = None,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> OHLCV:
         """Fetch OHLCV bar history.
@@ -229,6 +251,7 @@ class DataAPI:
             max_chunks: Maximum number of pagination chunks
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Returns:
@@ -246,6 +269,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -275,6 +299,7 @@ class DataAPI:
         depth: int = 100,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> OrderBook:
         """Fetch order book snapshot.
@@ -284,6 +309,7 @@ class DataAPI:
             depth: Order book depth (default: 100)
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Returns:
@@ -299,6 +325,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -318,6 +345,7 @@ class DataAPI:
         limit: int = 500,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> list[Trade]:
         """Fetch recent trades.
@@ -327,6 +355,7 @@ class DataAPI:
             limit: Maximum number of trades (default: 500)
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Returns:
@@ -342,6 +371,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -362,6 +392,7 @@ class DataAPI:
         from_id: int | None = None,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> list[Trade]:
         """Fetch historical trades with exchange pagination support."""
@@ -371,6 +402,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -395,6 +427,7 @@ class DataAPI:
         quote_asset: str | None = None,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         use_cache: bool = True,
     ) -> list[Symbol]:
         """Fetch symbol metadata.
@@ -403,6 +436,7 @@ class DataAPI:
             quote_asset: Optional quote asset filter
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             use_cache: Whether to use cached symbol data
 
         Returns:
@@ -417,6 +451,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=InstrumentType.SPOT,  # Symbol metadata doesn't use instrument_type
             )
             .extra_param("quote_asset", quote_asset)
@@ -440,6 +475,7 @@ class DataAPI:
         limit: int = 30,
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> list[OpenInterest]:
         """Fetch open interest data.
@@ -453,6 +489,7 @@ class DataAPI:
             limit: Maximum number of records
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Returns:
@@ -468,6 +505,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -497,6 +535,7 @@ class DataAPI:
         limit: int = 100,
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> list[FundingRate]:
         """Fetch funding rate data.
@@ -508,6 +547,7 @@ class DataAPI:
             limit: Maximum number of records
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Returns:
@@ -523,6 +563,7 @@ class DataAPI:
                 TransportKind.REST,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -549,6 +590,7 @@ class DataAPI:
         dedupe_same_candle: bool = False,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[Any]:  # StreamingBar
         """Stream real-time OHLCV updates.
@@ -561,6 +603,7 @@ class DataAPI:
             dedupe_same_candle: Deduplicate same candle updates
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Yields:
@@ -576,6 +619,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -602,6 +646,7 @@ class DataAPI:
         *,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[Trade]:
         """Stream real-time trades.
@@ -610,6 +655,7 @@ class DataAPI:
             symbol: Symbol identifier
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Yields:
@@ -625,6 +671,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -647,6 +694,7 @@ class DataAPI:
         dedupe_same_candle: bool = False,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[Any]:  # StreamingBar
         """Stream real-time OHLCV updates for multiple symbols.
@@ -659,6 +707,7 @@ class DataAPI:
             dedupe_same_candle: Deduplicate same candle updates
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Yields:
@@ -699,6 +748,7 @@ class DataAPI:
                     TransportKind.WS,
                     exchange=exchange_name,
                     market_type=market_type_resolved,
+                    market_variant=market_variant,
                     instrument_type=instrument_type_resolved,
                 )
                 .symbol(symbols[0])
@@ -732,6 +782,7 @@ class DataAPI:
         *,
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[Trade]:
         """Stream real-time trades for multiple symbols.
@@ -740,6 +791,7 @@ class DataAPI:
             symbols: List of symbol identifiers
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Yields:
@@ -775,6 +827,7 @@ class DataAPI:
                     TransportKind.WS,
                     exchange=exchange_name,
                     market_type=market_type_resolved,
+                    market_variant=market_variant,
                     instrument_type=instrument_type_resolved,
                 )
                 .symbol(symbols[0])
@@ -798,6 +851,7 @@ class DataAPI:
         update_speed: str = "100ms",
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[OrderBook]:
         """Stream order book updates.
@@ -823,6 +877,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbol(symbol)
@@ -845,6 +900,7 @@ class DataAPI:
         update_speed: str = "100ms",
         exchange: str | None = None,
         market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType | None = None,
     ) -> AsyncIterator[OrderBook]:
         """Stream order book updates for multiple symbols.
@@ -855,6 +911,7 @@ class DataAPI:
             update_speed: Update speed (default: "100ms")
             exchange: Exchange name (uses default if set)
             market_type: Market type (uses default if set)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: SPOT)
 
         Yields:
@@ -890,6 +947,7 @@ class DataAPI:
                     TransportKind.WS,
                     exchange=exchange_name,
                     market_type=market_type_resolved,
+                    market_variant=market_variant,
                     instrument_type=instrument_type_resolved,
                 )
                 .symbol(symbols[0])
@@ -917,6 +975,7 @@ class DataAPI:
         *,
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> AsyncIterator[Liquidation]:
         """Stream liquidations.
@@ -924,6 +983,7 @@ class DataAPI:
         Args:
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Yields:
@@ -937,6 +997,7 @@ class DataAPI:
             TransportKind.WS,
             exchange=exchange,
             market_type=market_type,
+            market_variant=market_variant,
             instrument_type=instrument_type,
         ).build()
         logger.debug("Streaming liquidations", extra={"exchange": request.exchange})
@@ -950,6 +1011,7 @@ class DataAPI:
         period: str = "5m",
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> AsyncIterator[OpenInterest]:
         """Stream open interest updates.
@@ -959,6 +1021,7 @@ class DataAPI:
             period: Period for open interest (default: "5m")
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Yields:
@@ -974,6 +1037,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbols(symbols)
@@ -994,6 +1058,7 @@ class DataAPI:
         update_speed: str = "1s",
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> AsyncIterator[FundingRate]:
         """Stream funding rate updates.
@@ -1003,6 +1068,7 @@ class DataAPI:
             update_speed: Update speed (default: "1s")
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Yields:
@@ -1018,6 +1084,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbols(symbols)
@@ -1038,6 +1105,7 @@ class DataAPI:
         update_speed: str = "1s",
         exchange: str | None = None,
         market_type: MarketType = MarketType.FUTURES,
+        market_variant: MarketVariant | None = None,
         instrument_type: InstrumentType = InstrumentType.PERPETUAL,
     ) -> AsyncIterator[MarkPrice]:
         """Stream mark price updates.
@@ -1047,6 +1115,7 @@ class DataAPI:
             update_speed: Update speed (default: "1s")
             exchange: Exchange name (uses default if set)
             market_type: Market type (default: FUTURES)
+            market_variant: Market variant (uses default if set, derived from market_type otherwise)
             instrument_type: Instrument type (default: PERPETUAL)
 
         Yields:
@@ -1062,6 +1131,7 @@ class DataAPI:
                 TransportKind.WS,
                 exchange=exchange,
                 market_type=market_type,
+                market_variant=market_variant,
                 instrument_type=instrument_type,
             )
             .symbols(symbols)
