@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from .enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
+from .enums import DataFeature, InstrumentType, MarketType, MarketVariant, Timeframe, TransportKind
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,9 @@ class DataRequest:
     transport: TransportKind
     exchange: str
     market_type: MarketType
+    market_variant: MarketVariant | None = (
+        None  # Optional; derived from market_type if not provided
+    )
     instrument_type: InstrumentType = InstrumentType.SPOT
 
     # Symbol identification (can be alias, URM ID, exchange-native, or InstrumentSpec)
@@ -114,6 +117,12 @@ class DataRequest:
         # Uses object.__setattr__ because dataclass is frozen
         if self.feature == DataFeature.ORDER_BOOK and self.depth is None:
             object.__setattr__(self, "depth", 100)
+
+        # Architecture: Derive market_variant from market_type if not provided
+        # This ensures backward compatibility while enabling explicit variant specification
+        if self.market_variant is None:
+            derived_variant = MarketVariant.from_market_type(self.market_type)
+            object.__setattr__(self, "market_variant", derived_variant)
 
 
 class DataRequestBuilder:
