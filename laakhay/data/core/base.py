@@ -72,7 +72,7 @@ class BaseProvider(ABC):
     async def fetch_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
@@ -90,8 +90,8 @@ class BaseProvider(ABC):
         """Close provider connections and cleanup resources."""
         pass
 
-    def validate_interval(self, interval: Timeframe) -> None:
-        """Validate if interval is supported by provider. Override if needed."""
+    def validate_timeframe(self, timeframe: Timeframe) -> None:
+        """Validate if timeframe is supported by provider. Override if needed."""
         pass
 
     def validate_symbol(self, symbol: str) -> None:
