@@ -32,7 +32,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..core.enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
+from ..core.enums import (
+    DataFeature,
+    InstrumentType,
+    MarketType,
+    MarketVariant,
+    Timeframe,
+    TransportKind,
+)
 from ..core.request import DataRequest, DataRequestBuilder
 
 if TYPE_CHECKING:
@@ -89,6 +96,7 @@ class APIRequestBuilder(DataRequestBuilder):
         *,
         default_exchange: str | None = None,
         default_market_type: MarketType | None = None,
+        default_market_variant: MarketVariant | None = None,
         default_instrument_type: InstrumentType = InstrumentType.SPOT,
         _from_dataapi: bool = False,
     ) -> None:
@@ -97,6 +105,7 @@ class APIRequestBuilder(DataRequestBuilder):
         Args:
             default_exchange: Default exchange to use if exchange() not called
             default_market_type: Default market type if market_type() not called
+            default_market_variant: Default market variant if market_variant() not called
             default_instrument_type: Default instrument type (default: SPOT)
             _from_dataapi: Internal flag indicating builder is from DataAPI context
 
@@ -109,6 +118,7 @@ class APIRequestBuilder(DataRequestBuilder):
         super().__init__()
         self._default_exchange = default_exchange
         self._default_market_type = default_market_type
+        self._default_market_variant = default_market_variant
         self._default_instrument_type = default_instrument_type
         self._from_dataapi = _from_dataapi
 
@@ -118,6 +128,7 @@ class APIRequestBuilder(DataRequestBuilder):
         *,
         default_exchange: str | None = None,
         default_market_type: MarketType | None = None,
+        default_market_variant: MarketVariant | None = None,
         default_instrument_type: InstrumentType = InstrumentType.SPOT,
         _from_dataapi: bool = False,
     ) -> APIRequestBuilder:
@@ -126,6 +137,7 @@ class APIRequestBuilder(DataRequestBuilder):
         Args:
             default_exchange: Default exchange name
             default_market_type: Default market type
+            default_market_variant: Default market variant
             default_instrument_type: Default instrument type
             _from_dataapi: Internal flag for DataAPI context (auto-set by DataAPI)
 
@@ -145,6 +157,7 @@ class APIRequestBuilder(DataRequestBuilder):
         return cls(
             default_exchange=default_exchange,
             default_market_type=default_market_type,
+            default_market_variant=default_market_variant,
             default_instrument_type=default_instrument_type,
             _from_dataapi=_from_dataapi,
         )
@@ -192,6 +205,27 @@ class APIRequestBuilder(DataRequestBuilder):
             self._market_type = self._default_market_type
         return self
 
+    def market_variant(
+        self,
+        market_variant: MarketVariant | None = None,
+    ) -> APIRequestBuilder:
+        """Set the market variant, using default if None provided.
+
+        Args:
+            market_variant: Market variant, or None to use default
+
+        Architecture:
+            Overrides base method to support None parameter for default resolution.
+
+        Returns:
+            Self for method chaining
+        """
+        if market_variant is not None:
+            self._market_variant = market_variant
+        elif self._default_market_variant is not None:
+            self._market_variant = self._default_market_variant
+        return self
+
     def instrument_type(
         self,
         instrument_type: InstrumentType | None = None,
@@ -234,6 +268,8 @@ class APIRequestBuilder(DataRequestBuilder):
             self._exchange = self._default_exchange
         if self._market_type is None and self._default_market_type is not None:
             self._market_type = self._default_market_type
+        if self._market_variant is None and self._default_market_variant is not None:
+            self._market_variant = self._default_market_variant
 
         # Check required fields with appropriate error messages
         # Use DataAPI-style messages if:
@@ -447,9 +483,11 @@ def api_request(
     *,
     exchange: str | None = None,
     market_type: MarketType | None = None,
+    market_variant: MarketVariant | None = None,
     instrument_type: InstrumentType = InstrumentType.SPOT,
     default_exchange: str | None = None,
     default_market_type: MarketType | None = None,
+    default_market_variant: MarketVariant | None = None,
     default_instrument_type: InstrumentType = InstrumentType.SPOT,
     symbol: str | None = None,
     symbols: list[str] | None = None,
@@ -465,9 +503,11 @@ def api_request(
         transport: Transport kind (REST or WS)
         exchange: Exchange name (uses default_exchange if not provided)
         market_type: Market type (uses default_market_type if not provided)
+        market_variant: Market variant (uses default_market_variant if not provided)
         instrument_type: Instrument type (uses default_instrument_type if not provided)
         default_exchange: Default exchange for resolution
         default_market_type: Default market type for resolution
+        default_market_variant: Default market variant for resolution
         default_instrument_type: Default instrument type for resolution
         symbol: Single symbol (alias, URM ID, or exchange-native)
         symbols: Multiple symbols
@@ -498,6 +538,9 @@ def api_request(
     # Resolve defaults (prefer explicit over defaults)
     resolved_exchange = exchange if exchange is not None else default_exchange
     resolved_market_type = market_type if market_type is not None else default_market_type
+    resolved_market_variant = (
+        market_variant if market_variant is not None else default_market_variant
+    )
     resolved_instrument_type = (
         instrument_type if instrument_type != InstrumentType.SPOT else default_instrument_type
     )
@@ -511,6 +554,7 @@ def api_request(
     builder = APIRequestBuilder.with_defaults(
         default_exchange=default_exchange,
         default_market_type=default_market_type,
+        default_market_variant=default_market_variant,
         default_instrument_type=default_instrument_type,
     )
 
@@ -522,6 +566,10 @@ def api_request(
         .market_type(resolved_market_type)
         .instrument_type(resolved_instrument_type)
     )
+
+    # Set market_variant if resolved
+    if resolved_market_variant is not None:
+        builder = builder.market_variant(resolved_market_variant)
 
     # Set symbol(s)
     if symbol is not None:

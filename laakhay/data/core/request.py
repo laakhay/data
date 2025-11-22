@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from .enums import DataFeature, InstrumentType, MarketType, Timeframe, TransportKind
+from .enums import DataFeature, InstrumentType, MarketType, MarketVariant, Timeframe, TransportKind
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,9 @@ class DataRequest:
     transport: TransportKind
     exchange: str
     market_type: MarketType
+    market_variant: MarketVariant | None = (
+        None  # Optional; derived from market_type if not provided
+    )
     instrument_type: InstrumentType = InstrumentType.SPOT
 
     # Symbol identification (can be alias, URM ID, exchange-native, or InstrumentSpec)
@@ -115,6 +118,12 @@ class DataRequest:
         if self.feature == DataFeature.ORDER_BOOK and self.depth is None:
             object.__setattr__(self, "depth", 100)
 
+        # Architecture: Derive market_variant from market_type if not provided
+        # This ensures backward compatibility while enabling explicit variant specification
+        if self.market_variant is None:
+            derived_variant = MarketVariant.from_market_type(self.market_type)
+            object.__setattr__(self, "market_variant", derived_variant)
+
 
 class DataRequestBuilder:
     """Builder for creating DataRequest instances with a fluent API.
@@ -142,6 +151,7 @@ class DataRequestBuilder:
         self._transport: TransportKind | None = None
         self._exchange: str | None = None
         self._market_type: MarketType | None = None
+        self._market_variant: MarketVariant | None = None
         self._instrument_type: InstrumentType = InstrumentType.SPOT
         self._symbol: str | None = None
         self._symbols: list[str] | None = None
@@ -178,6 +188,11 @@ class DataRequestBuilder:
     def market_type(self, market_type: MarketType) -> DataRequestBuilder:
         """Set the market type."""
         self._market_type = market_type
+        return self
+
+    def market_variant(self, market_variant: MarketVariant) -> DataRequestBuilder:
+        """Set the market variant."""
+        self._market_variant = market_variant
         return self
 
     def instrument_type(self, instrument_type: InstrumentType) -> DataRequestBuilder:
@@ -283,6 +298,7 @@ class DataRequestBuilder:
             transport=self._transport,
             exchange=self._exchange,
             market_type=self._market_type,
+            market_variant=self._market_variant,
             instrument_type=self._instrument_type,
             symbol=self._symbol,
             symbols=self._symbols,
