@@ -12,6 +12,7 @@ from laakhay.data.core.enums import (
     DataFeature,
     InstrumentType,
     MarketType,
+    MarketVariant,
     Timeframe,
     TransportKind,
 )
@@ -99,7 +100,10 @@ async def test_route_valid_request(router, mock_provider_registry):
     router._capability_service.validate_request.assert_called_once_with(request)
 
     # Verify provider was retrieved
-    mock_provider_registry.get_provider.assert_called_once_with("binance", MarketType.SPOT)
+    # Note: market_variant is automatically derived from market_type in DataRequest.__post_init__
+    mock_provider_registry.get_provider.assert_called_once_with(
+        "binance", MarketType.SPOT, market_variant=MarketVariant.SPOT
+    )
 
     # Verify result
     assert result["symbol"] == "BTCUSDT"
