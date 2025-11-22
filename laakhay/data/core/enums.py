@@ -107,18 +107,108 @@ class Timeframe(str, Enum):
 
 
 class MarketType(str, Enum):
-    """Market type for exchange trading.
+    """Top-level market category for exchange trading.
 
     Different exchanges may support different market types.
-    This enum standardizes market type identification across providers.
+    This enum standardizes high-level market category identification across providers.
+    MarketType represents broad categories; for more specific variants, use MarketVariant.
     """
 
     SPOT = "spot"
     FUTURES = "futures"
+    OPTIONS = "options"
+    EQUITY = "equity"  # for cash equities
+    FX = "fx"  # forex markets
 
     def __str__(self) -> str:
         """String representation returns the value."""
         return self.value
+
+
+class MarketVariant(str, Enum):
+    """Specific market variant within a MarketType.
+
+    MarketVariant provides fine-grained distinction between different market
+    implementations. For example, FUTURES can be LINEAR_PERP (USDT-margined)
+    or INVERSE_PERP (coin-margined).
+
+    Architecture:
+        Some variants align with MarketType (e.g., SPOT).
+        Others are more specific (e.g., LINEAR_PERP, INVERSE_PERP under FUTURES).
+    """
+
+    SPOT = "spot"  # cash/spot trading (works for crypto, equities, FX)
+    LINEAR_PERP = "linear_perp"  # stable-quote perpetual (USDT-margined)
+    INVERSE_PERP = "inverse_perp"  # coin-quote perpetual (BTCUSD, ETHUSD...)
+    LINEAR_DELIVERY = "linear_delivery"  # expiring stable-quote futures
+    INVERSE_DELIVERY = "inverse_delivery"  # expiring coin futures
+    OPTIONS = "options"  # any options (equity or crypto)
+    EQUITY = "equity"  # cash equities (optional if you want to distinguish)
+
+    def __str__(self) -> str:
+        """String representation returns the value."""
+        return self.value
+
+    @classmethod
+    def from_market_type(
+        cls, market_type: MarketType, default: "MarketVariant | None" = None
+    ) -> "MarketVariant":
+        """Get default MarketVariant for a MarketType.
+
+        Args:
+            market_type: The market type to get a variant for
+            default: Optional default variant if market_type is FUTURES.
+                    If None, defaults to LINEAR_PERP.
+
+        Returns:
+            The appropriate MarketVariant for the given MarketType
+
+        Examples:
+            >>> MarketVariant.from_market_type(MarketType.SPOT)
+            <MarketVariant.SPOT: 'spot'>
+            >>> MarketVariant.from_market_type(MarketType.FUTURES)
+            <MarketVariant.LINEAR_PERP: 'linear_perp'>
+            >>> MarketVariant.from_market_type(MarketType.FUTURES, MarketVariant.INVERSE_PERP)
+            <MarketVariant.INVERSE_PERP: 'inverse_perp'>
+        """
+        if market_type == MarketType.SPOT:
+            return cls.SPOT
+        if market_type == MarketType.FUTURES:
+            return default if default is not None else cls.LINEAR_PERP
+        if market_type == MarketType.OPTIONS:
+            return cls.OPTIONS
+        if market_type == MarketType.EQUITY:
+            return cls.EQUITY
+        if market_type == MarketType.FX:
+            return cls.SPOT  # FX spot uses the same SPOT variant
+        raise ValueError(f"Unsupported market type: {market_type}")
+
+    def to_market_type(self) -> MarketType:
+        """Get the MarketType that this variant belongs to.
+
+        Returns:
+            The corresponding MarketType
+
+        Examples:
+            >>> MarketVariant.LINEAR_PERP.to_market_type()
+            <MarketType.FUTURES: 'futures'>
+            >>> MarketVariant.SPOT.to_market_type()
+            <MarketType.SPOT: 'spot'>
+        """
+        if self == MarketVariant.SPOT:
+            return MarketType.SPOT
+        if self in (
+            MarketVariant.LINEAR_PERP,
+            MarketVariant.INVERSE_PERP,
+            MarketVariant.LINEAR_DELIVERY,
+            MarketVariant.INVERSE_DELIVERY,
+        ):
+            return MarketType.FUTURES
+        if self == MarketVariant.OPTIONS:
+            return MarketType.OPTIONS
+        if self == MarketVariant.EQUITY:
+            return MarketType.EQUITY
+        raise ValueError(f"Cannot determine MarketType for variant: {self}")
 
 
 class DataFeature(str, Enum):

@@ -8,6 +8,7 @@ from .enums import (
     InstrumentSpec,
     InstrumentType,
     MarketType,
+    MarketVariant,
     Timeframe,
     TransportKind,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "BaseProvider",
     "Timeframe",
     "MarketType",
+    "MarketVariant",
     "DataFeature",
     "TransportKind",
     "InstrumentType",
