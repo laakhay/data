@@ -12,7 +12,7 @@ from typing import Any
 from laakhay.data.core import MarketType
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
-from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy
+from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy, WeightPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 from ....config import INTERVAL_MAP
@@ -75,8 +75,10 @@ CHUNK_POLICY = ChunkPolicy(
     max_chunks=None,  # No hard limit
     requires_start_time=False,
     supports_auto_chunking=True,
-    weight_per_request=1,
 )
+
+# Weight policy for rate limiting
+WEIGHT_POLICY = WeightPolicy(static_weight=1)
 
 # Chunk hints for time-based chunking
 CHUNK_HINT = ChunkHint(
@@ -95,6 +97,7 @@ SPEC = RestEndpointSpec(
     build_query=_build_query,
     chunk_policy=CHUNK_POLICY,
     chunk_hint=CHUNK_HINT,
+    weight_policy=WEIGHT_POLICY,
 )
 
 
