@@ -60,6 +60,7 @@ def get_endpoint_spec(endpoint_id: str) -> RestEndpointSpec | None:
 
     Returns:
         RestEndpointSpec if found, None otherwise
+
     """
     entry = _ENDPOINT_REGISTRY.get(endpoint_id)
     return entry[0] if entry else None
@@ -73,6 +74,7 @@ def get_endpoint_adapter(endpoint_id: str) -> type[ResponseAdapter] | None:
 
     Returns:
         Adapter class if found, None otherwise
+
     """
     entry = _ENDPOINT_REGISTRY.get(endpoint_id)
     return entry[1] if entry else None
@@ -83,29 +85,31 @@ def list_endpoints() -> list[str]:
 
     Returns:
         List of endpoint identifiers
+
     """
     return list(_ENDPOINT_REGISTRY.keys())
 
 
 __all__ = [
+    # Functions
     "get_endpoint_spec",
     "get_endpoint_adapter",
     "list_endpoints",
-    # Export all specs and adapters for discovery
-    "OHLCVSpec",
-    "OHLCVAdapter",
-    "ExchangeInfoSpec",
+    # Specs and adapters
     "ExchangeInfoAdapter",
-    "OrderBookSpec",
-    "OrderBookAdapter",
-    "TradesSpec",
-    "TradesAdapter",
-    "HistoricalTradesSpec",
-    "HistoricalTradesAdapter",
-    "OpenInterestCurrentSpec",
-    "OpenInterestCurrentAdapter",
-    "OpenInterestHistSpec",
-    "OpenInterestHistAdapter",
-    "FundingRateSpec",
+    "ExchangeInfoSpec",
     "FundingRateAdapter",
+    "FundingRateSpec",
+    "HistoricalTradesAdapter",
+    "HistoricalTradesSpec",
+    "OHLCVAdapter",
+    "OHLCVSpec",
+    "OpenInterestCurrentAdapter",
+    "OpenInterestCurrentSpec",
+    "OpenInterestHistAdapter",
+    "OpenInterestHistSpec",
+    "OrderBookAdapter",
+    "OrderBookSpec",
+    "TradesAdapter",
+    "TradesSpec",
 ]

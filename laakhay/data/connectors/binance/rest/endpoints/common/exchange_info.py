@@ -8,15 +8,18 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any
 
-from laakhay.data.core import MarketType
+from laakhay.data.connectors.binance.config import get_api_path_prefix
+from laakhay.data.core import MarketType, MarketVariant
 from laakhay.data.models import Symbol
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
 def build_path(params: dict[str, Any]) -> str:
-    """Build the exchangeInfo path based on market type."""
+    """Build the exchangeInfo path based on market type and variant."""
     market: MarketType = params["market_type"]
-    return "/fapi/v1/exchangeInfo" if market == MarketType.FUTURES else "/api/v3/exchangeInfo"
+    market_variant: MarketVariant | None = params.get("market_variant")
+    prefix = get_api_path_prefix(market, market_variant)
+    return f"{prefix}/exchangeInfo"
 
 
 # Endpoint specification
@@ -40,6 +43,7 @@ class Adapter(ResponseAdapter):
 
         Returns:
             List of Symbol objects for trading pairs
+
         """
         market_type = params["market_type"]
         quote_asset_filter = params.get("quote_asset")
@@ -76,6 +80,6 @@ class Adapter(ResponseAdapter):
                     min_notional=min_notional,
                     contract_type=sd.get("contractType"),
                     delivery_date=sd.get("deliveryDate"),
-                )
+                ),
             )
         return out

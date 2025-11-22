@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from laakhay.data.connectors.binance.config import get_api_path_prefix
 from laakhay.data.core import MarketType
 from laakhay.data.models import Trade
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
@@ -17,9 +18,8 @@ from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 def build_path(params: dict[str, Any]) -> str:
     """Build the historicalTrades path (supports both Spot and Futures)."""
     market: MarketType = params["market_type"]
-    if market == MarketType.FUTURES:
-        return "/fapi/v1/historicalTrades"
-    return "/api/v3/historicalTrades"
+    prefix = get_api_path_prefix(market, params.get("market_variant"))
+    return f"{prefix}/historicalTrades"
 
 
 def build_query(params: dict[str, Any]) -> dict[str, Any]:
@@ -65,6 +65,7 @@ class Adapter(ResponseAdapter):
 
         Returns:
             List of Trade objects
+
         """
         symbol = params["symbol"].upper()
         out: list[Trade] = []
@@ -83,6 +84,6 @@ class Adapter(ResponseAdapter):
                     timestamp=datetime.fromtimestamp(int(row.get("time", 0)) / 1000, tz=UTC),
                     is_buyer_maker=bool(row.get("isBuyerMaker")),
                     is_best_match=row.get("isBestMatch"),
-                )
+                ),
             )
         return out
