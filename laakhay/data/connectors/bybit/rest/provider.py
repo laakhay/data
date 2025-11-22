@@ -273,6 +273,14 @@ class BybitRESTConnector(RESTProvider):
             data = await self.fetch("open_interest_current", params)
         return list(data)
 
+    async def __aenter__(self) -> BybitRESTConnector:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()
+
     async def close(self) -> None:
         """Close underlying HTTP resources."""
         await self._transport.close()
