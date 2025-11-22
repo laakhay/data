@@ -32,7 +32,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..core.enums import DataFeature, InstrumentType, MarketType, MarketVariant, Timeframe, TransportKind
+from ..core.enums import (
+    DataFeature,
+    InstrumentType,
+    MarketType,
+    MarketVariant,
+    Timeframe,
+    TransportKind,
+)
 from ..core.request import DataRequest, DataRequestBuilder
 
 if TYPE_CHECKING:
@@ -531,7 +538,9 @@ def api_request(
     # Resolve defaults (prefer explicit over defaults)
     resolved_exchange = exchange if exchange is not None else default_exchange
     resolved_market_type = market_type if market_type is not None else default_market_type
-    resolved_market_variant = market_variant if market_variant is not None else default_market_variant
+    resolved_market_variant = (
+        market_variant if market_variant is not None else default_market_variant
+    )
     resolved_instrument_type = (
         instrument_type if instrument_type != InstrumentType.SPOT else default_instrument_type
     )
