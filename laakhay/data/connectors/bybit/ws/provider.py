@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
-from laakhay.data.core import MarketType, Timeframe
+from laakhay.data.core import MarketType, MarketVariant, Timeframe
 from laakhay.data.models.streaming_bar import StreamingBar
 from laakhay.data.runtime.ws import StreamRunner, WSProvider
 
@@ -40,13 +40,28 @@ class BybitWSConnector(WSProvider):
     endpoint spec and adapter resolution.
     """
 
-    def __init__(self, *, market_type: MarketType = MarketType.SPOT) -> None:
+    def __init__(
+        self,
+        *,
+        market_type: MarketType = MarketType.SPOT,
+        market_variant: MarketVariant | None = None,
+    ) -> None:
         """Initialize Bybit WebSocket connector.
 
         Args:
             market_type: Market type (spot or futures)
+            market_variant: Optional market variant. If not provided, derived from
+                          market_type with smart defaults:
+                          - SPOT → SPOT
+                          - FUTURES → LINEAR_PERP (can be overridden)
+                          - OPTIONS → OPTIONS
         """
         self.market_type = market_type
+        # Derive market_variant from market_type if not provided (backward compatibility)
+        if market_variant is None:
+            self.market_variant = MarketVariant.from_market_type(market_type)
+        else:
+            self.market_variant = market_variant
 
     async def stream_ohlcv(
         self,
