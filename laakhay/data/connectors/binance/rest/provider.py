@@ -12,7 +12,8 @@ Architecture:
 
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
 from time import perf_counter
 from typing import Any
 
@@ -27,10 +28,12 @@ from laakhay.data.models import (
     FundingRate,
     OpenInterest,
     OrderBook,
+    SeriesMeta,
     Symbol,
     Trade,
 )
 from laakhay.data.runtime.chunking import (
+    ChunkPlanner,
     extract_chunk_hint,
     extract_chunk_policy,
 )
@@ -70,16 +73,15 @@ class BinanceRESTConnector(RESTProvider):
                            Defaults to LINEAR_PERP for FUTURES. Ignored for SPOT.
             api_key: Optional API key for authenticated endpoints
             api_secret: Optional API secret (not currently used)
+
         """
         self.market_type = market_type
-        # Derive market_variant from market_type if not provided (backward compatibility)
         if market_variant is None:
             self.market_variant = MarketVariant.from_market_type(market_type)
         else:
             self.market_variant = market_variant
 
         self._api_key = api_key
-        # Use market_variant to select base URL (fapi for linear, dapi for inverse)
         self._transport = RESTTransport(base_url=get_base_url(market_type, self.market_variant))
         self._runner = RestRunner(self._transport)
         self._api_path_prefix = get_api_path_prefix(market_type, self.market_variant)
@@ -110,6 +112,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Raises:
             ValueError: If endpoint_id is not found in registry
+
         """
         spec = get_endpoint_spec(endpoint_id)
         if spec is None:
@@ -119,7 +122,6 @@ class BinanceRESTConnector(RESTProvider):
         if adapter_cls is None:
             raise ValueError(f"No adapter found for endpoint: {endpoint_id}")
 
-        # Ensure market_type and market_variant are in params
         params = {
             **params,
             "market_type": self.market_type,
@@ -152,19 +154,29 @@ class BinanceRESTConnector(RESTProvider):
 
         Returns:
             OHLCV object with bars
+
         """
         if timeframe not in INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 
-        # Get endpoint spec to check for chunking support
         spec = get_endpoint_spec("ohlcv")
         if spec is None:
             raise ValueError("OHLCV endpoint spec not found")
 
-        chunk_policy = extract_chunk_policy(spec)
+        params = {
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+
+        chunk_policy = extract_chunk_policy(spec, params)
         chunk_hint = extract_chunk_hint(spec)
 
-        # Use generic chunking if policy exists and limit exceeds max_points
         if (
             chunk_policy
             and chunk_policy.supports_auto_chunking
@@ -182,15 +194,6 @@ class BinanceRESTConnector(RESTProvider):
                 chunk_hint=chunk_hint,
             )
 
-        # Simple path: single request
-        params = {
-            "symbol": symbol,
-            "interval": timeframe,
-            "interval_str": INTERVAL_MAP[timeframe],
-            "start_time": start_time,
-            "end_time": end_time,
-            "limit": limit,
-        }
         result: OHLCV = await self.fetch("ohlcv", params)
         return result
 
@@ -206,8 +209,6 @@ class BinanceRESTConnector(RESTProvider):
         chunk_hint: Any,
     ) -> OHLCV:
         """Fetch OHLCV using chunking layer with backward pagination for limit-based requests."""
-        from laakhay.data.runtime.chunking import ChunkPlanner
-
         planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
         plans = planner.plan(
             limit=limit,
@@ -217,7 +218,6 @@ class BinanceRESTConnector(RESTProvider):
             max_chunks=max_chunks,
         )
 
-        # Check if we need backward pagination (no time range provided)
         needs_backward_pagination = start_time is None and end_time is None
 
         if needs_backward_pagination:
@@ -250,20 +250,14 @@ class BinanceRESTConnector(RESTProvider):
 
                 chunk_bars = chunk_result.bars
                 if chunk_bars:
-                    # Deduplicate: remove bars that overlap with oldest aggregated bar
                     if aggregated_bars:
                         oldest_aggregated_ts = aggregated_bars[0].timestamp
                         chunk_bars = [b for b in chunk_bars if b.timestamp < oldest_aggregated_ts]
 
                     if chunk_bars:
                         aggregated_bars = chunk_bars + aggregated_bars
-                        # Subtract 1ms to prevent boundary overlap between chunks
-                        from datetime import timedelta
-
                         current_end_time = chunk_bars[0].timestamp - timedelta(milliseconds=1)
                     elif aggregated_bars:
-                        from datetime import timedelta
-
                         current_end_time = aggregated_bars[0].timestamp - timedelta(milliseconds=1)
 
                 chunks_used += 1  # noqa: SIM113
@@ -279,12 +273,9 @@ class BinanceRESTConnector(RESTProvider):
             if len(aggregated_bars) > limit:
                 aggregated_bars = aggregated_bars[-limit:]
 
-            from laakhay.data.models import SeriesMeta
-
             meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
             return OHLCV(meta=meta, bars=aggregated_bars)
 
-        # Time-based chunking (has start_time or end_time) - fetch in parallel
         async def fetch_chunk(plan: Any) -> OHLCV:
             params = {
                 "market_type": self.market_type,
@@ -297,18 +288,13 @@ class BinanceRESTConnector(RESTProvider):
             }
             return await self.fetch("ohlcv", params)
 
-        import asyncio
-
-        # Fetch all chunks in parallel
         chunk_results = await asyncio.gather(*[fetch_chunk(plan) for plan in plans])
 
-        # Aggregate all bars
         aggregated_bars: list[Any] = []
         for chunk_result in chunk_results:
             if chunk_result.bars:
                 aggregated_bars.extend(chunk_result.bars)
 
-        # Deduplicate and sort by timestamp
         seen = set()
         unique_bars = []
         for bar in aggregated_bars:
@@ -319,17 +305,16 @@ class BinanceRESTConnector(RESTProvider):
 
         unique_bars.sort(key=lambda b: b.timestamp)
 
-        # Limit to requested amount
         if len(unique_bars) > limit:
             unique_bars = unique_bars[-limit:]
-
-        from laakhay.data.models import SeriesMeta
 
         meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
         return OHLCV(meta=meta, bars=unique_bars)
 
     async def get_symbols(
-        self, quote_asset: str | None = None, use_cache: bool = True
+        self,
+        quote_asset: str | None = None,
+        use_cache: bool = True,
     ) -> list[Symbol]:
         """List trading symbols, optionally filtered by quote asset.
 
@@ -339,6 +324,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Returns:
             List of Symbol objects
+
         """
         params = {"quote_asset": quote_asset}
         data = await self.fetch("exchange_info", params)
@@ -353,6 +339,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Returns:
             OrderBook object
+
         """
         params = {"symbol": symbol, "limit": limit}
         result: OrderBook = await self.fetch("order_book", params)
@@ -367,6 +354,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Returns:
             List of Trade objects
+
         """
         params = {"symbol": symbol, "limit": limit}
         data = await self.fetch("recent_trades", params)
@@ -393,6 +381,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Raises:
             ValueError: If API key missing
+
         """
         if not self._api_key:
             raise ValueError("api_key is required to use Binance historical trades endpoint")
@@ -426,6 +415,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Raises:
             ValueError: If not futures market
+
         """
         if self.market_type != MarketType.FUTURES:
             raise ValueError("Funding rates are only available for Futures on Binance")
@@ -463,6 +453,7 @@ class BinanceRESTConnector(RESTProvider):
 
         Raises:
             ValueError: If not futures market
+
         """
         if self.market_type != MarketType.FUTURES:
             raise ValueError("Open interest is only available for Futures on Binance")
