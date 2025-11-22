@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from ..chunking import ChunkHint, ChunkPolicy
+from ..chunking import ChunkHint, ChunkPolicy, WeightPolicy
 from .transport import RESTTransport
 
 
@@ -19,8 +19,12 @@ class RestEndpointSpec:
     build_body: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     build_headers: Callable[[dict[str, Any]], dict[str, str]] | None = None
     next_cursor: Callable[[Any], dict[str, Any] | None] | None = None
-    chunk_policy: ChunkPolicy | None = None  # Optional chunking policy
-    chunk_hint: ChunkHint | None = None  # Optional chunking hints
+    # Chunk policy can be static or a factory function that creates policy from params
+    chunk_policy: ChunkPolicy | Callable[[dict[str, Any]], ChunkPolicy] | None = None
+    chunk_hint: ChunkHint | None = None
+    weight_policy: WeightPolicy | Callable[[dict[str, Any]], WeightPolicy] | None = (
+        None  # Optional weight policy
+    )
 
 
 class ResponseAdapter:

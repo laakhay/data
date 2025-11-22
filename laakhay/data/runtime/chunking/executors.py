@@ -11,7 +11,7 @@ from datetime import datetime
 from time import perf_counter
 from typing import Any
 
-from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult
+from .definitions import ChunkHint, ChunkPlan, ChunkPolicy, ChunkResult, WeightPolicy
 from .telemetry import log_chunk_completed, log_chunk_error, log_chunk_execution_complete
 
 
@@ -26,15 +26,18 @@ class ChunkExecutor:
         self,
         policy: ChunkPolicy,
         hint: ChunkHint | None = None,
+        weight_policy: WeightPolicy | None = None,
     ) -> None:
         """Initialize chunk executor.
 
         Args:
             policy: Chunking policy for the endpoint
             hint: Optional chunk hints for pagination and deduplication
+            weight_policy: Optional weight policy for rate limit telemetry
         """
         self._policy = policy
         self._hint = hint or ChunkHint()
+        self._weight_policy = weight_policy
 
     async def execute(
         self,
@@ -69,7 +72,9 @@ class ChunkExecutor:
             try:
                 chunk_data = await fetch_chunk(plan)
                 chunks_used += 1
-                weight_consumed += self._policy.weight_per_request
+                # Calculate weight from weight policy if available
+                weight = self._weight_policy.calculate(plan.limit) if self._weight_policy else 0
+                weight_consumed += weight
                 chunk_latency_ms = (perf_counter() - chunk_start) * 1000.0
             except Exception as e:
                 log_chunk_error(
@@ -96,7 +101,7 @@ class ChunkExecutor:
                 endpoint_id=getattr(plan, "endpoint_id", "unknown"),
                 chunk_index=plan.chunk_index,
                 rows_aggregated=len(data_points),
-                weight=self._policy.weight_per_request,
+                weight=weight,
                 latency_ms=chunk_latency_ms,
             )
 

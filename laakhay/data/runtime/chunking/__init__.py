@@ -23,8 +23,11 @@ from .definitions import (
     ChunkPlan,
     ChunkPolicy,
     ChunkResult,
+    WeightPolicy,
+    WeightTier,
     extract_chunk_hint,
     extract_chunk_policy,
+    extract_weight_policy,
 )
 from .executors import ChunkExecutor
 from .planners import ChunkPlanner
@@ -36,6 +39,8 @@ from .telemetry import (
 )
 
 __all__ = [
+    "WeightTier",
+    "WeightPolicy",
     "ChunkPolicy",
     "ChunkHint",
     "ChunkResult",
@@ -44,6 +49,7 @@ __all__ = [
     "ChunkExecutor",
     "extract_chunk_policy",
     "extract_chunk_hint",
+    "extract_weight_policy",
     "log_chunk_plan",
     "log_chunk_completed",
     "log_chunk_execution_complete",

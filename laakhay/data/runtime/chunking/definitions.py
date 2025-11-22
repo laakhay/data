@@ -12,6 +12,75 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class WeightTier:
+    """Weight tier definition for tiered rate limiting.
+
+    Attributes:
+        min_limit: Minimum limit value (inclusive)
+        max_limit: Maximum limit value (exclusive, or None for unbounded)
+        weight: Weight for this tier
+    """
+
+    min_limit: int
+    max_limit: int | None  # None means unbounded
+    weight: int
+
+
+@dataclass(frozen=True)
+class WeightPolicy:
+    """Declarative weight policy for API rate limiting.
+
+    Supports both static weights (same for all limits) and tiered weights
+    based on limit values.
+
+    Examples:
+        # Static weight (always 2)
+        WeightPolicy(static_weight=2)
+
+        # Tiered weights
+        WeightPolicy(tiers=[
+            WeightTier(1, 100, 1),
+            WeightTier(100, 500, 2),
+            WeightTier(500, 1000, 5),
+            WeightTier(1000, None, 10),  # None = unbounded
+        ])
+    """
+
+    static_weight: int | None = None
+    tiers: list[WeightTier] | None = None
+
+    def __post_init__(self) -> None:
+        """Validate weight policy configuration."""
+        if self.static_weight is None and self.tiers is None:
+            raise ValueError("WeightPolicy must have either static_weight or tiers")
+        if self.static_weight is not None and self.tiers is not None:
+            raise ValueError("WeightPolicy cannot have both static_weight and tiers")
+        if self.tiers and not self.tiers:
+            raise ValueError("WeightPolicy tiers cannot be empty")
+
+    def calculate(self, limit: int) -> int:
+        """Calculate weight for a given limit.
+
+        Args:
+            limit: Request limit value
+
+        Returns:
+            Weight for the request
+        """
+        if self.static_weight is not None:
+            return self.static_weight
+
+        if self.tiers:
+            for tier in self.tiers:
+                if tier.min_limit <= limit and (tier.max_limit is None or limit < tier.max_limit):
+                    return tier.weight
+            # If no tier matches, use the last tier's weight (fallback)
+            return self.tiers[-1].weight
+
+        return 1  # Default fallback
+
+
+@dataclass(frozen=True)
 class ChunkPolicy:
     """Chunking policy for an endpoint.
 
@@ -23,14 +92,12 @@ class ChunkPolicy:
         max_chunks: Maximum number of chunks to fetch (None = unlimited)
         requires_start_time: Whether start_time is required for chunking
         supports_auto_chunking: Whether the endpoint supports automatic chunking
-        weight_per_request: Request weight/rate limit cost per chunk (for telemetry)
     """
 
     max_points: int
     max_chunks: int | None = None
     requires_start_time: bool = False
     supports_auto_chunking: bool = True
-    weight_per_request: int = 1
 
 
 @dataclass(frozen=True)
@@ -99,21 +166,57 @@ class ChunkPlan:
     chunk_index: int = 0
 
 
-def extract_chunk_policy(spec: Any) -> ChunkPolicy | None:
+def extract_chunk_policy(spec: Any, params: dict[str, Any] | None = None) -> ChunkPolicy | None:
     """Extract chunk policy from endpoint specification.
 
     This function looks for chunk metadata in the endpoint spec. If the spec
-    has a `chunk_policy` attribute, it returns it. Otherwise, it returns None
-    indicating the endpoint doesn't support chunking.
+    has a `chunk_policy` attribute, it returns it (or calls it as a factory if it's callable).
+    Otherwise, it returns None indicating the endpoint doesn't support chunking.
 
     Args:
         spec: REST endpoint specification
+        params: Optional request params for dynamic policy creation
 
     Returns:
         ChunkPolicy if endpoint supports chunking, None otherwise
     """
     if hasattr(spec, "chunk_policy") and spec.chunk_policy is not None:
-        return spec.chunk_policy
+        policy = spec.chunk_policy
+        # If policy is a callable factory, call it with params to create dynamic policy
+        if callable(policy) and not isinstance(policy, ChunkPolicy):
+            if params is None:
+                params = {}
+            return policy(params)
+        return policy
+    return None
+
+
+def extract_weight_policy(spec: Any, params: dict[str, Any] | None = None) -> WeightPolicy | None:
+    """Extract weight policy from endpoint specification.
+
+    This function looks for weight policy in the endpoint spec. If the spec
+    has a `weight_policy` attribute, it returns it (or calls it as a factory if it's callable).
+    Otherwise, it returns None indicating no weight tracking.
+
+    Args:
+        spec: REST endpoint specification
+        params: Optional request params for dynamic policy creation
+
+    Returns:
+        WeightPolicy if available, None otherwise
+    """
+    if hasattr(spec, "weight_policy") and spec.weight_policy is not None:
+        policy = spec.weight_policy
+        # If policy is a callable factory, call it with params to create dynamic policy
+        if callable(policy) and not isinstance(policy, WeightPolicy):
+            if params is None:
+                params = {}
+            return policy(params)
+        # If it's already a WeightPolicy instance, return it directly
+        if isinstance(policy, WeightPolicy):
+            return policy
+        # Otherwise return as-is (should be WeightPolicy or None)
+        return policy
     return None
 
 

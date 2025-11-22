@@ -8,7 +8,13 @@ from decimal import Decimal
 import pytest
 
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
-from laakhay.data.runtime.chunking import ChunkExecutor, ChunkHint, ChunkPlan, ChunkPolicy
+from laakhay.data.runtime.chunking import (
+    ChunkExecutor,
+    ChunkHint,
+    ChunkPlan,
+    ChunkPolicy,
+    WeightPolicy,
+)
 
 
 class TestChunkExecutor:
@@ -158,8 +164,9 @@ class TestChunkExecutor:
     @pytest.mark.asyncio
     async def test_execute_tracks_weight(self):
         """Test that executor tracks request weight."""
-        policy = ChunkPolicy(max_points=1000, weight_per_request=5)
-        executor = ChunkExecutor(policy=policy)
+        policy = ChunkPolicy(max_points=1000)
+        weight_policy = WeightPolicy(static_weight=5)
+        executor = ChunkExecutor(policy=policy, weight_policy=weight_policy)
 
         async def fetch_chunk(plan: ChunkPlan) -> OHLCV:
             bars = [
