@@ -32,7 +32,7 @@ class ConcreteProvider(BaseProvider):
     async def fetch_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
@@ -51,7 +51,7 @@ class ConcreteProvider(BaseProvider):
         ]
         meta = SeriesMeta(
             symbol=symbol,
-            timeframe=interval,
+            timeframe=timeframe,
             exchange=self.name,
             market_type=MarketType.SPOT,
             count=1,
@@ -99,10 +99,10 @@ class TestBaseProvider:
         with pytest.raises(ValueError, match="Symbol must be a non-empty string"):
             provider.validate_symbol(123)  # type: ignore
 
-    def test_validate_interval_no_override(self):
-        """Test validate_interval does nothing by default."""
+    def test_validate_timeframe_no_override(self):
+        """Test validate_timeframe does nothing by default."""
         provider = ConcreteProvider()
-        provider.validate_interval(Timeframe.H1)  # Should not raise
+        provider.validate_timeframe(Timeframe.H1)  # Should not raise
 
     @pytest.mark.asyncio
     async def test_describe_capabilities_default(self):
