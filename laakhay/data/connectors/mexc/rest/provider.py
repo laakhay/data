@@ -106,7 +106,7 @@ class MEXCRESTConnector(RESTProvider):
     async def fetch_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
@@ -118,7 +118,7 @@ class MEXCRESTConnector(RESTProvider):
 
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
-            interval: Timeframe for bars
+            timeframe: Timeframe for bars
             start_time: Optional start time
             end_time: Optional end time
             limit: Optional limit on number of bars
@@ -127,8 +127,8 @@ class MEXCRESTConnector(RESTProvider):
         Returns:
             OHLCV object with bars
         """
-        if interval not in INTERVAL_MAP:
-            raise ValueError(f"Invalid timeframe: {interval}")
+        if timeframe not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
 
         # Get endpoint spec to check for chunking support
         spec = get_endpoint_spec("ohlcv")
@@ -147,7 +147,7 @@ class MEXCRESTConnector(RESTProvider):
         ):
             return await self._fetch_ohlcv_chunked(
                 symbol=symbol,
-                interval=interval,
+                timeframe=timeframe,
                 start_time=start_time,
                 end_time=end_time,
                 limit=limit,
@@ -159,8 +159,8 @@ class MEXCRESTConnector(RESTProvider):
         # Simple path: single request
         params = {
             "symbol": symbol,
-            "interval": interval,
-            "interval_str": INTERVAL_MAP[interval],
+            "interval": timeframe,
+            "interval_str": INTERVAL_MAP[timeframe],
             "start_time": start_time,
             "end_time": end_time,
             "limit": limit,
@@ -171,7 +171,7 @@ class MEXCRESTConnector(RESTProvider):
     async def _fetch_ohlcv_chunked(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None,
         end_time: datetime | None,
         limit: int,
@@ -187,7 +187,7 @@ class MEXCRESTConnector(RESTProvider):
             limit=limit,
             start_time=start_time,
             end_time=end_time,
-            timeframe=interval,
+            timeframe=timeframe,
             max_chunks=max_chunks,
         )
 
@@ -195,8 +195,8 @@ class MEXCRESTConnector(RESTProvider):
             params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
-                "interval": interval,
-                "interval_str": INTERVAL_MAP[interval],
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
                 "start_time": plan.start_time,
                 "end_time": plan.end_time,
                 "limit": plan.limit,

@@ -30,9 +30,9 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
-        interval: Timeframe = params["interval"]
+        timeframe: Timeframe = params["interval"]
         # MEXC uses format: spot@kline.<symbol>.<interval> or similar
-        return f"spot@kline.{symbol.lower()}.{INTERVAL_MAP[interval]}"
+        return f"spot@kline.{symbol.lower()}.{INTERVAL_MAP[timeframe]}"
 
     def build_combined_url(names: list[str]) -> str:
         if not ws_combined:

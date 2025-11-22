@@ -164,7 +164,7 @@ class CoinbaseRESTConnector(RESTProvider):
         ):
             return await self._fetch_ohlcv_chunked(
                 symbol=symbol,
-                interval=timeframe,
+                timeframe=timeframe,
                 start_time=start_time,
                 end_time=end_time,
                 limit=limit,
@@ -188,7 +188,7 @@ class CoinbaseRESTConnector(RESTProvider):
     async def _fetch_ohlcv_chunked(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None,
         end_time: datetime | None,
         limit: int,
@@ -204,7 +204,7 @@ class CoinbaseRESTConnector(RESTProvider):
             limit=limit,
             start_time=start_time,
             end_time=end_time,
-            timeframe=interval,
+            timeframe=timeframe,
             max_chunks=max_chunks,
         )
 
@@ -212,8 +212,8 @@ class CoinbaseRESTConnector(RESTProvider):
             params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
-                "interval": interval,
-                "interval_str": INTERVAL_MAP[interval],
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
                 "start_time": plan.start_time,
                 "end_time": plan.end_time,
                 "limit": plan.limit,
@@ -234,7 +234,7 @@ class CoinbaseRESTConnector(RESTProvider):
             if result.data:
                 from laakhay.data.models import SeriesMeta
 
-                meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+                meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
                 return OHLCV(meta=meta, bars=result.data)
             else:
                 # Fallback: fetch first chunk for metadata only if no data

@@ -34,8 +34,8 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
-        interval: Timeframe = params["interval"]
-        interval_str = INTERVAL_MAP[interval]
+        timeframe: Timeframe = params["interval"]
+        interval_str = INTERVAL_MAP[timeframe]
         # Normalize symbol to Kraken format for stream name
         # The symbol passed in should be in standard format (e.g., "BTCUSD")
         # and needs to be converted to Kraken format (e.g., "XBT/USD" for spot or "PI_XBTUSD" for futures)

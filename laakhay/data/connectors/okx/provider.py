@@ -85,7 +85,7 @@ class OKXProvider:
     async def fetch_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
@@ -93,7 +93,7 @@ class OKXProvider:
         """Fetch OHLCV bars."""
         return await self._rest.fetch_ohlcv(
             symbol=symbol,
-            interval=interval,
+            timeframe=timeframe,
             start_time=start_time,
             end_time=end_time,
             limit=limit,
@@ -153,7 +153,7 @@ class OKXProvider:
     async def stream_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -162,7 +162,7 @@ class OKXProvider:
         """Stream OHLCV bars."""
         async for bar in self._ws.stream_ohlcv(
             symbol=symbol,
-            interval=interval,
+            timeframe=timeframe,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_same_candle=dedupe_same_candle,
@@ -172,7 +172,7 @@ class OKXProvider:
     async def stream_ohlcv_multi(
         self,
         symbols: list[str],
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -181,7 +181,7 @@ class OKXProvider:
         """Stream OHLCV bars for multiple symbols."""
         async for bar in self._ws.stream_ohlcv_multi(
             symbols,
-            interval,
+            timeframe,
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_same_candle=dedupe_same_candle,

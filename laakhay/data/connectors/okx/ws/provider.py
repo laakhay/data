@@ -50,7 +50,7 @@ class OKXWSConnector(WSProvider):
     async def stream_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -60,7 +60,7 @@ class OKXWSConnector(WSProvider):
 
         Args:
             symbol: Trading symbol
-            interval: Timeframe for bars
+            timeframe: Timeframe for bars
             only_closed: Only yield closed candles
             throttle_ms: Optional throttle in milliseconds
             dedupe_same_candle: Deduplicate same candle updates
@@ -76,7 +76,7 @@ class OKXWSConnector(WSProvider):
     async def stream_ohlcv_multi(
         self,
         symbols: list[str],
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -86,7 +86,7 @@ class OKXWSConnector(WSProvider):
 
         Args:
             symbols: List of trading symbols
-            interval: Timeframe for bars
+            timeframe: Timeframe for bars
             only_closed: Only yield closed candles
             throttle_ms: Optional throttle in milliseconds
             dedupe_same_candle: Deduplicate same candle updates

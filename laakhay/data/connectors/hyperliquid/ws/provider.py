@@ -65,7 +65,7 @@ class HyperliquidWSProvider(WSProvider):
     async def stream_ohlcv(  # type: ignore[override,misc]
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -74,7 +74,7 @@ class HyperliquidWSProvider(WSProvider):
         async for obj in self.stream(
             "ohlcv",
             [symbol],
-            {"interval": interval},
+            {"interval": timeframe},
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_key=None,
@@ -84,7 +84,7 @@ class HyperliquidWSProvider(WSProvider):
     async def stream_ohlcv_multi(  # type: ignore[override,misc]
         self,
         symbols: list[str],
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -93,7 +93,7 @@ class HyperliquidWSProvider(WSProvider):
         async for obj in self.stream(
             "ohlcv",
             symbols,
-            {"interval": interval},
+            {"interval": timeframe},
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_key=None,

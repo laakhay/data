@@ -30,8 +30,8 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
-        interval: Timeframe = params["interval"]
-        return f"{symbol.lower()}@kline_{INTERVAL_MAP[interval]}"
+        timeframe: Timeframe = params["interval"]
+        return f"{symbol.lower()}@kline_{INTERVAL_MAP[timeframe]}"
 
     def build_combined_url(names: list[str]) -> str:
         if not ws_combined:

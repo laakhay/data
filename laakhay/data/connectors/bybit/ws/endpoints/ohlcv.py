@@ -30,8 +30,8 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         raise ValueError(f"WebSocket not supported for market type: {market_type}")
 
     def build_stream_name(symbol: str, params: dict[str, Any]) -> str:
-        interval: Timeframe = params["interval"]
-        interval_str = INTERVAL_MAP[interval]
+        timeframe: Timeframe = params["interval"]  # Exchange API uses "interval" key
+        interval_str = INTERVAL_MAP[timeframe]
         # Bybit format: kline.{interval}.{symbol}
         return f"kline.{interval_str}.{symbol.upper()}"
 

@@ -66,7 +66,7 @@ class BybitWSConnector(WSProvider):
     async def stream_ohlcv(
         self,
         symbol: str,
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -76,7 +76,7 @@ class BybitWSConnector(WSProvider):
 
         Args:
             symbol: Trading symbol
-            interval: Timeframe for bars
+            timeframe: Timeframe for bars
             only_closed: Only yield closed candles
             throttle_ms: Optional throttle in milliseconds
             dedupe_same_candle: Deduplicate same candle updates
@@ -87,7 +87,7 @@ class BybitWSConnector(WSProvider):
         async for obj in self.stream(
             "ohlcv",
             [symbol],
-            {"interval": interval},
+            {"interval": timeframe},  # Exchange API uses "interval" parameter name
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_key=None if not dedupe_same_candle else self._ohlcv_key,
@@ -97,7 +97,7 @@ class BybitWSConnector(WSProvider):
     async def stream_ohlcv_multi(
         self,
         symbols: list[str],
-        interval: Timeframe,
+        timeframe: Timeframe,
         *,
         only_closed: bool = False,
         throttle_ms: int | None = None,
@@ -107,7 +107,7 @@ class BybitWSConnector(WSProvider):
 
         Args:
             symbols: List of trading symbols
-            interval: Timeframe for bars
+            timeframe: Timeframe for bars
             only_closed: Only yield closed candles
             throttle_ms: Optional throttle in milliseconds
             dedupe_same_candle: Deduplicate same candle updates
@@ -118,7 +118,7 @@ class BybitWSConnector(WSProvider):
         async for obj in self.stream(
             "ohlcv",
             symbols,
-            {"interval": interval},
+            {"interval": timeframe},  # Exchange API uses "interval" parameter name
             only_closed=only_closed,
             throttle_ms=throttle_ms,
             dedupe_key=None if not dedupe_same_candle else self._ohlcv_key,

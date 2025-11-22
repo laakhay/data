@@ -40,8 +40,8 @@ def build_spec(market_type: MarketType) -> WSEndpointSpec:
         Note: Actual subscription uses JSON message, this is for identification
         """
         product_id = normalize_symbol_to_coinbase(symbol)
-        interval: Timeframe = params["interval"]
-        interval_str = INTERVAL_MAP[interval]
+        timeframe: Timeframe = params["interval"]
+        interval_str = INTERVAL_MAP[timeframe]
         # Format: {product_id}:{channel}:{granularity}
         return f"{product_id}:candles:{interval_str}"
 
