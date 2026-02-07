@@ -452,14 +452,20 @@ class DataAPI:
         Raises:
             CapabilityError: If symbol metadata REST is not supported
         """
+        resolved_market_type = self._resolve_market_type(market_type)
+        resolved_instrument_type = (
+            InstrumentType.PERPETUAL
+            if resolved_market_type == MarketType.FUTURES
+            else InstrumentType.SPOT
+        )
         request = (
             self._create_request_builder(
                 DataFeature.SYMBOL_METADATA,
                 TransportKind.REST,
                 exchange=exchange,
-                market_type=market_type,
+                market_type=resolved_market_type,
                 market_variant=market_variant,
-                instrument_type=InstrumentType.SPOT,  # Symbol metadata doesn't use instrument_type
+                instrument_type=resolved_instrument_type,
             )
             .extra_param("quote_asset", quote_asset)
             .extra_param("use_cache", use_cache)

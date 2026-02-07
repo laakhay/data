@@ -127,7 +127,14 @@ class Adapter(ResponseAdapter):
                 continue
 
             contract_type = inst.get("instType")
-            delivery_date = inst.get("expTime")  # OKX uses expTime for delivery
+            # OKX returns empty expTime for perpetual swaps; normalize it for Symbol model.
+            delivery_date_raw = inst.get("expTime")
+            if delivery_date_raw in (None, "", "0", 0):
+                delivery_date = None
+            else:
+                with contextlib.suppress(ValueError, TypeError):
+                    delivery_date_raw = int(str(delivery_date_raw))
+                delivery_date = delivery_date_raw
 
             out.append(
                 Symbol(
