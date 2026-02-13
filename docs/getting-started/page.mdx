@@ -1,0 +1,41 @@
+# Getting Started
+
+## Installation
+
+```bash
+pip install laakhay-data
+```
+
+## Quick Example
+
+```python
+import asyncio
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
+
+async def main():
+    async with DataAPI() as api:
+        bars = await api.fetch_ohlcv(
+            symbol="BTCUSDT",
+            timeframe=Timeframe.H1,
+            exchange="binance",
+            market_type=MarketType.SPOT,
+            limit=100,
+        )
+        print(len(bars))
+
+asyncio.run(main())
+```
+
+## Streaming Example
+
+```python
+async for trade in api.stream_trades(
+    symbol="BTCUSDT",
+    exchange="binance",
+    market_type=MarketType.SPOT,
+):
+    print(trade.symbol, trade.price)
+```
+
+More advanced guides and full API docs are coming soon.
