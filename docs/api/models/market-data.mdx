@@ -1,0 +1,65 @@
+# Market Data Models
+
+## Bar
+
+Fields:
+
+- `timestamp`
+- `open`, `high`, `low`, `close`
+- `volume`
+- `is_closed`
+
+Computed helpers include:
+
+- `hl2`, `hlc3`, `ohlc4`
+- `range`, `body_size`, `upper_shadow`, `lower_shadow`
+- `is_bullish`, `is_bearish`
+- freshness/time helpers (`open_time_ms`, `close_time_ms`, `get_age_seconds`, `is_fresh`)
+
+## OHLCV
+
+Fields:
+
+- `meta: SeriesMeta`
+- `bars: list[Bar]`
+
+Behavior:
+
+- validates bars are chronologically sorted
+- iterable/len/index access
+- `latest`, `earliest`, `start_time`, `end_time`
+- aggregate helpers (`highest_price`, `lowest_price`, `total_volume`)
+- slicing helpers (`get_bars_in_range`, `get_last_n_bars`, `get_closed_bars`, `get_open_bars`)
+
+## OrderBook
+
+Fields:
+
+- `symbol`
+- `last_update_id`
+- `bids: list[(price, qty)]`
+- `asks: list[(price, qty)]`
+- `timestamp`
+
+Computed helpers include:
+
+- best bid/ask + spread + mid price
+- spread bps/percent
+- total bid/ask volume and value
+- imbalance, market pressure, depth score
+- level/depth utilities
+
+## Trade
+
+Fields:
+
+- `symbol`, `trade_id`, `price`, `quantity`, `quote_quantity`
+- `timestamp`
+- `is_buyer_maker`, `is_best_match`
+
+Computed helpers:
+
+- `value`
+- `side` (`buy`/`sell` taker perspective)
+- size categories (`small`, `medium`, `large`, `whale`)
+- freshness helpers

@@ -1,0 +1,21 @@
+# Chunking and Pagination
+
+The runtime chunking subsystem supports long-range REST fetches with endpoint-aware limits.
+
+## Components
+
+- `ChunkPolicy`: max points, chunk count, time requirements.
+- `ChunkPlanner`: creates chunk windows/plans.
+- `ChunkExecutor`: executes chunks, dedupes by timestamp.
+- `WeightPolicy`: optional request weight accounting.
+
+## Typical Flow
+
+1. Extract endpoint chunk policy.
+2. Build plans with `ChunkPlanner.plan(...)`.
+3. Execute with `ChunkExecutor.execute(...)`.
+4. Aggregate results into final payload.
+
+## Why This Exists
+
+Exchanges often cap bars/trades per request. Chunking preserves correctness and avoids silent data truncation.

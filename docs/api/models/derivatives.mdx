@@ -1,0 +1,60 @@
+# Derivatives Models
+
+## FundingRate
+
+Fields:
+
+- `symbol`
+- `funding_time`
+- `funding_rate`
+- optional `mark_price`
+
+Helpers:
+
+- percent/annualized rate
+- positive/negative/high checks
+- freshness and serialization helpers
+
+## OpenInterest
+
+Fields:
+
+- `symbol`
+- `timestamp`
+- `open_interest`
+- optional aggregates (`open_interest_value`, `sum_open_interest`, `sum_open_interest_value`)
+
+Helpers:
+
+- freshness checks
+- serialization
+
+## Liquidation
+
+Fields include:
+
+- `symbol`, `timestamp`, `side`, `order_type`, `time_in_force`
+- quantity and price fields
+- optional commission/trade metadata
+
+Helpers:
+
+- `value_usdt`
+- long/short liquidation flags
+- size/freshness checks
+
+## MarkPrice
+
+Fields:
+
+- `symbol`
+- `mark_price`
+- optional `index_price`, `estimated_settle_price`, `last_funding_rate`, `next_funding_time`
+- `timestamp`
+
+Helpers:
+
+- mark-index spread (absolute/bps/percent)
+- premium/discount/severity
+- funding countdown
+- compare-to-last-price and compare-to-spot helpers

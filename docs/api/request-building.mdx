@@ -1,0 +1,81 @@
+# Request Building
+
+## DataRequest
+
+Import:
+
+```python
+from laakhay.data.core.request import DataRequest
+```
+
+`DataRequest` is an immutable dataclass used by the router.
+
+Key fields:
+
+- Core routing: `feature`, `transport`, `exchange`, `market_type`, `market_variant`, `instrument_type`
+- Symbols: `symbol` or `symbols` (mutually exclusive)
+- Feature params: `timeframe`, `start_time`, `end_time`, `limit`, `depth`, `period`, `update_speed`
+- Stream flags: `only_closed`, `throttle_ms`, `dedupe_same_candle`
+- Pagination/extra: `historical`, `max_chunks`, `from_id`, `extra_params`
+
+Validation highlights:
+
+- symbol required for most features except liquidations, symbol metadata, health
+- `feature=OHLCV` + `transport=REST` requires timeframe
+- order book depth defaults to `100` if missing
+- `market_variant` auto-derived from `market_type` when omitted
+
+## DataRequestBuilder
+
+Import:
+
+```python
+from laakhay.data.core.request import DataRequestBuilder
+```
+
+Fluent methods include:
+
+- `feature`, `transport`, `exchange`, `market_type`, `market_variant`, `instrument_type`
+- `symbol`, `symbols`
+- `timeframe`, `start_time`, `end_time`, `limit`, `depth`, `period`, `update_speed`
+- `only_closed`, `throttle_ms`, `dedupe_same_candle`, `historical`, `max_chunks`, `from_id`
+- `extra_param`
+- `build`
+
+## APIRequestBuilder
+
+Import:
+
+```python
+from laakhay.data.api import APIRequestBuilder
+```
+
+Adds DataAPI-style defaults and convenience factories:
+
+- `with_defaults(...)`
+- `for_ohlcv(...)`
+- `for_order_book(...)`
+- `for_trades(...)`
+- `for_stream(...)`
+
+## Factory Functions
+
+- `request(...)` in `core.request`
+- `api_request(...)` in `api.request_builder`
+
+Example:
+
+```python
+from laakhay.data.api import api_request
+from laakhay.data.core import DataFeature, MarketType, Timeframe, TransportKind
+
+req = api_request(
+    DataFeature.OHLCV,
+    TransportKind.REST,
+    symbol='BTC/USDT',
+    timeframe=Timeframe.M5,
+    limit=500,
+    default_exchange='binance',
+    default_market_type=MarketType.SPOT,
+)
+```

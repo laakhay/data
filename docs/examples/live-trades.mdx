@@ -1,0 +1,23 @@
+# Live Trades Stream
+
+```python
+import asyncio
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType
+
+async def one_symbol() -> None:
+    async with DataAPI(default_exchange='binance', default_market_type=MarketType.SPOT) as api:
+        n = 0
+        async for trade in api.stream_trades('BTC/USDT'):
+            print(trade.symbol, trade.price, trade.quantity, trade.side)
+            n += 1
+            if n == 20:
+                break
+
+async def multi_symbol() -> None:
+    async with DataAPI(default_exchange='binance', default_market_type=MarketType.SPOT) as api:
+        async for trade in api.stream_trades_multi(['BTC/USDT', 'ETH/USDT', 'SOL/USDT']):
+            print(trade.symbol, trade.price)
+
+asyncio.run(one_symbol())
+```

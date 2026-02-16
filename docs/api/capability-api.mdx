@@ -1,0 +1,56 @@
+# Capability API
+
+Capability API is exposed from `laakhay.data.capability`.
+
+## Core Types
+
+- `CapabilityKey`
+- `CapabilityStatus`
+- `FallbackOption`
+- `CapabilityService`
+
+## Discovery/Listing Functions
+
+- `get_all_exchanges() -> list[str]`
+- `get_exchange_capability(exchange) -> ExchangeCapability | None`
+- `get_all_capabilities() -> dict[str, ExchangeCapability]`
+- `get_supported_market_types(exchange) -> list[str] | None`
+- `get_supported_timeframes(exchange: str | None = None) -> list[str]`
+- `get_supported_data_types(exchange) -> dict[str, dict[str, bool]] | None`
+- `get_all_supported_market_types() -> list[str]`
+
+## Checks
+
+- `is_exchange_supported(exchange) -> bool`
+- `supports_market_type(exchange, market_type) -> bool`
+- `supports_data_type(exchange, data_type, method='rest') -> bool`
+- `supports(feature, transport, *, exchange, market_type, instrument_type=None, stream_variant=None) -> CapabilityStatus`
+
+## Helpers
+
+- `describe_exchange(exchange)`
+- `list_features(exchange, market_type, instrument_type)`
+
+## Service API
+
+`CapabilityService`:
+
+- `validate_request(request) -> CapabilityStatus` (raises `CapabilityError` on unsupported)
+- `check_capability(...) -> CapabilityStatus`
+- `get_capability_key(request) -> CapabilityKey`
+
+Example:
+
+```python
+from laakhay.data.capability import supports
+from laakhay.data.core import DataFeature, InstrumentType, MarketType, TransportKind
+
+status = supports(
+    feature=DataFeature.MARK_PRICE,
+    transport=TransportKind.WS,
+    exchange='binance',
+    market_type=MarketType.FUTURES,
+    instrument_type=InstrumentType.PERPETUAL,
+)
+print(status.supported)
+```

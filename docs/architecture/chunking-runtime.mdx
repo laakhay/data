@@ -1,0 +1,25 @@
+# Chunking Runtime
+
+Chunking is used when a REST endpoint has per-request limits and caller asks for larger windows.
+
+## Key Types
+
+- `ChunkPolicy`
+- `ChunkHint`
+- `ChunkPlan`
+- `ChunkResult`
+- `WeightPolicy` / `WeightTier`
+
+## Planner + Executor
+
+- Planner computes chunk windows by limit/timeframe/time range.
+- Executor runs chunks, deduplicates by timestamp, aggregates payload.
+
+## Telemetry
+
+Structured telemetry hooks include:
+
+- `log_chunk_plan`
+- `log_chunk_completed`
+- `log_chunk_execution_complete`
+- `log_chunk_error`

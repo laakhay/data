@@ -1,0 +1,21 @@
+# Capability Discovery
+
+Capabilities are not hard-coded in one static file. They are discovered from code:
+
+- provider registrations
+- decorated feature handlers (`@register_feature_handler`)
+- endpoint modules where available
+
+## Registry Shape
+
+Hierarchical map:
+
+`exchange -> market_type -> instrument_type -> feature -> transport -> CapabilityStatus`
+
+## Service Layer
+
+`CapabilityService.validate_request(request)` wraps `supports(...)` and raises `CapabilityError` with context.
+
+## Rebuild
+
+After provider registration changes, capability registry can be rebuilt via discovery (`rebuild_registry_from_discovery`).

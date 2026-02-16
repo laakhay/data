@@ -1,99 +1,38 @@
-# Laakhay Data Library - Documentation Index
+# Laakhay Data
 
-Complete index of all documentation for the Laakhay Data library.
+`laakhay-data` is an async-first market data library for unified REST and streaming access across multiple exchanges.
 
-## 🏗️ Architecture Documentation
+## Start Here
 
-### Core Architecture
-- **[Overview](./architecture/overview.md)** - High-level architecture, component interactions, and request flows
-- **[Design Decisions](./architecture/design-decisions.md)** - Architecture Decision Records (ADRs) covering major design choices
-- **[Models](./architecture/models.md)** - Data models architecture, immutability patterns, and usage
-- **[Provider System](./architecture/provider-system.md)** - Provider lifecycle and registration
+If you're new, follow this order:
 
-### System Layers
-- **[I/O Layer](./architecture/io-layer.md)** - REST/WebSocket transport abstractions and provider interfaces
-- **[Clients Layer](./architecture/clients.md)** - High-level streaming feeds with caching and subscriptions
-- **[Sinks](./architecture/sinks.md)** - Stream sink implementations for event forwarding
+1. `getting-started/installation`
+2. `getting-started/quickstart`
+3. `getting-started/first-stream`
+4. `guides/*` for production patterns
+5. `examples/*` for copy/paste workflows
 
-## 📝 Inline Code Documentation
+## Core User Value
 
-All core modules include comprehensive inline architectural comments:
+- Single facade: `DataAPI`.
+- Unified immutable models (`OHLCV`, `Trade`, `OrderBook`, `FundingRate`, ...).
+- Capability-aware routing and request validation.
+- High-level streaming feeds and relay pipelines.
 
-### Core Modules (`laakhay/data/core/`)
-- **`api.py`** - DataAPI facade pattern, default parameter resolution
-- **`router.py`** - DataRouter coordination, request flow
-- **`registry.py`** - Provider registry, instance pooling
-- **`capabilities.py`** - Hierarchical capability registry
-- **`urm.py`** - Universal Representation Mapping (symbol normalization)
-- **`relay.py`** - Stream relay pattern, backpressure handling
-- **`request.py`** - Request object pattern, validation
-- **`capability_service.py`** - Capability validation service
-- **`base.py`** - Abstract base class for providers
-- **`enums.py`** - Standardized types and enums
-- **`exceptions.py`** - Exception hierarchy
+## Typical Usage Flow
 
-### Models (`laakhay/data/models/`)
-- **`__init__.py`** - Module overview and model categories
-- **`ohlcv.py`** - OHLCV series model with architectural comments
+- Fetch historical data over REST.
+- Start live stream(s).
+- Route events through relay/sinks.
+- Feed normalized data into `laakhay-ta` and `laakhay-quantlab`.
 
-### I/O Layer (`laakhay/data/io/`)
-- **`rest/provider.py`** - REST provider interface
-- **`ws/provider.py`** - WebSocket provider interface
+## Supported Exchanges
 
-### Clients Layer (`laakhay/data/clients/`)
-- **`base_feed.py`** - Base feed architecture
-- **`ohlcv_feed.py`** - OHLCV feed architecture
+- Binance
+- Bybit
+- OKX
+- Kraken
+- Hyperliquid
+- Coinbase
 
-### Sinks (`laakhay/data/sinks/`)
-- **`in_memory.py`** - In-memory sink implementation
-- **`redis.py`** - Redis Streams sink implementation
-
-## 🎯 Quick Navigation
-
-### By Topic
-
-**Understanding the Architecture:**
-1. Start with [Architecture Overview](./architecture/overview.md)
-2. Read [Design Decisions](./architecture/design-decisions.md) for rationale
-3. Explore specific layers: [I/O](./architecture/io-layer.md), [Clients](./architecture/clients.md), [Models](./architecture/models.md)
-4. Dive into [Provider System](./architecture/provider-system.md) for exchange-specific details
-
-**Using the Library:**
-- See inline documentation in `api/data_api.py` for DataAPI usage
-- Check `clients/ohlcv_feed.py` for feed examples
-- Review `sinks/` for event forwarding patterns
-
-**Extending the Library:**
-- Review `io/rest/provider.py` and `io/ws/provider.py` for provider interfaces
-- Check `core/base.py` for base provider class
-- See `runtime/provider_registry.py` for provider registration
-
-### By Component
-
-**Routing & Coordination:**
-- `api/data_api.py` - High-level facade
-- `runtime/router.py` - Request routing
-- `runtime/provider_registry.py` - Provider management
-- `core/request.py` - Request model
-
-**Capabilities & Validation:**
-- `capability/registry.py` - Capability registry
-- `capability/service.py` - Validation service
-
-**Symbol Normalization:**
-- `core/urm.py` - URM system
-
-**Streaming:**
-- `runtime/relay.py` - Stream relay
-- `clients/base_feed.py` - Base feeds
-- `clients/ohlcv_feed.py` - OHLCV feeds
-- `sinks/` - Event sinks
-
-**Data Models:**
-- `models/` - All data models
-- `core/enums.py` - Type definitions
-
-## 🔗 External Resources
-
-- [Main README](../README.md) - Library overview and installation
-- [Pydantic Documentation](https://docs.pydantic.dev/) - Data model framework
+`MEXC` currently exists in connectors but is not part of default `register_all()`.

@@ -1,0 +1,48 @@
+# First Stream
+
+## Stream Trades
+
+```python
+import asyncio
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType
+
+async def main() -> None:
+    async with DataAPI(
+        default_exchange='binance',
+        default_market_type=MarketType.SPOT,
+    ) as api:
+        count = 0
+        async for trade in api.stream_trades('BTC/USDT'):
+            print(trade.symbol, trade.price, trade.side)
+            count += 1
+            if count >= 5:
+                break
+
+asyncio.run(main())
+```
+
+## Stream OHLCV
+
+```python
+from laakhay.data.core import Timeframe
+
+async for bar in api.stream_ohlcv(
+    symbol='BTC/USDT',
+    timeframe=Timeframe.M1,
+    only_closed=False,
+    throttle_ms=250,
+):
+    print(bar.symbol, bar.timestamp, bar.close, bar.is_closed)
+```
+
+## Multi-Symbol Stream
+
+```python
+async for trade in api.stream_trades_multi(['BTC/USDT', 'ETH/USDT']):
+    print(trade.symbol, trade.price)
+```
+
+## Shutdown
+
+`DataAPI` supports async context manager and closes owned router resources in `__aexit__`.

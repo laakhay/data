@@ -1,0 +1,31 @@
+# Stream Relay and Sinks
+
+`StreamRelay` forwards streaming events from router to one or many sinks.
+
+## Backpressure Policies
+
+- `drop`: skip events when buffer is full.
+- `block`: wait for buffer space.
+- `buffer`: attempt enqueue, drop if full.
+
+## Built-in Sinks
+
+- `InMemorySink`: async queue, good for local tests.
+- `RedisStreamSink`: Redis Streams backend.
+
+## Example
+
+```python
+from laakhay.data.runtime.relay import StreamRelay
+from laakhay.data.sinks.in_memory import InMemorySink
+
+relay = StreamRelay(max_buffer_size=5000, backpressure_policy='drop')
+sink = InMemorySink(maxsize=10000)
+relay.add_sink(sink)
+
+# then call relay.relay(request) in a task
+```
+
+## Metrics
+
+`relay.get_metrics()` exposes counts for published/dropped/failed events and reconnection attempts.

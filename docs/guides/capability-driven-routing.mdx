@@ -1,0 +1,42 @@
+# Capability-Driven Routing
+
+Capabilities are discovered from provider registrations and endpoint metadata.
+
+## Why It Matters
+
+Before routing, `CapabilityService.validate_request()` checks if a request is supported for:
+
+- exchange
+- market type
+- instrument type
+- feature
+- transport
+
+This avoids expensive symbol resolution and provider invocation for impossible requests.
+
+## Programmatic Checks
+
+```python
+from laakhay.data.capability import supports
+from laakhay.data.core import DataFeature, InstrumentType, MarketType, TransportKind
+
+status = supports(
+    feature=DataFeature.LIQUIDATIONS,
+    transport=TransportKind.WS,
+    exchange='binance',
+    market_type=MarketType.FUTURES,
+    instrument_type=InstrumentType.PERPETUAL,
+)
+
+print(status.supported, status.reason)
+```
+
+## Listing Exchange Coverage
+
+```python
+from laakhay.data.capability import get_exchange_capability
+
+cap = get_exchange_capability('coinbase')
+print(cap['supported_market_types'])
+print(cap['data_types'])
+```

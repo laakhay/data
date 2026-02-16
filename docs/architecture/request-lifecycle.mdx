@@ -1,0 +1,18 @@
+# Request Lifecycle
+
+## REST Route (`DataAPI.fetch_*`)
+
+1. `DataAPI` builds `DataRequest` (with defaults resolved).
+2. `DataRouter.route(request)` validates capability.
+3. Router resolves symbol(s) to exchange-native via URM mapper.
+4. Router fetches provider instance from `ProviderRegistry` pool.
+5. Router resolves `(feature, transport)` handler method.
+6. Router maps request fields to method kwargs and invokes provider method.
+
+## Streaming Route (`DataAPI.stream_*`)
+
+Same as REST, but via `DataRouter.route_stream()` yielding async iterator items.
+
+## Multi-Symbol Streaming Special Path
+
+`stream_*_multi` methods fetch provider directly for performance and use provider-native multiplex stream methods.

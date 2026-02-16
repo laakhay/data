@@ -1,0 +1,83 @@
+# DataAPI
+
+`DataAPI` is the high-level facade for unified REST and WS access.
+
+Import:
+
+```python
+from laakhay.data.api import DataAPI
+```
+
+## Constructor
+
+```python
+DataAPI(
+  *,
+  default_exchange: str | None = None,
+  default_market_type: MarketType | None = None,
+  default_market_variant: MarketVariant | None = None,
+  default_instrument_type: InstrumentType = InstrumentType.SPOT,
+  router: DataRouter | None = None,
+)
+```
+
+## REST Methods
+
+- `fetch_health(...) -> dict[str, Any]`
+- `fetch_ohlcv(symbol, timeframe, *, start_time=None, end_time=None, limit=None, max_chunks=None, ...) -> OHLCV`
+- `fetch_order_book(symbol, *, depth=100, ...) -> OrderBook`
+- `fetch_recent_trades(symbol, *, limit=500, ...) -> list[Trade]`
+- `fetch_historical_trades(symbol, *, limit=None, from_id=None, ...) -> list[Trade]`
+- `fetch_symbols(*, quote_asset=None, use_cache=True, ...) -> list[Symbol]`
+- `fetch_open_interest(symbol, *, historical=False, period='5m', start_time=None, end_time=None, limit=30, ...) -> list[OpenInterest]`
+- `fetch_funding_rates(symbol, *, start_time=None, end_time=None, limit=100, ...) -> list[FundingRate]`
+
+## Streaming Methods
+
+Single-symbol:
+
+- `stream_ohlcv(symbol, timeframe, *, only_closed=False, throttle_ms=None, dedupe_same_candle=False, ...)`
+- `stream_trades(symbol, ...)`
+- `stream_order_book(symbol, *, depth=None, update_speed='100ms', ...)`
+
+Multi-symbol:
+
+- `stream_ohlcv_multi(symbols, timeframe, *, only_closed=False, throttle_ms=None, dedupe_same_candle=False, ...)`
+- `stream_trades_multi(symbols, ...)`
+- `stream_order_book_multi(symbols, *, depth=None, update_speed='100ms', ...)`
+
+Derivatives streams:
+
+- `stream_liquidations(...)`
+- `stream_open_interest(symbols, *, period='5m', ...)`
+- `stream_funding_rates(symbols, *, update_speed='1s', ...)`
+- `stream_mark_price(symbols, *, update_speed='1s', ...)`
+
+## Lifecycle
+
+- `close()`
+- async context manager (`__aenter__`, `__aexit__`)
+
+## Usage Pattern
+
+```python
+import asyncio
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
+
+async def main() -> None:
+    async with DataAPI(
+        default_exchange='binance',
+        default_market_type=MarketType.SPOT,
+    ) as api:
+        ohlcv = await api.fetch_ohlcv('BTC/USDT', Timeframe.M1, limit=300)
+        print(ohlcv.latest)
+
+asyncio.run(main())
+```
+
+## Notes
+
+- Router path validates capabilities before provider calls.
+- Multi-symbol stream methods use direct provider path for performance.
+- Symbol format for routed calls should be `BASE/QUOTE`.

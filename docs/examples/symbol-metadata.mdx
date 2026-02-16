@@ -1,0 +1,26 @@
+# Symbol Metadata
+
+```python
+import asyncio
+from decimal import Decimal
+
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType
+
+async def main() -> None:
+    async with DataAPI(default_exchange='binance', default_market_type=MarketType.SPOT) as api:
+        symbols = await api.fetch_symbols(quote_asset='USDT')
+        btc = next((s for s in symbols if s.symbol in {'BTCUSDT', 'BTC/USDT'}), None)
+
+        if btc is None:
+            return
+
+        px = Decimal('67999.12345')
+        qty = Decimal('0.0154321')
+
+        print('rounded price:', btc.round_price(px))
+        print('rounded qty:', btc.round_quantity(qty))
+        print('valid order:', btc.is_valid_order(btc.round_price(px), btc.round_quantity(qty)))
+
+asyncio.run(main())
+```

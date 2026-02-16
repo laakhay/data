@@ -1,0 +1,23 @@
+# Runtime Components
+
+## ProviderRegistry
+
+Responsibilities:
+
+- Register provider classes per exchange.
+- Store feature handler metadata.
+- Maintain provider instance pools keyed by `(exchange, market_type, market_variant)`.
+- Return URM mapper for symbol conversion.
+
+## DataRouter
+
+Responsibilities:
+
+- Validate capability.
+- Resolve symbols.
+- Resolve provider + handler.
+- Build invocation args and execute.
+
+## Relay
+
+`StreamRelay` decouples stream source and sink consumers via buffer + publish loop + retry behavior.

@@ -1,0 +1,36 @@
+# Multi-Symbol Feeds
+
+```python
+import asyncio
+
+from laakhay.data.clients import OHLCVFeed
+from laakhay.data.core import Timeframe
+
+async def main(ws_provider, rest_provider) -> None:
+    feed = OHLCVFeed(
+        ws_provider,
+        rest_provider=rest_provider,
+        max_bar_history=50,
+        dedupe_same_candle=True,
+    )
+
+    await feed.start(
+        symbols=['BTCUSDT', 'ETHUSDT'],
+        interval=Timeframe.M1,
+        warm_up=200,
+        only_closed=False,
+    )
+
+    def on_bar(bar):
+        print(bar.symbol, bar.timestamp, bar.close, bar.is_closed)
+
+    sub_id = feed.subscribe(on_bar)
+
+    await asyncio.sleep(15)
+
+    print(feed.snapshot())
+    print(feed.get_bar_history('BTCUSDT', count=5))
+
+    feed.unsubscribe(sub_id)
+    await feed.stop()
+```

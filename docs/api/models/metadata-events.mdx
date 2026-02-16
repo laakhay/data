@@ -1,0 +1,50 @@
+# Metadata and Event Models
+
+## Symbol
+
+Fields:
+
+- `symbol`, `base_asset`, `quote_asset`
+- optional constraints: `tick_size`, `step_size`, `min_notional`
+- futures extras: `contract_type`, `delivery_date`
+
+Helpers:
+
+- `round_price`
+- `round_quantity`
+- `is_valid_order`
+
+## SeriesMeta
+
+Fields:
+
+- `symbol`
+- `timeframe`
+
+Helpers:
+
+- `symbol_upper`
+- `key`
+
+## StreamingBar
+
+Extends `Bar` and adds:
+
+- `symbol`
+
+## Events
+
+Enums:
+
+- `DataEventType`: `CANDLE_UPDATE`, `CANDLE_CLOSED`, `CONNECTION_STATUS`
+- `ConnectionStatus`: `CONNECTED`, `DISCONNECTED`, `RECONNECTING`, `STALE`
+
+Dataclasses:
+
+- `ConnectionEvent`
+- `DataEvent`
+
+Factory helpers:
+
+- `DataEvent.bar_update(...)`
+- `DataEvent.connection_status(...)`

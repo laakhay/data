@@ -1,0 +1,13 @@
+# MEXC
+
+Exports in package:
+
+- `MEXCProvider`
+- `MEXCURM`
+
+Current status in this codebase:
+
+- Connector/provider exists under `connectors/mexc`.
+- It is not included in `register_all()` default registry wiring.
+
+If you want it in runtime capability discovery and `DataAPI` by default, add a registration function and include it in `register_all()`.

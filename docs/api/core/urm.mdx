@@ -1,0 +1,36 @@
+# URM
+
+URM (Universal Representation Mapping) normalizes symbols across exchanges.
+
+## Protocol
+
+`UniversalRepresentationMapper` requires:
+
+- `to_spec(exchange_symbol, *, market_type) -> InstrumentSpec`
+- `to_exchange_symbol(spec, *, market_type) -> str`
+
+## Registry
+
+`URMRegistry` methods:
+
+- `register(exchange, mapper)`
+- `unregister(exchange)`
+- `urm_to_spec(exchange_symbol, *, exchange, market_type)`
+- `urm_to_exchange_symbol(spec, *, exchange, market_type)`
+- `clear_cache(exchange=None)`
+
+## Utility Functions
+
+- `get_urm_registry()`
+- `parse_urm_id(urm_id)`
+- `spec_to_urm_id(spec, exchange=None)`
+- `validate_urm_id(urm_id)`
+
+## URM ID Format
+
+`urm://{exchange|*}:{base}/{quote}:{instrument_type}[:qualifiers]`
+
+Examples:
+
+- `urm://binance:btc/usdt:spot`
+- `urm://*:btc/usdt:perpetual`

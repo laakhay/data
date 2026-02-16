@@ -1,0 +1,15 @@
+# Coinbase
+
+Exports:
+
+- `CoinbaseProvider`
+- `CoinbaseRESTConnector`
+- `CoinbaseWSConnector`
+- `CoinbaseURM`
+
+Current registered market types: `spot` only.
+
+Notable behavior:
+
+- WS handler registration maps to multi-stream methods (`stream_ohlcv_multi`, `stream_order_book_multi`, `stream_trades_multi`) in current provider mapping.
+- No futures-only features (funding/open-interest/mark-price/liquidations).

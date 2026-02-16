@@ -1,0 +1,39 @@
+# Symbol Format and URM
+
+## Recommended Symbol Format
+
+For most `DataAPI` calls, use canonical normalized symbols:
+
+- `BTC/USDT`
+- `ETH/USDT`
+
+Using one canonical format keeps routing predictable across exchanges.
+
+## Practical Rules
+
+- Prefer `BASE/QUOTE` for request symbols.
+- Avoid mixing compact exchange-native symbols (like `BTCUSDT`) in cross-exchange flows.
+- Use URM helpers when you need explicit instrument identity or mapping workflows.
+
+## URM Utilities
+
+Available in `laakhay.data.core`:
+
+- `parse_urm_id(urm_id: str) -> InstrumentSpec`
+- `spec_to_urm_id(spec, exchange=None) -> str`
+- `validate_urm_id(urm_id: str) -> bool`
+- `get_urm_registry() -> URMRegistry`
+
+Example:
+
+```python
+from laakhay.data.core import InstrumentSpec, InstrumentType, spec_to_urm_id
+
+spec = InstrumentSpec(base='BTC', quote='USDT', instrument_type=InstrumentType.PERPETUAL)
+print(spec_to_urm_id(spec, exchange='binance'))
+```
+
+## Exchange Mapper Concept
+
+Each exchange provider owns a mapper that translates between exchange-native symbols and normalized specs.
+In normal usage, you should rely on `DataAPI` and canonical symbols unless you are building provider-specific tooling.

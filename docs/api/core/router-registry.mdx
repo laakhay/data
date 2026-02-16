@@ -1,0 +1,48 @@
+# Router and Registry
+
+## DataRouter
+
+Import:
+
+```python
+from laakhay.data.runtime.router import DataRouter
+```
+
+Main methods:
+
+- `route(request) -> Any`
+- `route_stream(request) -> AsyncIterator[Any]`
+- `close()`
+
+Internals:
+
+- validates with capability service
+- resolves symbols using URM mapper
+- resolves handler in provider registry
+- maps request params into provider kwargs
+
+## ProviderRegistry
+
+Import:
+
+```python
+from laakhay.data.runtime.provider_registry import get_provider_registry
+```
+
+Key methods:
+
+- `register(...)`
+- `unregister(exchange)`
+- `get_provider(exchange, market_type, market_variant=None, api_key=None, api_secret=None)`
+- `get_feature_handler(exchange, feature, transport)`
+- `get_urm_mapper(exchange)`
+- `is_registered(exchange)`
+- `list_exchanges()`
+- `shutdown_instances()`
+- `close_all()`
+
+## Feature Handler Decorator
+
+`register_feature_handler(feature, transport, method_name=None, constraints=None)` attaches handler metadata to provider methods.
+
+`collect_feature_handlers(provider_class)` scans decorated methods into handler map.

@@ -1,0 +1,50 @@
+# Quickstart
+
+## REST: Fetch OHLCV
+
+```python
+import asyncio
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
+
+async def main() -> None:
+    async with DataAPI(
+        default_exchange='binance',
+        default_market_type=MarketType.SPOT,
+    ) as api:
+        ohlcv = await api.fetch_ohlcv(
+            symbol='BTC/USDT',
+            timeframe=Timeframe.M5,
+            limit=100,
+        )
+
+        print('Bars:', len(ohlcv))
+        print('Latest close:', ohlcv.latest.close if ohlcv.latest else None)
+
+asyncio.run(main())
+```
+
+## REST: Fetch Order Book + Trades
+
+```python
+order_book = await api.fetch_order_book('BTC/USDT', depth=50)
+trades = await api.fetch_recent_trades('BTC/USDT', limit=200)
+```
+
+## Futures Example
+
+```python
+from laakhay.data.core import MarketType, InstrumentType
+
+funding = await api.fetch_funding_rates(
+    symbol='BTC/USDT',
+    exchange='binance',
+    market_type=MarketType.FUTURES,
+    instrument_type=InstrumentType.PERPETUAL,
+    limit=50,
+)
+```
+
+## Symbol Format Note
+
+Use `BASE/QUOTE` normalized format (`BTC/USDT`) with `DataAPI` and router-based flows.

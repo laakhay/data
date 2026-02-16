@@ -1,0 +1,34 @@
+# Relay Pipeline
+
+```python
+import asyncio
+
+from laakhay.data.core import DataFeature, MarketType, TransportKind
+from laakhay.data.core.request import request
+from laakhay.data.runtime.relay import StreamRelay
+from laakhay.data.sinks.in_memory import InMemorySink
+
+async def main() -> None:
+    relay = StreamRelay(max_buffer_size=20000, backpressure_policy='drop')
+    sink = InMemorySink(maxsize=50000)
+    relay.add_sink(sink)
+
+    req = request(
+        DataFeature.TRADES,
+        TransportKind.WS,
+        exchange='binance',
+        market_type=MarketType.SPOT,
+        symbol='BTC/USDT',
+    )
+
+    task = asyncio.create_task(relay.relay(req))
+
+    for _ in range(5):
+        event = await sink.get(timeout=10)
+        print(event)
+
+    await relay.stop()
+    task.cancel()
+
+asyncio.run(main())
+```

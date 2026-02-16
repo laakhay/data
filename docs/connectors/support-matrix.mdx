@@ -1,0 +1,36 @@
+# Support Matrix
+
+This matrix reflects current capability discovery output after default registration.
+
+## Exchanges and Market Types
+
+- Binance: `spot`, `futures`
+- Bybit: `spot`, `futures`
+- OKX: `spot`, `futures`
+- Kraken: `spot`, `futures`
+- Hyperliquid: `spot`, `futures`
+- Coinbase: `spot`
+
+## Feature Support by Exchange
+
+`REST/WS`:
+
+- `ohlcv`: Binance `Y/Y`, Bybit `Y/Y`, OKX `Y/Y`, Kraken `Y/Y`, Hyperliquid `Y/Y`, Coinbase `Y/Y`
+- `order_book`: Binance `Y/Y`, Bybit `Y/Y`, OKX `Y/Y`, Kraken `Y/Y`, Hyperliquid `Y/Y`, Coinbase `Y/Y`
+- `trades`: Binance `Y/Y`, Bybit `Y/Y`, OKX `Y/Y`, Kraken `Y/Y`, Hyperliquid `Y/Y`, Coinbase `Y/Y`
+- `historical_trades`: Binance `Y/N`, Kraken `Y/N` (not listed for others in current registry)
+- `symbol_metadata`: all listed exchanges `Y/N`
+- `health`: Binance `Y/N`, Bybit `Y/N`, OKX `Y/N`, Kraken `Y/N`, Coinbase `Y/N` (not listed for Hyperliquid)
+- `open_interest`: Binance `Y/Y`, Bybit `Y/Y`, OKX `Y/Y`, Kraken `Y/Y`, Hyperliquid `Y/Y`
+- `funding_rates`: Binance `Y/Y`, Bybit `Y/Y`, OKX `Y/Y`, Kraken `Y/N`, Hyperliquid `Y/Y`
+- `mark_price`: Binance `N/Y`, Bybit `N/Y`, OKX `N/Y`, Kraken `N/Y`, Hyperliquid `N/Y`
+- `liquidations`: Binance `N/Y`, Bybit `N/Y`, OKX `N/Y`, Kraken `N/Y`, Hyperliquid `N/Y`
+
+## Handler Mapping Snapshot
+
+Examples:
+
+- Binance `ohlcv/rest -> fetch_ohlcv`, `trades/ws -> stream_trades`
+- Coinbase `ohlcv/ws -> stream_ohlcv_multi`, `order_book/ws -> stream_order_book_multi`
+
+For exact handler map, inspect provider registrations via `collect_feature_handlers` output.

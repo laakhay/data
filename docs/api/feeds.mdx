@@ -1,0 +1,56 @@
+# Feeds
+
+Feeds are high-level streaming abstractions in `laakhay.data.clients`.
+
+## Base Classes
+
+- `BaseStreamFeed[T]`
+- `SymbolStreamFeed[T]`
+
+Common capabilities:
+
+- start/stop/update lifecycle
+- subscribe/unsubscribe callbacks
+- in-memory latest cache + snapshots
+- stale connection tracking
+
+## OHLCVFeed
+
+Import:
+
+```python
+from laakhay.data.clients import OHLCVFeed
+```
+
+Highlights:
+
+- multi-symbol OHLCV stream
+- optional REST warm-up
+- previous closed + history caches
+- event subscriptions (`DataEvent`, connection events)
+- symbol chunk assignment for stream grouping
+
+## OpenInterestFeed
+
+`SymbolStreamFeed` specialization for OI:
+
+- `start(symbols, period='5m')`
+- dynamic symbol mutation (`set_symbols`, `add_symbols`, `remove_symbols`)
+- dynamic period updates (`set_period`)
+
+## LiquidationFeed
+
+Simple global/symbol-filtered liquidation feed with cache and callback subscriptions.
+
+## Minimal Example
+
+```python
+feed = OHLCVFeed(ws_provider, rest_provider=rest_provider)
+await feed.start(symbols=['BTCUSDT', 'ETHUSDT'], interval=Timeframe.M1, warm_up=100)
+
+sub_id = feed.subscribe(lambda bar: print(bar.symbol, bar.close))
+
+# ... later
+feed.unsubscribe(sub_id)
+await feed.stop()
+```

@@ -1,0 +1,32 @@
+# REST OHLCV
+
+```python
+import asyncio
+from datetime import datetime, timedelta, UTC
+
+from laakhay.data.api import DataAPI
+from laakhay.data.core import MarketType, Timeframe
+
+async def main() -> None:
+    async with DataAPI(
+        default_exchange='binance',
+        default_market_type=MarketType.SPOT,
+    ) as api:
+        end = datetime.now(UTC)
+        start = end - timedelta(days=1)
+
+        series = await api.fetch_ohlcv(
+            symbol='BTC/USDT',
+            timeframe=Timeframe.M1,
+            start_time=start,
+            end_time=end,
+            limit=1500,
+            max_chunks=10,
+        )
+
+        print(series.meta)
+        print('bars=', len(series))
+        print('range=', series.start_time, series.end_time)
+
+asyncio.run(main())
+```

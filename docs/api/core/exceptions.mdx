@@ -1,0 +1,23 @@
+# Exceptions
+
+Import from `laakhay.data.core`.
+
+## Hierarchy
+
+- `DataError`
+  - `CapabilityError`
+  - `ProviderError`
+    - `RateLimitError`
+    - `InvalidSymbolError`
+    - `InvalidIntervalError`
+  - `ValidationError`
+  - `SymbolResolutionError`
+  - `RelayError`
+
+## Notable Fields
+
+- `CapabilityError`: `key`, `status`, `recommendations`
+- `ProviderError`: `status_code`
+- `RateLimitError`: `retry_after`
+- `SymbolResolutionError`: `exchange`, `value`, `market_type`, `known_aliases`
+- `RelayError`: `sink_name`, `consecutive_failures`

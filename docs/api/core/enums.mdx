@@ -1,0 +1,77 @@
+# Enums and Types
+
+Import from `laakhay.data.core`.
+
+## Timeframe
+
+Values:
+
+- `1m`, `3m`, `5m`, `15m`, `30m`
+- `1h`, `2h`, `4h`, `6h`, `8h`, `12h`
+- `1d`, `3d`, `1w`, `1M`
+
+Helpers:
+
+- `.seconds`
+- `.milliseconds`
+- `Timeframe.from_seconds(...)`
+- `Timeframe.from_str(...)`
+
+## MarketType
+
+- `SPOT`
+- `FUTURES`
+- `OPTIONS`
+- `EQUITY`
+- `FX`
+
+## MarketVariant
+
+- `SPOT`
+- `LINEAR_PERP`
+- `INVERSE_PERP`
+- `LINEAR_DELIVERY`
+- `INVERSE_DELIVERY`
+- `OPTIONS`
+- `EQUITY`
+
+Helpers:
+
+- `MarketVariant.from_market_type(...)`
+- `.to_market_type()`
+
+## DataFeature
+
+- `OHLCV`
+- `HEALTH`
+- `ORDER_BOOK`
+- `TRADES`
+- `HISTORICAL_TRADES`
+- `LIQUIDATIONS`
+- `OPEN_INTEREST`
+- `FUNDING_RATE`
+- `MARK_PRICE`
+- `SYMBOL_METADATA`
+
+## TransportKind
+
+- `REST`
+- `WS`
+
+## InstrumentType
+
+- `SPOT`
+- `PERPETUAL`
+- `FUTURE`
+- `OPTION`
+- `MOVE`
+- `BASKET`
+
+## InstrumentSpec
+
+Immutable canonical symbol spec:
+
+- `base`
+- `quote`
+- `instrument_type`
+- optional: `expiry`, `strike`, `contract_size`, `metadata`

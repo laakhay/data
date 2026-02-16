@@ -1,0 +1,19 @@
+# Connectors
+
+Connector packages are under `laakhay.data.connectors.<exchange>`.
+
+Each exchange package usually exports:
+
+- unified provider (`<Exchange>Provider`)
+- rest connector/provider
+- ws connector/provider
+- URM mapper
+
+Default registration path (`register_all`) currently includes:
+
+- binance
+- bybit
+- okx
+- kraken
+- hyperliquid
+- coinbase

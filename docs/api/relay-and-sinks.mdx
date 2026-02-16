@@ -1,0 +1,53 @@
+# Relay and Sinks
+
+## StreamRelay
+
+Import:
+
+```python
+from laakhay.data.runtime.relay import StreamRelay
+```
+
+Constructor:
+
+```python
+StreamRelay(
+  router: DataRouter | None = None,
+  *,
+  max_buffer_size: int = 1000,
+  backpressure_policy: str = 'drop',
+  max_retries: int = 3,
+  retry_delay: float = 1.0,
+)
+```
+
+Main methods:
+
+- `add_sink(sink)`
+- `remove_sink(sink)`
+- `relay(request, *, sink=None)`
+- `get_metrics() -> RelayMetrics`
+- `stop()`
+
+## StreamSink Protocol
+
+Any sink implementing:
+
+- `publish(event)`
+- `close()`
+
+## Built-in Sinks
+
+- `InMemorySink(maxsize=1000)`
+- `RedisStreamSink(stream_key, *, redis_client=None, batch_size=1, batch_timeout=0.1)`
+
+## Metrics
+
+`RelayMetrics` includes:
+
+- `events_published`
+- `events_dropped`
+- `events_failed`
+- `reconnection_attempts`
+- `last_event_time`
+- `sink_lag_seconds`

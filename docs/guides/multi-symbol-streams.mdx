@@ -1,0 +1,31 @@
+# Multi-Symbol Streams
+
+`DataAPI` has dedicated multi-symbol methods:
+
+- `stream_ohlcv_multi(symbols, timeframe, ...)`
+- `stream_trades_multi(symbols, ...)`
+- `stream_order_book_multi(symbols, ...)`
+
+## Why These Are Separate
+
+These methods use direct provider path for performance and multiplexing, bypassing single-symbol router path.
+
+## Example
+
+```python
+symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
+
+async for book in api.stream_order_book_multi(
+    symbols=symbols,
+    update_speed='100ms',
+    exchange='binance',
+    market_type=MarketType.SPOT,
+):
+    print(book.symbol, book.best_bid_price, book.best_ask_price)
+```
+
+## Operational Tips
+
+- Keep symbol sets bounded per stream task.
+- Partition symbols by liquidity profile if downstream processing differs.
+- Use throttling/deduping for OHLCV where needed.
