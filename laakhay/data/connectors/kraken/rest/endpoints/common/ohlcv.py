@@ -156,7 +156,7 @@ class Adapter(ResponseAdapter):
                     f"Invalid candles response format: expected list, got {type(candles_data)}"
                 )
 
-            meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+            meta = SeriesMeta(symbol=symbol, timeframe=interval)
             bars = []
             for row in candles_data:
                 if not isinstance(row, dict):
@@ -203,7 +203,7 @@ class Adapter(ResponseAdapter):
                     f"Invalid OHLC response format: expected list, got {type(pair_data)}"
                 )
 
-            meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+            meta = SeriesMeta(symbol=symbol, timeframe=interval)
             bars = []
             for row in pair_data:
                 if not isinstance(row, list) or len(row) < 7:

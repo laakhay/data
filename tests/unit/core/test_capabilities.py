@@ -8,6 +8,7 @@ from datetime import datetime
 
 import pytest
 
+from laakhay.core import InstrumentExpiry
 from laakhay.data.capability.registry import rebuild_registry_from_discovery
 from laakhay.data.core import (
     CapabilityError,
@@ -63,7 +64,7 @@ def test_instrument_spec_with_optional_fields():
         expiry=expiry,
         strike=35000.0,
     )
-    assert spec.expiry == expiry
+    assert spec.expiry == InstrumentExpiry(expiry)
     assert spec.strike == 35000.0
     assert "BTC/USD" in str(spec)
 

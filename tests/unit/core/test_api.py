@@ -403,7 +403,7 @@ class TestDataAPIFetchOHLCV:
 
         api = DataAPI(router=mock_router)
         async with api:
-            for timeframe in Timeframe:
+            for timeframe in Timeframe.all():
                 await api.fetch_ohlcv(
                     symbol="BTC/USDT",
                     timeframe=timeframe,
@@ -412,7 +412,7 @@ class TestDataAPIFetchOHLCV:
                 )
 
         # Should be called once per timeframe
-        assert mock_router.route.call_count == len(Timeframe)
+        assert mock_router.route.call_count == len(Timeframe.all())
 
 
 class TestDataAPIFetchOrderBook:

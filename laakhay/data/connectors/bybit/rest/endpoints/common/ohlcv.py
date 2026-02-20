@@ -90,7 +90,7 @@ class Adapter(ResponseAdapter):
         if not isinstance(klines, list):
             raise DataError(f"Invalid kline response format: expected list, got {type(klines)}")
 
-        meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+        meta = SeriesMeta(symbol=symbol, timeframe=interval)
         bars = []
         for row in klines:
             if not isinstance(row, list) or len(row) < 6:

@@ -2,6 +2,7 @@
 
 import pytest
 
+import laakhay.core as core_urm
 from laakhay.data.core import (
     InstrumentSpec,
     InstrumentType,
@@ -247,75 +248,23 @@ def test_get_urm_registry_singleton():
     assert registry1 is registry2
 
 
-def test_parse_urm_id():
-    """Test parsing URM IDs."""
-    # Spot
+def test_data_core_urm_functions_are_re_exported_from_core():
+    """Data library should delegate URM grammar logic to laakhay-core."""
+    assert parse_urm_id is core_urm.parse_urm_id
+    assert spec_to_urm_id is core_urm.spec_to_urm_id
+    assert validate_urm_id is core_urm.validate_urm_id
+
+
+def test_data_core_urm_smoke_uses_core_behavior():
+    """Smoke check only: parsing/serialization behavior belongs to core tests."""
     spec = parse_urm_id("urm://binance:btc/usdt:spot")
     assert spec.base == "BTC"
     assert spec.quote == "USDT"
     assert spec.instrument_type == InstrumentType.SPOT
-    assert spec.metadata.get("exchange") == "binance"
 
-    # Perpetual with wildcard
-    spec = parse_urm_id("urm://*:btc/usdt:perpetual")
-    assert spec.base == "BTC"
-    assert spec.quote == "USDT"
-    assert spec.instrument_type == InstrumentType.PERPETUAL
-
-    # Future with expiry
-    spec = parse_urm_id("urm://okx:btc/usdt:future:20240329")
-    assert spec.base == "BTC"
-    assert spec.quote == "USDT"
-    assert spec.instrument_type == InstrumentType.FUTURE
-    assert spec.expiry is not None
-    assert spec.expiry.year == 2024
-    assert spec.expiry.month == 3
-    assert spec.expiry.day == 29
-
-
-def test_parse_urm_id_invalid_format():
-    """Test parsing invalid URM IDs."""
-    with pytest.raises(SymbolResolutionError):
-        parse_urm_id("invalid-format")
-
-    with pytest.raises(SymbolResolutionError):
-        parse_urm_id("urm://binance:btc/usdt")  # Missing instrument_type
-
-    with pytest.raises(SymbolResolutionError):
-        parse_urm_id("urm://binance:btc/usdt:invalid")  # Invalid instrument type
-
-
-def test_spec_to_urm_id():
-    """Test converting spec to URM ID."""
-    # Spot
-    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.SPOT)
-    urm_id = spec_to_urm_id(spec, exchange="binance")
-    assert urm_id == "urm://binance:btc/usdt:spot"
-
-    # Perpetual without exchange
-    spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL)
-    urm_id = spec_to_urm_id(spec)
-    assert urm_id == "urm://*:btc/usdt:perpetual"
-
-    # Future with expiry
-    from datetime import datetime
-
-    spec = InstrumentSpec(
-        base="BTC",
-        quote="USDT",
-        instrument_type=InstrumentType.FUTURE,
-        expiry=datetime(2024, 3, 29),
-    )
-    urm_id = spec_to_urm_id(spec, exchange="okx")
-    assert urm_id == "urm://okx:btc/usdt:future:20240329"
-
-
-def test_validate_urm_id():
-    """Test URM ID validation."""
-    assert validate_urm_id("urm://binance:btc/usdt:spot") is True
-    assert validate_urm_id("urm://*:btc/usdt:perpetual") is True
-    assert validate_urm_id("invalid") is False
-    assert validate_urm_id("urm://binance:btc/usdt") is False
+    serialized = spec_to_urm_id(spec, exchange="binance")
+    assert serialized.startswith("urm://binance:")
+    assert validate_urm_id(serialized) is True
 
 
 def test_urm_registry_mapper_exception_handling():
@@ -380,32 +329,7 @@ def test_urm_registry_cache_invalid_missing_timestamp():
     assert registry._is_cache_valid(cache_key) is False
 
 
-def test_parse_urm_id_invalid_exchange():
-    """Test parsing URM ID with invalid exchange name."""
-    with pytest.raises(SymbolResolutionError, match="Invalid exchange"):
+def test_data_core_urm_invalid_exchange_smoke():
+    """Invalid URM input should raise from core parser."""
+    with pytest.raises(SymbolResolutionError):
         parse_urm_id("urm://invalid-exchange!:btc/usdt:spot")
-
-
-def test_parse_urm_id_option_basic():
-    """Test parsing URM ID with option instrument type."""
-    spec = parse_urm_id("urm://deribit:btc/usd:option")
-    assert spec.base == "BTC"
-    assert spec.quote == "USD"
-    assert spec.instrument_type == InstrumentType.OPTION
-
-
-def test_spec_to_urm_id_with_option():
-    """Test converting spec with option to URM ID."""
-    from datetime import datetime
-
-    spec = InstrumentSpec(
-        base="BTC",
-        quote="USD",
-        instrument_type=InstrumentType.OPTION,
-        strike=35000.0,
-        expiry=datetime(2024, 6, 28),
-        metadata={"option_type": "C"},
-    )
-    urm_id = spec_to_urm_id(spec, exchange="deribit")
-    assert "C:35000" in urm_id
-    assert "20240628" in urm_id

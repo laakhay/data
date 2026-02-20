@@ -20,6 +20,11 @@ def test_all_exchanges_registered():
     registry.register("hyperliquid", HyperliquidURM())
     registry.register("coinbase", CoinbaseURM())
 
+    # Register quotes for mappers that use _split_base_quote
+    registry.register_quotes("binance", ["USDT", "USD", "BTC", "ETH", "BNB"])
+    registry.register_quotes("bybit", ["USDT", "USD", "BTC"])
+    registry.register_quotes("kraken", ["USDT", "USD", "BTC", "EUR"])
+
     assert len(registry._mappers) == 6
 
 
@@ -30,6 +35,10 @@ def test_cross_exchange_conversion():
     registry.register("kraken", KrakenURM())
     registry.register("okx", OKXURM())
     registry.register("coinbase", CoinbaseURM())
+
+    # Register quotes
+    registry.register_quotes("binance", ["USDT", "USD", "BTC"])
+    registry.register_quotes("kraken", ["USDT", "USD", "BTC"])
 
     spec = InstrumentSpec(base="BTC", quote="USD", instrument_type=InstrumentType.SPOT)
 
@@ -77,6 +86,11 @@ def test_futures_cross_exchange():
     registry.register("kraken", KrakenURM())
     registry.register("okx", OKXURM())
     registry.register("hyperliquid", HyperliquidURM())
+
+    # Register quotes
+    registry.register_quotes("binance", ["USDT", "USD"])
+    registry.register_quotes("bybit", ["USDT", "USD"])
+    registry.register_quotes("kraken", ["USDT", "USD"])
 
     # USDT spec for exchanges that support USDT
     usdt_spec = InstrumentSpec(base="BTC", quote="USDT", instrument_type=InstrumentType.PERPETUAL)

@@ -7,31 +7,19 @@ Handles OKX-specific symbol formats:
 
 from __future__ import annotations
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
-from laakhay.data.core.exceptions import SymbolResolutionError
+from laakhay.core import BaseURMMapper, InstrumentSpec, InstrumentType, MarketType
+from laakhay.core.exceptions import SymbolResolutionError
 
 
-class OKXURM:
+class OKXURM(BaseURMMapper):
     """OKX Universal Representation Mapper."""
 
-    def to_spec(
+    def _to_spec_impl(
         self,
         exchange_symbol: str,
         *,
         market_type: MarketType,
     ) -> InstrumentSpec:
-        """Convert OKX symbol to InstrumentSpec.
-
-        Args:
-            exchange_symbol: OKX symbol (e.g., "BTC-USDT", "BTC-USDT-SWAP")
-            market_type: Market type (spot or futures)
-
-        Returns:
-            Canonical InstrumentSpec
-
-        Raises:
-            SymbolResolutionError: If symbol cannot be parsed
-        """
         symbol_upper = exchange_symbol.upper()
 
         # Remove -SWAP suffix for futures
@@ -62,24 +50,12 @@ class OKXURM:
                 instrument_type=InstrumentType.SPOT,
             )
 
-    def to_exchange_symbol(
+    def _to_exchange_symbol_impl(
         self,
         spec: InstrumentSpec,
         *,
         market_type: MarketType,
     ) -> str:
-        """Convert InstrumentSpec to OKX symbol.
-
-        Args:
-            spec: Canonical InstrumentSpec
-            market_type: Market type (spot or futures)
-
-        Returns:
-            OKX symbol string
-
-        Raises:
-            SymbolResolutionError: If spec cannot be converted
-        """
         symbol = f"{spec.base}-{spec.quote}"
 
         if market_type == MarketType.FUTURES:

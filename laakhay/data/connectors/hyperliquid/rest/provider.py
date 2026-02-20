@@ -100,10 +100,7 @@ class HyperliquidRESTProvider(RESTProvider):
         from ..constants import INTERVAL_MAP as HYPERLIQUID_INTERVAL_MAP
 
         if isinstance(timeframe, str):
-            parsed_timeframe = Timeframe.from_str(timeframe)
-            if parsed_timeframe is None:
-                raise ValueError(f"Invalid timeframe: {timeframe}")
-            timeframe = parsed_timeframe
+            timeframe = Timeframe(timeframe)
         if not isinstance(timeframe, Timeframe) or timeframe not in HYPERLIQUID_INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 

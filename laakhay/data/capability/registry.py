@@ -141,7 +141,7 @@ def get_exchange_capability(exchange: str) -> ExchangeCapability | None:
         display_name=exchange_lower.capitalize(),
         supported_market_types=market_types,
         default_market_type=market_types[0] if market_types else None,
-        supported_timeframes=[tf.value for tf in Timeframe],
+        supported_timeframes=[tf.value for tf in Timeframe.all()],
         data_types=data_types,
         notes=None,
     )
@@ -196,15 +196,13 @@ def get_supported_timeframes(exchange: str | None = None) -> list[str]:
     """Get supported timeframes.
 
     Args:
-        exchange: Optional exchange name. If None, returns all timeframes from enum.
+        exchange: Optional exchange name. If None, returns all timeframes.
                  If provided, returns exchange-specific timeframes (currently same for all).
 
     Returns:
         List of timeframe strings (e.g., ["1m", "3m", "5m", ...])
     """
-    # Currently all exchanges support the full Timeframe enum
-    # This could be made exchange-specific in the future if needed
-    return [tf.value for tf in Timeframe]
+    return [tf.value for tf in Timeframe.all()]
 
 
 def get_supported_data_types(exchange: str) -> dict[str, dict[str, bool]] | None:
@@ -360,7 +358,7 @@ def _build_capability_registry_from_discovery() -> None:
             # Add feature-specific metadata
             if feature == DataFeature.OHLCV:
                 stream_metadata["symbol_scope"] = "symbol"
-                stream_metadata["timeframe_options"] = [tf.value for tf in Timeframe]
+                stream_metadata["timeframe_options"] = [tf.value for tf in Timeframe.all()]
             elif feature == DataFeature.TRADES:
                 stream_metadata["symbol_scope"] = "symbol"
             elif feature == DataFeature.LIQUIDATIONS:

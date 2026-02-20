@@ -197,6 +197,31 @@ class BinanceProvider:
         ):
             yield bar
 
+    async def stream_ohlcv_multi(
+        self,
+        symbols: list[str],
+        timeframe: Timeframe,
+        *,
+        only_closed: bool = False,
+        throttle_ms: int | None = None,
+        dedupe_same_candle: bool = False,
+        instrument_type: object | None = None,  # noqa: ARG002
+    ) -> AsyncIterator[StreamingBar]:
+        """Stream OHLCV bars for multiple symbols.
+
+        Note:
+            `instrument_type` is accepted for DataAPI compatibility and ignored by
+            the Binance WS connector.
+        """
+        async for bar in self._ws.stream_ohlcv_multi(
+            symbols=symbols,
+            timeframe=timeframe,
+            only_closed=only_closed,
+            throttle_ms=throttle_ms,
+            dedupe_same_candle=dedupe_same_candle,
+        ):
+            yield bar
+
     @register_feature_handler(DataFeature.TRADES, TransportKind.WS)
     async def stream_trades(self, symbol: str) -> AsyncIterator[Trade]:
         """Stream trades."""

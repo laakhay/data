@@ -3,11 +3,11 @@
 Tests focus on meaningful behavior, not just field access.
 """
 
+from laakhay.core.exceptions import LaakhayError, SymbolResolutionError
 from laakhay.data.core import (
     DataError,
     ProviderError,
     RateLimitError,
-    SymbolResolutionError,
 )
 
 
@@ -38,4 +38,4 @@ def test_symbol_resolution_error_with_context():
     )
     assert error.exchange == "binance"
     assert error.value == "INVALID"
-    assert isinstance(error, DataError)
+    assert isinstance(error, LaakhayError)

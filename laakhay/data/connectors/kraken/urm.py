@@ -7,11 +7,11 @@ Handles Kraken-specific symbol formats and aliases:
 
 from __future__ import annotations
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
-from laakhay.data.core.exceptions import SymbolResolutionError
+from laakhay.core import BaseURMMapper, InstrumentSpec, InstrumentType, MarketType
+from laakhay.core.exceptions import SymbolResolutionError
 
 
-class KrakenURM:
+class KrakenURM(BaseURMMapper):
     """Kraken Universal Representation Mapper."""
 
     # Asset alias mapping (Kraken uses XBT instead of BTC)
@@ -20,24 +20,12 @@ class KrakenURM:
         "BTC": "XBT",  # Reverse mapping
     }
 
-    def to_spec(
+    def _to_spec_impl(
         self,
         exchange_symbol: str,
         *,
         market_type: MarketType,
     ) -> InstrumentSpec:
-        """Convert Kraken symbol to InstrumentSpec.
-
-        Args:
-            exchange_symbol: Kraken symbol (e.g., "XBT/USD", "PI_XBTUSD")
-            market_type: Market type (spot or futures)
-
-        Returns:
-            Canonical InstrumentSpec
-
-        Raises:
-            SymbolResolutionError: If symbol cannot be parsed
-        """
         symbol_upper = exchange_symbol.upper()
 
         if market_type == MarketType.SPOT:
@@ -84,24 +72,12 @@ class KrakenURM:
                 instrument_type=InstrumentType.PERPETUAL,
             )
 
-    def to_exchange_symbol(
+    def _to_exchange_symbol_impl(
         self,
         spec: InstrumentSpec,
         *,
         market_type: MarketType,
     ) -> str:
-        """Convert InstrumentSpec to Kraken symbol.
-
-        Args:
-            spec: Canonical InstrumentSpec
-            market_type: Market type (spot or futures)
-
-        Returns:
-            Kraken symbol string
-
-        Raises:
-            SymbolResolutionError: If spec cannot be converted
-        """
         # Convert BTC -> XBT for Kraken
         base = self._denormalize_asset(spec.base)
         quote = self._denormalize_asset(spec.quote)
@@ -144,37 +120,3 @@ class KrakenURM:
             if canonical_name == asset:
                 return kraken_name
         return asset
-
-    def _split_base_quote(self, symbol: str) -> tuple[str, str]:
-        """Split symbol into base and quote.
-
-        Handles common quote assets: USD, USDT, etc.
-        """
-        # Common quote assets (longest first)
-        quote_assets = [
-            "USDT",
-            "USD",
-            "BTC",
-            "ETH",
-            "EUR",
-            "GBP",
-            "JPY",
-        ]
-
-        for quote in quote_assets:
-            if symbol.endswith(quote):
-                base = symbol[: -len(quote)]
-                if base:
-                    return base, quote
-
-        # Fallback: assume last 3-4 chars are quote
-        if len(symbol) >= 6:
-            return symbol[:-4], symbol[-4:]
-        elif len(symbol) >= 4:
-            return symbol[:-3], symbol[-3:]
-        else:
-            raise SymbolResolutionError(
-                f"Cannot split Kraken symbol '{symbol}' into base/quote",
-                exchange="kraken",
-                value=symbol,
-            )

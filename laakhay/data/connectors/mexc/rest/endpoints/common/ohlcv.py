@@ -84,7 +84,7 @@ class Adapter(ResponseAdapter):
         """
         symbol = params["symbol"].upper()
         interval = params["interval"]
-        meta = SeriesMeta(symbol=symbol, timeframe=interval.value)
+        meta = SeriesMeta(symbol=symbol, timeframe=interval)
         bars = [
             Bar(
                 timestamp=datetime.fromtimestamp(row[0] / 1000, tz=UTC),

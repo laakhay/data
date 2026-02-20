@@ -70,7 +70,7 @@ class CoinbaseRESTConnector(RESTProvider):
         latency_ms = (perf_counter() - start) * 1000.0
         return {
             "exchange": "coinbase",
-            "market_type": self.market_type.value,
+            "market_type": self.market_type,
             "status": "ok",
             "latency_ms": latency_ms,
             "endpoint": path,
@@ -137,10 +137,7 @@ class CoinbaseRESTConnector(RESTProvider):
 
         # Convert string timeframe to Timeframe if needed
         if isinstance(timeframe, str):
-            tf = Timeframe.from_str(timeframe)
-            if tf is None:
-                raise ValueError(f"Invalid timeframe: {timeframe}")
-            timeframe = tf
+            timeframe = Timeframe(timeframe)
 
         if timeframe not in INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
@@ -234,7 +231,7 @@ class CoinbaseRESTConnector(RESTProvider):
             if result.data:
                 from laakhay.data.models import SeriesMeta
 
-                meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
+                meta = SeriesMeta(symbol=symbol, timeframe=timeframe)
                 return OHLCV(meta=meta, bars=result.data)
             else:
                 # Fallback: fetch first chunk for metadata only if no data

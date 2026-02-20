@@ -6,31 +6,19 @@ Handles Coinbase-specific symbol formats:
 
 from __future__ import annotations
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
-from laakhay.data.core.exceptions import SymbolResolutionError
+from laakhay.core import BaseURMMapper, InstrumentSpec, InstrumentType, MarketType
+from laakhay.core.exceptions import SymbolResolutionError
 
 
-class CoinbaseURM:
+class CoinbaseURM(BaseURMMapper):
     """Coinbase Universal Representation Mapper."""
 
-    def to_spec(
+    def _to_spec_impl(
         self,
         exchange_symbol: str,
         *,
         market_type: MarketType,
     ) -> InstrumentSpec:
-        """Convert Coinbase symbol to InstrumentSpec.
-
-        Args:
-            exchange_symbol: Coinbase symbol (e.g., "BTC-USD")
-            market_type: Market type (spot only for Coinbase)
-
-        Returns:
-            Canonical InstrumentSpec
-
-        Raises:
-            SymbolResolutionError: If symbol cannot be parsed
-        """
         if market_type != MarketType.SPOT:
             raise SymbolResolutionError(
                 "Coinbase only supports spot markets",
@@ -58,24 +46,12 @@ class CoinbaseURM:
             instrument_type=InstrumentType.SPOT,
         )
 
-    def to_exchange_symbol(
+    def _to_exchange_symbol_impl(
         self,
         spec: InstrumentSpec,
         *,
         market_type: MarketType,
     ) -> str:
-        """Convert InstrumentSpec to Coinbase symbol.
-
-        Args:
-            spec: Canonical InstrumentSpec
-            market_type: Market type (spot only for Coinbase)
-
-        Returns:
-            Coinbase symbol string
-
-        Raises:
-            SymbolResolutionError: If spec cannot be converted
-        """
         if market_type != MarketType.SPOT:
             raise SymbolResolutionError(
                 "Coinbase only supports spot markets",

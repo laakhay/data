@@ -9,31 +9,19 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from laakhay.data.core import InstrumentSpec, InstrumentType, MarketType
-from laakhay.data.core.exceptions import SymbolResolutionError
+from laakhay.core import BaseURMMapper, InstrumentSpec, InstrumentType, MarketType
+from laakhay.core.exceptions import SymbolResolutionError
 
 
-class MEXCURM:
+class MEXCURM(BaseURMMapper):
     """MEXC Universal Representation Mapper."""
 
-    def to_spec(
+    def _to_spec_impl(
         self,
         exchange_symbol: str,
         *,
         market_type: MarketType,
     ) -> InstrumentSpec:
-        """Convert MEXC symbol to InstrumentSpec.
-
-        Args:
-            exchange_symbol: MEXC symbol (e.g., "BTCUSDT", "BTCUSDT_240329")
-            market_type: Market type (spot or futures)
-
-        Returns:
-            Canonical InstrumentSpec
-
-        Raises:
-            SymbolResolutionError: If symbol cannot be parsed
-        """
         symbol_upper = exchange_symbol.upper()
 
         # Handle dated futures (format: BASEQUOTE_YYMMDD)
@@ -72,24 +60,12 @@ class MEXCURM:
                 instrument_type=InstrumentType.SPOT,
             )
 
-    def to_exchange_symbol(
+    def _to_exchange_symbol_impl(
         self,
         spec: InstrumentSpec,
         *,
         market_type: MarketType,
     ) -> str:
-        """Convert InstrumentSpec to MEXC symbol.
-
-        Args:
-            spec: Canonical InstrumentSpec
-            market_type: Market type (spot or futures)
-
-        Returns:
-            MEXC symbol string
-
-        Raises:
-            SymbolResolutionError: If spec cannot be converted
-        """
         base_quote = f"{spec.base}{spec.quote}"
 
         if market_type == MarketType.FUTURES:
@@ -117,41 +93,3 @@ class MEXCURM:
                     market_type=market_type,
                 )
             return base_quote
-
-    def _split_base_quote(self, symbol: str) -> tuple[str, str]:
-        """Split symbol into base and quote.
-
-        Handles common quote assets: USDT, USD, BTC, ETH, MX, etc.
-        """
-        # Common quote assets (longest first to avoid partial matches)
-        quote_assets = [
-            "USDT",
-            "USD",
-            "BTC",
-            "ETH",
-            "MX",
-            "BUSD",
-            "DAI",
-            "USDC",
-            "TUSD",
-            "PAX",
-            "USDP",
-        ]
-
-        for quote in quote_assets:
-            if symbol.endswith(quote):
-                base = symbol[: -len(quote)]
-                if base:
-                    return base, quote
-
-        # Fallback: assume last 3-4 chars are quote
-        if len(symbol) >= 6:
-            return symbol[:-4], symbol[-4:]
-        elif len(symbol) >= 4:
-            return symbol[:-3], symbol[-3:]
-        else:
-            raise SymbolResolutionError(
-                f"Cannot split MEXC symbol '{symbol}' into base/quote",
-                exchange="mexc",
-                value=symbol,
-            )

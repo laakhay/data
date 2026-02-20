@@ -31,9 +31,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from laakhay.core.exceptions import SymbolResolutionError, ValidationError
+
 if TYPE_CHECKING:
     from .capabilities import CapabilityKey, CapabilityStatus, FallbackOption
-    from .enums import MarketType
 
 
 class DataError(Exception):
@@ -94,32 +95,8 @@ class InvalidIntervalError(ProviderError):
     pass
 
 
-class ValidationError(DataError):
-    """Data validation failure."""
-
-    pass
-
-
-class SymbolResolutionError(DataError):
-    """Symbol cannot be resolved or converted.
-
-    Raised when URM cannot resolve a symbol to/from exchange format.
-    """
-
-    def __init__(
-        self,
-        message: str,
-        *,
-        exchange: str | None = None,
-        value: str | None = None,
-        market_type: MarketType | None = None,
-        known_aliases: dict[str, str] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.exchange = exchange
-        self.value = value
-        self.market_type = market_type
-        self.known_aliases = known_aliases or {}
+# SymbolResolutionError and ValidationError are imported from laakhay.core and
+# re-exported from this module for backward compatibility.
 
 
 class RelayError(DataError):
@@ -135,3 +112,16 @@ class RelayError(DataError):
         super().__init__(message)
         self.sink_name = sink_name
         self.consecutive_failures = consecutive_failures
+
+
+__all__ = [
+    "DataError",
+    "CapabilityError",
+    "ProviderError",
+    "RateLimitError",
+    "InvalidSymbolError",
+    "InvalidIntervalError",
+    "ValidationError",
+    "SymbolResolutionError",
+    "RelayError",
+]
