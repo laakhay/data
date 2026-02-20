@@ -10,7 +10,7 @@ endif
 PYTHON_VERSION ?= 3.12
 PY := $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
-.PHONY: help install test unit-test integration-test lint format format-check type-check fix coverage clean build publish
+.PHONY: help install test unit-test integration-test lint lint-fix format format-check type-check check fix coverage clean build publish
 
 help:
 	@echo "Make targets:"
@@ -19,10 +19,12 @@ help:
 	@echo "  unit-test       Run unit test suite (tests/unit)."
 	@echo "  integration-test Run integration tests (tests/integration)."
 	@echo "  lint            Run ruff lint if available."
+	@echo "  lint-fix        Run ruff lint and auto-fix issues."
 	@echo "  format          Run ruff format if available."
 	@echo "  format-check    Check if code formatting is correct."
 	@echo "  type-check      Run mypy type checker."
-	@echo "  fix             Auto-fix linting issues and format code."
+	@echo "  check           Run all checks (lint + format check)."
+	@echo "  fix             Auto-fix all fixable issues (lint + format)."
 	@echo "  coverage        Run tests with coverage report."
 	@echo "  clean           Remove caches and compiled artifacts."
 	@echo "  build           Build distribution packages."
@@ -43,37 +45,40 @@ install:
 test: unit-test integration-test
 
 unit-test:
-	@$(PY) -m pytest tests/unit -q
+	@$(UV) run pytest tests/unit -q
 
 integration-test:
-	@$(PY) -m pytest tests/integration -q
+	@$(UV) run pytest tests/integration -q
 
 test-cov: ## Run tests with coverage (HTML report)
-	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term -v
+	@$(UV) run pytest tests/ --cov=laakhay/data --cov-report=html --cov-report=term -v
 
 test-cov-xml: ## Run tests with coverage (XML report for CI)
-	@$(PY) -m pytest tests/ --cov=laakhay/data --cov-report=xml --cov-report=term -v
+	@$(UV) run pytest tests/ --cov=laakhay/data --cov-report=xml --cov-report=term -v
 
 test-cov-xml-unit: ## Run unit tests with coverage (XML report for CI)
-	@$(PY) -m pytest tests/unit --cov=laakhay/data --cov-report=xml --cov-report=term -v
+	@$(UV) run pytest tests/unit --cov=laakhay/data --cov-report=xml --cov-report=term -v
 
 coverage: test-cov ## Run tests with coverage (alias)
 
 lint:
-	@$(PY) -m ruff check . 2>&1 || (echo "ruff check failed or not installed" && exit 1)
+	@$(UV) run ruff check . 2>&1 || (echo "ruff check failed or not installed" && exit 1)
+
+lint-fix:
+	@$(UV) run ruff check --fix . 2>&1 || (echo "ruff check --fix failed or not installed" && exit 1)
 
 format:
-	@$(PY) -m ruff format . 2>&1 || (echo "ruff format failed or not installed" && exit 1)
+	@$(UV) run ruff format . 2>&1 || (echo "ruff format failed or not installed" && exit 1)
 
 format-check:
-	@$(PY) -m ruff format --check . 2>&1 || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
+	@$(UV) run ruff format --check . 2>&1 || (echo "Code formatting issues found. Run 'make format' to fix." && exit 1)
 
 type-check:
-	@$(PY) -m mypy laakhay/data 2>&1 || (echo "mypy check failed or not installed" && exit 1)
+	@$(UV) run mypy laakhay/data 2>&1 || (echo "mypy check failed or not installed" && exit 1)
 
-fix:
-	@$(PY) -m ruff check --fix . 2>&1 || (echo "ruff check --fix failed or not installed" && exit 1)
-	@$(PY) -m ruff format . 2>&1 || (echo "ruff format failed or not installed" && exit 1)
+check: lint format-check
+
+fix: lint-fix format
 
 clean:
 	@find . -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
