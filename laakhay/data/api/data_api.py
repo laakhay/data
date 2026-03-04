@@ -299,6 +299,64 @@ class DataAPI:
         # Router handles: capability validation, URM resolution, provider lookup
         return await self._router.route(request)
 
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: Timeframe | str,
+        *,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+        exchange: str | None = None,
+        market_type: MarketType | None = None,
+        market_variant: MarketVariant | None = None,
+        instrument_type: InstrumentType | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate over OHLCV bar history chunk-by-chunk for memory efficiency.
+
+        Args:
+            symbol: Symbol identifier
+            timeframe: Timeframe for bars
+            start_time: Optional start time
+            end_time: Optional end time
+            limit: Maximum number of bars
+            max_chunks: Maximum number of chunks
+            fetch_concurrency: Maximum in-flight REST chunk requests
+            yield_chunk_size: Target number of bars to buffer before yielding
+            exchange: Exchange name
+            market_type: Market type
+            market_variant: Market variant
+            instrument_type: Instrument type
+
+        Yields:
+            OHLCV objects, each containing one chunk of data
+        """
+        request = (
+            self._create_request_builder(
+                DataFeature.OHLCV,
+                TransportKind.REST,
+                exchange=exchange,
+                market_type=market_type,
+                market_variant=market_variant,
+                instrument_type=instrument_type,
+            )
+            .symbol(symbol)
+            .timeframe(timeframe)
+            .start_time(start_time)
+            .end_time(end_time)
+            .limit(limit)
+            .max_chunks(max_chunks)
+            .extra_param("fetch_concurrency", fetch_concurrency)
+            .extra_param("yield_chunk_size", yield_chunk_size)
+            .build()
+        )
+
+        async for chunk in self._router.route_iter(request):
+            yield chunk
+
     async def fetch_order_book(
         self,
         symbol: str,

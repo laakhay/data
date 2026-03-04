@@ -40,6 +40,7 @@ def mock_router():
     router = MagicMock(spec=DataRouter)
     router.route = AsyncMock()
     router.route_stream = MagicMock(return_value=AsyncMock())
+    router.route_iter = MagicMock(return_value=AsyncMock())
     return router
 
 
@@ -1115,3 +1116,44 @@ class TestDataAPIStreamingMethods:
         call_args = mock_router.route_stream.call_args[0][0]
         assert call_args.feature == DataFeature.MARK_PRICE
         assert call_args.transport == TransportKind.WS
+
+
+class TestDataAPIIterateOHLCV:
+    """Test DataAPI.iterate_ohlcv method."""
+
+    @pytest.mark.asyncio
+    async def test_iterate_ohlcv_routes_via_route_iter(self, mock_router, mock_ohlcv):
+        """iterate_ohlcv should delegate to DataRouter.route_iter."""
+
+        async def mock_iter():
+            yield mock_ohlcv
+
+        mock_router.route_iter.return_value = mock_iter()
+
+        api = DataAPI(router=mock_router)
+        async with api:
+            chunks = []
+            async for chunk in api.iterate_ohlcv(
+                symbol="BTC/USDT",
+                timeframe=Timeframe.H1,
+                exchange="binance",
+                market_type=MarketType.SPOT,
+                limit=1000,
+                max_chunks=5,
+                fetch_concurrency=4,
+                yield_chunk_size=500,
+            ):
+                chunks.append(chunk)
+
+        assert chunks == [mock_ohlcv]
+        mock_router.route_iter.assert_called_once()
+        call_args = mock_router.route_iter.call_args[0][0]
+        assert isinstance(call_args, DataRequest)
+        assert call_args.feature == DataFeature.OHLCV
+        assert call_args.transport == TransportKind.REST
+        assert call_args.symbol == "BTC/USDT"
+        assert call_args.timeframe == Timeframe.H1
+        assert call_args.limit == 1000
+        assert call_args.max_chunks == 5
+        assert call_args.extra_params["fetch_concurrency"] == 4
+        assert call_args.extra_params["yield_chunk_size"] == 500

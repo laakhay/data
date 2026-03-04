@@ -63,7 +63,7 @@ def log_chunk_completed(
         weight: Request weight consumed
         latency_ms: Latency in milliseconds (optional)
     """
-    logger.info(
+    logger.debug(
         "chunk_completed",
         extra={
             "endpoint_id": endpoint_id,

@@ -30,6 +30,7 @@ from .definitions import (
     extract_weight_policy,
 )
 from .executors import ChunkExecutor
+from .ohlcv_service import OHLCVChunkService
 from .planners import ChunkPlanner
 from .telemetry import (
     log_chunk_completed,
@@ -47,6 +48,7 @@ __all__ = [
     "ChunkPlan",
     "ChunkPlanner",
     "ChunkExecutor",
+    "OHLCVChunkService",
     "extract_chunk_policy",
     "extract_chunk_hint",
     "extract_weight_policy",

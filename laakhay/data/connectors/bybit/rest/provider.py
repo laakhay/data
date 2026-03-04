@@ -12,6 +12,7 @@ Architecture:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import datetime
 from time import perf_counter
 from typing import Any
@@ -25,6 +26,9 @@ from laakhay.data.models import (
     OrderBook,
     Symbol,
     Trade,
+)
+from laakhay.data.runtime.chunking import (
+    OHLCVChunkService,
 )
 from laakhay.data.runtime.rest import (
     RESTProvider,
@@ -42,8 +46,6 @@ class BybitRESTConnector(RESTProvider):
     It provides full access to Bybit REST endpoints with automatic
     endpoint spec and adapter resolution.
     """
-
-    _MAX_CANDLES_PER_REQUEST = 200  # Bybit max is 200
 
     def __init__(
         self,
@@ -127,6 +129,7 @@ class BybitRESTConnector(RESTProvider):
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
+        max_chunks: int | None = None,
     ) -> OHLCV:
         """Fetch OHLCV bars for a symbol and timeframe.
 
@@ -143,6 +146,10 @@ class BybitRESTConnector(RESTProvider):
         if timeframe not in INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
+
         params = {
             "symbol": symbol,
             "interval": timeframe,  # Exchange API uses "interval"
@@ -151,8 +158,104 @@ class BybitRESTConnector(RESTProvider):
             "end_time": end_time,
             "limit": limit,
         }
-        result: OHLCV = await self.fetch("ohlcv", params)
-        return result
+
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
+            }
+            return await self.fetch("ohlcv", chunk_params)
+
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="bybit",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        return await service.fetch(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+        )
+
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        *,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate OHLCV bars with optional parallel fetch and coalesced yields."""
+        if timeframe not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
+
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
+
+        params = {
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
+
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
+            }
+            return await self.fetch("ohlcv", chunk_params)
+
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="bybit",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        async for chunk in service.iterate(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+            fetch_concurrency=fetch_concurrency,
+            yield_chunk_size=yield_chunk_size,
+        ):
+            yield chunk
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True

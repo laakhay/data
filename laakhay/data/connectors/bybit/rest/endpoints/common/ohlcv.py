@@ -12,6 +12,7 @@ from typing import Any
 from laakhay.data.connectors.bybit.config import INTERVAL_MAP, get_category
 from laakhay.data.core.exceptions import DataError
 from laakhay.data.models import OHLCV, Bar, SeriesMeta
+from laakhay.data.runtime.chunking import ChunkHint, ChunkPolicy, WeightPolicy
 from laakhay.data.runtime.rest import ResponseAdapter, RestEndpointSpec
 
 
@@ -58,11 +59,30 @@ def build_query(params: dict[str, Any]) -> dict[str, Any]:
 
 
 # Endpoint specification
+# Bybit max kline limit is 200
+CHUNK_POLICY = ChunkPolicy(
+    max_points=200,
+    max_chunks=None,
+    requires_start_time=False,
+    supports_auto_chunking=True,
+)
+WEIGHT_POLICY = WeightPolicy(static_weight=1)
+CHUNK_HINT = ChunkHint(
+    timestamp_key="timestamp",
+    limit_field="limit",
+    start_time_field="start_time",
+    end_time_field="end_time",
+    timeframe_field="interval",
+)
+
 SPEC = RestEndpointSpec(
     id="ohlcv",
     method="GET",
     build_path=build_path,
     build_query=build_query,
+    chunk_policy=CHUNK_POLICY,
+    chunk_hint=CHUNK_HINT,
+    weight_policy=WEIGHT_POLICY,
 )
 
 

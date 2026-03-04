@@ -12,6 +12,7 @@ Architecture:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import datetime
 from time import perf_counter
 from typing import Any
@@ -26,7 +27,9 @@ from laakhay.data.models import (
     Symbol,
     Trade,
 )
-from laakhay.data.runtime.chunking import extract_chunk_hint, extract_chunk_policy
+from laakhay.data.runtime.chunking import (
+    OHLCVChunkService,
+)
 from laakhay.data.runtime.rest import RESTProvider, RestRunner, RESTTransport
 
 from .endpoints import get_endpoint_adapter, get_endpoint_spec
@@ -39,9 +42,6 @@ class MEXCRESTConnector(RESTProvider):
     It provides full access to MEXC REST endpoints with automatic
     endpoint spec and adapter resolution.
     """
-
-    _MAX_CANDLES_PER_REQUEST = 1000
-    _DEFAULT_MAX_CANDLE_CHUNKS = 5
 
     def __init__(
         self,
@@ -130,33 +130,10 @@ class MEXCRESTConnector(RESTProvider):
         if timeframe not in INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 
-        # Get endpoint spec to check for chunking support
         spec = get_endpoint_spec("ohlcv")
         if spec is None:
             raise ValueError("OHLCV endpoint spec not found")
 
-        chunk_policy = extract_chunk_policy(spec)
-        chunk_hint = extract_chunk_hint(spec)
-
-        # Use generic chunking if policy exists and limit exceeds max_points
-        if (
-            chunk_policy
-            and chunk_policy.supports_auto_chunking
-            and limit is not None
-            and limit > chunk_policy.max_points
-        ):
-            return await self._fetch_ohlcv_chunked(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_time=start_time,
-                end_time=end_time,
-                limit=limit,
-                max_chunks=max_chunks,
-                chunk_policy=chunk_policy,
-                chunk_hint=chunk_hint,
-            )
-
-        # Simple path: single request
         params = {
             "symbol": symbol,
             "interval": timeframe,
@@ -165,68 +142,103 @@ class MEXCRESTConnector(RESTProvider):
             "end_time": end_time,
             "limit": limit,
         }
-        result: OHLCV = await self.fetch("ohlcv", params)
-        return result
 
-    async def _fetch_ohlcv_chunked(
-        self,
-        symbol: str,
-        timeframe: Timeframe,
-        start_time: datetime | None,
-        end_time: datetime | None,
-        limit: int,
-        max_chunks: int | None,
-        chunk_policy: Any,
-        chunk_hint: Any,
-    ) -> OHLCV:
-        """Fetch OHLCV using generic chunking layer."""
-        from laakhay.data.runtime.chunking import ChunkExecutor, ChunkPlanner
-
-        planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
-        plans = planner.plan(
-            limit=limit,
-            start_time=start_time,
-            end_time=end_time,
-            timeframe=timeframe,
-            max_chunks=max_chunks,
-        )
-
-        async def fetch_chunk(plan: Any) -> OHLCV:
-            params = {
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
                 "interval": timeframe,
                 "interval_str": INTERVAL_MAP[timeframe],
-                "start_time": plan.start_time,
-                "end_time": plan.end_time,
-                "limit": plan.limit,
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
             }
-            return await self.fetch("ohlcv", params)
+            return await self.fetch("ohlcv", chunk_params)
 
-        # Get metadata from first chunk for reconstruction
-        first_chunk = await fetch_chunk(plans[0])
-
-        executor = ChunkExecutor(policy=chunk_policy, hint=chunk_hint)
-        result = await executor.execute(
-            plans=plans,
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="mexc",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
             fetch_chunk=fetch_chunk,
         )
+        return await service.fetch(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+        )
 
-        # Executor extracts bars and aggregates them as a list
-        # We need to reconstruct OHLCV from aggregated bars
-        if isinstance(result.data, list):
-            # Executor returned list of bars
-            return OHLCV(meta=first_chunk.meta, bars=result.data)
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        *,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate OHLCV bars with optional parallel fetch and coalesced yields."""
+        if timeframe not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
 
-        # If executor preserved OHLCV structure (shouldn't happen with current impl)
-        if isinstance(result.data, OHLCV):
-            return result.data
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
 
-        # Fallback: try to extract bars
-        if hasattr(result.data, "bars") and hasattr(result.data, "meta"):
-            return OHLCV(meta=result.data.meta, bars=result.data.bars)
+        params = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
 
-        raise ValueError(f"Unexpected result type: {type(result.data)}")
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
+            }
+            return await self.fetch("ohlcv", chunk_params)
+
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="mexc",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        async for chunk in service.iterate(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+            fetch_concurrency=fetch_concurrency,
+            yield_chunk_size=yield_chunk_size,
+        ):
+            yield chunk
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True

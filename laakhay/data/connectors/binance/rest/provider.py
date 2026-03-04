@@ -12,8 +12,8 @@ Architecture:
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timedelta
+from collections.abc import AsyncIterator
+from datetime import datetime
 from time import perf_counter
 from typing import Any
 
@@ -28,14 +28,11 @@ from laakhay.data.models import (
     FundingRate,
     OpenInterest,
     OrderBook,
-    SeriesMeta,
     Symbol,
     Trade,
 )
 from laakhay.data.runtime.chunking import (
-    ChunkPlanner,
-    extract_chunk_hint,
-    extract_chunk_policy,
+    OHLCVChunkService,
 )
 from laakhay.data.runtime.rest import (
     RESTProvider,
@@ -53,9 +50,6 @@ class BinanceRESTConnector(RESTProvider):
     It provides full access to Binance REST endpoints with automatic
     endpoint spec and adapter resolution.
     """
-
-    _MAX_CANDLES_PER_REQUEST = 1000
-    _DEFAULT_MAX_CANDLE_CHUNKS = 5
 
     def __init__(
         self,
@@ -142,8 +136,6 @@ class BinanceRESTConnector(RESTProvider):
     ) -> OHLCV:
         """Fetch OHLCV bars for a symbol and timeframe.
 
-        Uses generic chunking layer if endpoint supports it and limit exceeds max_points.
-
         Args:
             symbol: Trading symbol (e.g., "BTCUSDT")
             timeframe: Timeframe for bars
@@ -174,142 +166,103 @@ class BinanceRESTConnector(RESTProvider):
             "limit": limit,
         }
 
-        chunk_policy = extract_chunk_policy(spec, params)
-        chunk_hint = extract_chunk_hint(spec)
-
-        if (
-            chunk_policy
-            and chunk_policy.supports_auto_chunking
-            and limit is not None
-            and limit > chunk_policy.max_points
-        ):
-            return await self._fetch_ohlcv_chunked(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_time=start_time,
-                end_time=end_time,
-                limit=limit,
-                max_chunks=max_chunks,
-                chunk_policy=chunk_policy,
-                chunk_hint=chunk_hint,
-            )
-
-        result: OHLCV = await self.fetch("ohlcv", params)
-        return result
-
-    async def _fetch_ohlcv_chunked(
-        self,
-        symbol: str,
-        timeframe: Timeframe,
-        start_time: datetime | None,
-        end_time: datetime | None,
-        limit: int,
-        max_chunks: int | None,
-        chunk_policy: Any,
-        chunk_hint: Any,
-    ) -> OHLCV:
-        """Fetch OHLCV using chunking layer with backward pagination for limit-based requests."""
-        planner = ChunkPlanner(policy=chunk_policy, hint=chunk_hint)
-        plans = planner.plan(
-            limit=limit,
-            start_time=start_time,
-            end_time=end_time,
-            timeframe=timeframe,
-            max_chunks=max_chunks,
-        )
-
-        needs_backward_pagination = start_time is None and end_time is None
-
-        if needs_backward_pagination:
-            aggregated_bars: list[Any] = []
-            chunks_used = 0
-            current_end_time: datetime | None = None
-
-            for plan in plans:
-                if max_chunks is not None and chunks_used >= max_chunks:
-                    break
-
-                remaining = limit - len(aggregated_bars)
-                if remaining <= 0:
-                    break
-
-                chunk_limit = min(plan.limit, remaining)
-
-                params = {
-                    "market_type": self.market_type,
-                    "symbol": symbol,
-                    "interval": timeframe,
-                    "interval_str": INTERVAL_MAP[timeframe],
-                    "end_time": current_end_time,
-                    "limit": chunk_limit,
-                }
-                chunk_result: OHLCV = await self.fetch("ohlcv", params)
-
-                if not chunk_result.bars:
-                    break
-
-                chunk_bars = chunk_result.bars
-                if chunk_bars:
-                    if aggregated_bars:
-                        oldest_aggregated_ts = aggregated_bars[0].timestamp
-                        chunk_bars = [b for b in chunk_bars if b.timestamp < oldest_aggregated_ts]
-
-                    if chunk_bars:
-                        aggregated_bars = chunk_bars + aggregated_bars
-                        current_end_time = chunk_bars[0].timestamp - timedelta(milliseconds=1)
-                    elif aggregated_bars:
-                        current_end_time = aggregated_bars[0].timestamp - timedelta(milliseconds=1)
-
-                chunks_used += 1  # noqa: SIM113
-
-                if len(aggregated_bars) >= limit:
-                    break
-
-                if len(chunk_result.bars) < chunk_limit and not chunk_result.bars:
-                    break
-
-            aggregated_bars.sort(key=lambda b: b.timestamp)
-
-            if len(aggregated_bars) > limit:
-                aggregated_bars = aggregated_bars[-limit:]
-
-            meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
-            return OHLCV(meta=meta, bars=aggregated_bars)
-
-        async def fetch_chunk(plan: Any) -> OHLCV:
-            params = {
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
                 "interval": timeframe,
                 "interval_str": INTERVAL_MAP[timeframe],
-                "start_time": plan.start_time,
-                "end_time": plan.end_time,
-                "limit": plan.limit,
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
             }
-            return await self.fetch("ohlcv", params)
+            return await self.fetch("ohlcv", chunk_params)
 
-        chunk_results = await asyncio.gather(*[fetch_chunk(plan) for plan in plans])
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="binance",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        return await service.fetch(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+        )
 
-        aggregated_bars: list[Any] = []
-        for chunk_result in chunk_results:
-            if chunk_result.bars:
-                aggregated_bars.extend(chunk_result.bars)
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        *,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate OHLCV bars with optional parallel fetch and coalesced yields."""
+        if timeframe not in INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
 
-        seen = set()
-        unique_bars = []
-        for bar in aggregated_bars:
-            bar_key = (bar.timestamp, bar.open, bar.high, bar.low, bar.close)
-            if bar_key not in seen:
-                seen.add(bar_key)
-                unique_bars.append(bar)
+        spec = get_endpoint_spec("ohlcv")
+        if spec is None:
+            raise ValueError("OHLCV endpoint spec not found")
 
-        unique_bars.sort(key=lambda b: b.timestamp)
+        params = {
+            "market_type": self.market_type,
+            "market_variant": self.market_variant,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
 
-        if len(unique_bars) > limit:
-            unique_bars = unique_bars[-limit:]
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": timeframe,
+                "interval_str": INTERVAL_MAP[timeframe],
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
+            }
+            return await self.fetch("ohlcv", chunk_params)
 
-        meta = SeriesMeta(symbol=symbol, timeframe=timeframe.value)
-        return OHLCV(meta=meta, bars=unique_bars)
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="binance",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        async for chunk in service.iterate(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+            fetch_concurrency=fetch_concurrency,
+            yield_chunk_size=yield_chunk_size,
+        ):
+            yield chunk
 
     async def get_symbols(
         self,

@@ -7,8 +7,8 @@ API documentation: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developer
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from datetime import datetime, timedelta
+from collections.abc import AsyncIterator, Callable
+from datetime import datetime
 from typing import Any
 
 from ....core import MarketType, Timeframe
@@ -19,6 +19,9 @@ from ....models import (
     OrderBook,
     Symbol,
     Trade,
+)
+from ....runtime.chunking import (
+    OHLCVChunkService,
 )
 from ....runtime.rest import (
     ResponseAdapter,
@@ -74,9 +77,6 @@ class HyperliquidRESTProvider(RESTProvider):
             "exchange_info_raw": (exchange_info_raw_spec, ExchangeInfoSymbolsAdapter),
         }
 
-    _MAX_CANDLES_PER_REQUEST = 5000  # Hyperliquid returns up to 5000 candles
-    _DEFAULT_MAX_CANDLE_CHUNKS = 5
-
     async def fetch(self, endpoint: str, params: dict[str, Any]) -> Any:
         if endpoint not in self._ENDPOINTS:
             raise ValueError(f"Unknown REST endpoint: {endpoint}")
@@ -104,21 +104,23 @@ class HyperliquidRESTProvider(RESTProvider):
         if not isinstance(timeframe, Timeframe) or timeframe not in HYPERLIQUID_INTERVAL_MAP:
             raise ValueError(f"Invalid timeframe: {timeframe}")
 
-        if max_chunks is not None and max_chunks <= 0:
-            raise ValueError("max_chunks must be None or a positive integer")
+        spec = candles_spec()
+        params = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": HYPERLIQUID_INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
 
-        chunk_cap = max_chunks or self._DEFAULT_MAX_CANDLE_CHUNKS
-        interval_delta = timedelta(seconds=timeframe.seconds)
-
-        async def _fetch_chunk(
-            *,
+        async def fetch_chunk(
             chunk_start: datetime | None,
             chunk_end: datetime | None,
             chunk_limit: int | None,
         ) -> OHLCV:
-            if not isinstance(timeframe, Timeframe):
-                raise ValueError(f"Invalid timeframe: {timeframe}")
-            params = {
+            chunk_params = {
                 "market_type": self.market_type,
                 "symbol": symbol,
                 "interval": timeframe,
@@ -127,69 +129,89 @@ class HyperliquidRESTProvider(RESTProvider):
                 "end_time": chunk_end,
                 "limit": chunk_limit,
             }
-            result: OHLCV = await self.fetch("ohlcv", params)
-            return result
+            return await self.fetch("ohlcv", chunk_params)
 
-        # Fast path: single request is enough.
-        if (limit is None or limit <= self._MAX_CANDLES_PER_REQUEST) and chunk_cap == 1:
-            return await _fetch_chunk(chunk_start=start_time, chunk_end=end_time, chunk_limit=limit)
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="hyperliquid",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        return await service.fetch(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+        )
 
-        aggregated: list[Any] = []
-        meta = None
-        remaining = limit
-        current_start = start_time
-        chunks_used = 0
-        last_timestamp: datetime | None = None
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str | Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        *,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate OHLCV bars with optional parallel fetch and coalesced yields."""
+        from ..constants import INTERVAL_MAP as HYPERLIQUID_INTERVAL_MAP
 
-        while True:
-            if chunk_cap is not None and chunks_used >= chunk_cap:
-                break
+        if isinstance(timeframe, str):
+            timeframe = Timeframe(timeframe)
+        if timeframe not in HYPERLIQUID_INTERVAL_MAP:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
 
-            chunk_limit = self._MAX_CANDLES_PER_REQUEST
-            if remaining is not None:
-                if remaining <= 0:
-                    break
-                chunk_limit = min(chunk_limit, remaining)
+        spec = candles_spec()
+        params = {
+            "market_type": self.market_type,
+            "symbol": symbol,
+            "interval": timeframe,
+            "interval_str": HYPERLIQUID_INTERVAL_MAP[timeframe],
+            "start_time": start_time,
+            "end_time": end_time,
+            "limit": limit,
+        }
 
-            chunk_ohlcv = await _fetch_chunk(
-                chunk_start=current_start,
-                chunk_end=end_time,
-                chunk_limit=chunk_limit,
-            )
-            meta = meta or chunk_ohlcv.meta
-            bars = chunk_ohlcv.bars
+        async def fetch_chunk(
+            chunk_start: datetime | None,
+            chunk_end: datetime | None,
+            chunk_limit: int | None,
+        ) -> OHLCV:
+            chunk_params = {
+                "market_type": self.market_type,
+                "symbol": symbol,
+                "interval": timeframe,
+                "interval_str": HYPERLIQUID_INTERVAL_MAP[timeframe],
+                "start_time": chunk_start,
+                "end_time": chunk_end,
+                "limit": chunk_limit,
+            }
+            return await self.fetch("ohlcv", chunk_params)
 
-            if not bars:
-                break
-
-            if last_timestamp is not None:
-                bars = [bar for bar in bars if bar.timestamp > last_timestamp]
-                if not bars:
-                    break
-
-            aggregated.extend(bars)
-            last_timestamp = bars[-1].timestamp
-
-            if remaining is not None:
-                remaining -= len(bars)
-                if remaining <= 0:
-                    break
-
-            current_start = last_timestamp + interval_delta
-            if end_time is not None and current_start >= end_time:
-                break
-
-            chunks_used += 1
-
-            if len(bars) < self._MAX_CANDLES_PER_REQUEST:
-                break
-
-        if not aggregated and meta is None:
-            return await _fetch_chunk(chunk_start=start_time, chunk_end=end_time, chunk_limit=limit)
-
-        if meta is None:
-            raise ValueError("meta cannot be None when aggregated is provided")
-        return OHLCV(meta=meta, bars=aggregated)
+        service = OHLCVChunkService.from_endpoint_spec(
+            exchange="hyperliquid",
+            market_type=self.market_type,
+            spec=spec,
+            params=params,
+            fetch_chunk=fetch_chunk,
+        )
+        async for chunk in service.iterate(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+            fetch_concurrency=fetch_concurrency,
+            yield_chunk_size=yield_chunk_size,
+        ):
+            yield chunk
 
     async def get_symbols(
         self, quote_asset: str | None = None, use_cache: bool = True

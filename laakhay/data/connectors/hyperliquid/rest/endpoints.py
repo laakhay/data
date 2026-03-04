@@ -11,8 +11,24 @@ from __future__ import annotations
 from typing import Any
 
 from ....core import MarketType
+from ....runtime.chunking import ChunkHint, ChunkPolicy, WeightPolicy
 from ....runtime.rest import RestEndpointSpec
 from ..constants import INTERVAL_MAP
+
+OHLCV_CHUNK_POLICY = ChunkPolicy(
+    max_points=5000,
+    max_chunks=None,
+    requires_start_time=False,
+    supports_auto_chunking=True,
+)
+OHLCV_CHUNK_HINT = ChunkHint(
+    timestamp_key="timestamp",
+    limit_field="limit",
+    start_time_field="start_time",
+    end_time_field="end_time",
+    timeframe_field="interval",
+)
+OHLCV_WEIGHT_POLICY = WeightPolicy(static_weight=1)
 
 
 def candles_spec() -> RestEndpointSpec:
@@ -58,6 +74,9 @@ def candles_spec() -> RestEndpointSpec:
         build_path=build_path,
         build_query=build_query,
         build_body=build_body,
+        chunk_policy=OHLCV_CHUNK_POLICY,
+        chunk_hint=OHLCV_CHUNK_HINT,
+        weight_policy=OHLCV_WEIGHT_POLICY,
     )
 
 

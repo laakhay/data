@@ -116,6 +116,11 @@ class ChunkPlanner:
             total_chunks=len(plans),
             total_limit=limit,
         )
+        import logging
+
+        logging.getLogger(__name__).info(
+            f"ChunkPlanner: Planned {len(plans)} chunks for range {start_time} - {end_time}"
+        )
 
         return plans
 

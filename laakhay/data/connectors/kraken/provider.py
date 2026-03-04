@@ -90,6 +90,7 @@ class KrakenProvider:
         start_time: datetime | None = None,
         end_time: datetime | None = None,
         limit: int | None = None,
+        max_chunks: int | None = None,
     ) -> OHLCV:
         """Fetch OHLCV bars."""
         return await self._rest.fetch_ohlcv(
@@ -98,7 +99,33 @@ class KrakenProvider:
             start_time=start_time,
             end_time=end_time,
             limit=limit,
+            max_chunks=max_chunks,
         )
+
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: Timeframe,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+        max_chunks: int | None = None,
+        *,
+        fetch_concurrency: int = 1,
+        yield_chunk_size: int | None = None,
+    ) -> AsyncIterator[OHLCV]:
+        """Iterate over OHLCV bars chunk-by-chunk."""
+        async for chunk in self._rest.iterate_ohlcv(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            max_chunks=max_chunks,
+            fetch_concurrency=fetch_concurrency,
+            yield_chunk_size=yield_chunk_size,
+        ):
+            yield chunk
 
     @register_feature_handler(DataFeature.SYMBOL_METADATA, TransportKind.REST)
     async def get_symbols(

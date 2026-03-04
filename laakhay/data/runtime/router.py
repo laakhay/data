@@ -188,6 +188,69 @@ class DataRouter:
         logger.debug("Request completed successfully")
         return result
 
+    async def route_iter(self, request: DataRequest) -> AsyncIterator[Any]:
+        """Route a REST iterator request."""
+        from ..core.enums import TransportKind
+
+        if request.transport != TransportKind.REST:
+            raise ValueError("route_iter() requires transport=TransportKind.REST")
+
+        logger.debug(
+            "Routing iterator request",
+            extra={
+                "exchange": request.exchange,
+                "feature": request.feature.value,
+                "transport": request.transport.value,
+                "market_type": request.market_type.value,
+                "symbol": request.symbol,
+            },
+        )
+
+        self._capability_service.validate_request(request)
+        exchange_symbols = self._resolve_symbols(request)
+
+        provider = await self._provider_registry.get_provider(
+            request.exchange,
+            request.market_type,
+            market_variant=request.market_variant,
+        )
+
+        handler = self._provider_registry.get_feature_handler(
+            request.exchange,
+            request.feature,
+            request.transport,
+        )
+        if handler is None:
+            raise ProviderError(
+                f"No handler found for {request.feature.value} "
+                f"({request.transport.value}) on {request.exchange}"
+            )
+
+        method_name = self._resolve_iter_method_name(
+            provider=provider,
+            feature=request.feature,
+            handler_method_name=handler.method_name,
+        )
+        if method_name is None:
+            raise ProviderError(
+                f"No iterator handler found for {request.feature.value} "
+                f"({request.transport.value}) on {request.exchange}"
+            )
+
+        method_args = self._build_method_args(request, exchange_symbols)
+        method = getattr(provider, method_name)
+
+        item_count = 0
+        async for item in method(**method_args):
+            item_count += 1
+            if item_count % 100 == 0:
+                logger.debug(
+                    "Iterator progress",
+                    extra={"items_yielded": item_count},
+                )
+            yield item
+        logger.debug("Iterator completed", extra={"total_items": item_count})
+
     async def route_stream(self, request: DataRequest) -> AsyncIterator[Any]:
         """Route a streaming data request.
 
@@ -468,3 +531,30 @@ class DataRouter:
         args.update(request.extra_params)
 
         return args
+
+    def _resolve_iter_method_name(
+        self,
+        *,
+        provider: Any,
+        feature: Any,
+        handler_method_name: str,
+    ) -> str | None:
+        """Resolve the iterator method name used by route_iter()."""
+        from ..core.enums import DataFeature
+
+        candidates: list[str] = []
+
+        if feature == DataFeature.OHLCV:
+            candidates.append("iterate_ohlcv")
+
+        if handler_method_name.startswith("fetch_"):
+            candidates.append(f"iterate_{handler_method_name[6:]}")
+        elif handler_method_name.startswith("get_"):
+            candidates.append(f"iterate_{handler_method_name[4:]}")
+        elif handler_method_name.startswith("stream_"):
+            candidates.append(handler_method_name)
+
+        for candidate in candidates:
+            if hasattr(provider, candidate):
+                return candidate
+        return None

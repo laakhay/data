@@ -46,6 +46,20 @@ class MockProvider:
         yield {"symbol": symbol, "price": 50000}
         yield {"symbol": symbol, "price": 50001}
 
+    async def iterate_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str | Timeframe,
+        start_time=None,
+        end_time=None,
+        limit=None,
+        max_chunks=None,  # noqa: ARG002
+        fetch_concurrency: int = 1,  # noqa: ARG002
+        yield_chunk_size: int | None = None,  # noqa: ARG002
+    ) -> AsyncIterator[dict]:
+        """Mock iterate_ohlcv method."""
+        yield {"symbol": symbol, "timeframe": timeframe, "limit": limit}
+
 
 @pytest.fixture
 def mock_provider_registry():
@@ -193,6 +207,86 @@ async def test_route_stream_requires_ws(router):
 
     with pytest.raises(ValueError, match="requires transport=TransportKind.WS"):
         async for _ in router.route_stream(request):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_route_iter(router, mock_provider_registry):
+    """Test routing a REST iterator request."""
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+        limit=100,
+    )
+
+    mock_provider_registry.get_feature_handler.return_value = FeatureHandler(
+        method_name="fetch_ohlcv",
+        method=MockProvider.fetch_ohlcv,
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+    )
+
+    results = []
+    async for item in router.route_iter(request):
+        results.append(item)
+
+    assert len(results) == 1
+    assert results[0]["symbol"] == "BTCUSDT"
+    assert results[0]["timeframe"] == Timeframe.H1
+    assert results[0]["limit"] == 100
+
+
+@pytest.mark.asyncio
+async def test_route_iter_requires_rest(router):
+    """Test that route_iter requires REST transport."""
+    request = DataRequest(
+        feature=DataFeature.TRADES,
+        transport=TransportKind.WS,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+    )
+
+    with pytest.raises(ValueError, match="requires transport=TransportKind.REST"):
+        async for _ in router.route_iter(request):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_route_iter_no_iterator_handler(router, mock_provider_registry):
+    """Test route_iter raises ProviderError when iterator method is missing."""
+
+    class NoIteratorProvider:
+        name = "mock"
+        market_type = MarketType.SPOT
+
+        async def fetch_ohlcv(self, symbol: str, timeframe: str | Timeframe, **kwargs):
+            return {"symbol": symbol, "timeframe": timeframe, **kwargs}
+
+    provider = NoIteratorProvider()
+    mock_provider_registry.get_provider = AsyncMock(return_value=provider)
+    mock_provider_registry.get_feature_handler.return_value = FeatureHandler(
+        method_name="fetch_ohlcv",
+        method=NoIteratorProvider.fetch_ohlcv,
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+    )
+
+    request = DataRequest(
+        feature=DataFeature.OHLCV,
+        transport=TransportKind.REST,
+        exchange="binance",
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        timeframe=Timeframe.H1,
+    )
+
+    with pytest.raises(ProviderError, match="No iterator handler found"):
+        async for _ in router.route_iter(request):
             pass
 
 
